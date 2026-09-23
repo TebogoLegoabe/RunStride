@@ -35,13 +35,28 @@ export interface MatchSummary {
   unreadCount: number;
 }
 
+export interface RunDate {
+  id: string;
+  matchId: string;
+  proposedById: string;
+  startsAt: string;
+  place: string;
+  distanceKm: number | null;
+  note: string | null;
+  status: "proposed" | "accepted" | "declined" | "cancelled";
+  respondedAt: string | null;
+}
+
 export interface Message {
   id: string;
   matchId: string;
   senderId: string;
+  // text: typed. run_date: a run suggestion card. system: e.g. "Accepted the run"
+  kind: "text" | "run_date" | "system";
   body: string;
   createdAt: string;
   readAt: string | null;
+  runDate: RunDate | null;
 }
 
 // Pushed by the server over the WebSocket
@@ -50,7 +65,8 @@ export type RealtimeEvent =
   | { type: "pong" }
   | { type: "message"; message: Message }
   | { type: "read"; matchId: string; readAt: string }
-  | { type: "match_ended"; matchId: string };
+  | { type: "match_ended"; matchId: string }
+  | { type: "run_date"; runDate: RunDate };
 
 export interface SwipeResult {
   matched: boolean;
@@ -131,11 +147,3 @@ export interface MyProfile {
   photos: Photo[];
 }
 
-// Planned for the run-date feature; not backed by the API yet
-export interface RunDate {
-  id: string;
-  matchId: string;
-  location: { lat: number; lng: number; label: string };
-  scheduledFor: string;
-  status: "proposed" | "confirmed" | "completed" | "cancelled";
-}

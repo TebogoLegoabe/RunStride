@@ -182,17 +182,52 @@ class Match(Base):
         return self.user_b_id if self.user_a_id == user_id else self.user_a_id
 
 
+class RunDate(Base):
+    """A run one person suggested to their match."""
+
+    __tablename__ = "run_dates"
+    __table_args__ = (
+        Index("ix_run_dates_match_id", "match_id"),
+        CheckConstraint(
+            "status IN ('proposed', 'accepted', 'declined', 'cancelled')", name="run_date_status_values"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    match_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("matches.id", ondelete="CASCADE"))
+    proposed_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Where to meet, in the proposer's words (e.g. "Emmarentia Dam, main gate")
+    place: Mapped[str] = mapped_column(String(120))
+    distance_km: Mapped[int | None] = mapped_column(SmallInteger)
+    note: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="proposed", server_default="proposed")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+
 class Message(Base):
     __tablename__ = "messages"
-    __table_args__ = (Index("ix_messages_match_id_created_at", "match_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_messages_match_id_created_at", "match_id", "created_at"),
+        CheckConstraint("kind IN ('text', 'run_date', 'system')", name="message_kind_values"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     match_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("matches.id", ondelete="CASCADE"))
     sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    # text: typed by a person. run_date: a run suggestion, shown as a card.
+    # system: an automatic note like "Accepted the run". body is always readable text,
+    # so previews and moderation evidence work for every kind.
+    kind: Mapped[str] = mapped_column(String(20), default="text", server_default="text")
+    run_date_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("run_dates.id", ondelete="CASCADE"))
     body: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     # When the other person saw it
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    run_date: Mapped[RunDate | None] = relationship()
 
 
 class Block(Base):

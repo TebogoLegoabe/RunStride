@@ -11,7 +11,18 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.deps import DbSession
 from app.persona import PersonaError, PersonaNotConfigured
-from app.routers import admin, auth, discover, matches, preferences, profile, safety, users, verification
+from app.routers import (
+    admin,
+    auth,
+    discover,
+    matches,
+    preferences,
+    profile,
+    run_dates,
+    safety,
+    users,
+    verification,
+)
 from app.storage import MEDIA_URL_PREFIX
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -64,6 +75,7 @@ app.include_router(profile.router)
 app.include_router(preferences.router)
 app.include_router(discover.router)
 app.include_router(matches.router)
+app.include_router(run_dates.router)
 app.include_router(safety.router)
 app.include_router(admin.router)
 app.include_router(verification.router)

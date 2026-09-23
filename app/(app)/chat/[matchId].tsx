@@ -16,9 +16,11 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ApiError, getMe, getMessages, markRead, mediaUrl, sendMessage } from "../../../lib/api";
 import { formatClock } from "../../../lib/format";
-import type { Message } from "../../../lib/types";
+import type { Message, RunDate } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { SafetySheet } from "../../../components/SafetySheet";
+import { RunDateCard } from "../../../components/RunDateCard";
+import { SuggestRunSheet } from "../../../components/SuggestRunSheet";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const PAGE_SIZE = 30; // matches the API's default page
@@ -50,6 +52,9 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [ended, setEnded] = useState(false);
   const [safetyOpen, setSafetyOpen] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  // Latest state of each run, which changes after its card was first sent
+  const [runs, setRuns] = useState<Record<string, RunDate>>({});
   const [error, setError] = useState<string | null>(null);
   // Newest message we have, for catching up after a reconnect
   const lastId = useRef<string | null>(null);
@@ -116,6 +121,8 @@ export default function Chat() {
           setMessages((current) =>
             current?.map((m) => (m.senderId === myId && !m.readAt ? { ...m, readAt: event.readAt } : m)) ?? null
           );
+        } else if (event.type === "run_date" && event.runDate.matchId === matchId) {
+          setRuns((current) => ({ ...current, [event.runDate.id]: event.runDate }));
         } else if (event.type === "match_ended" && event.matchId === matchId) {
           setEnded(true);
         } else if (event.type === "ready") {
@@ -164,7 +171,7 @@ export default function Chat() {
 
   // Newest first for the inverted list (it starts scrolled to the bottom)
   const newestFirst = messages ? [...messages].reverse() : [];
-  const mine = messages?.filter((m) => m.senderId === myId) ?? [];
+  const mine = messages?.filter((m) => m.senderId === myId && m.kind === "text") ?? [];
   const lastMineId = mine.length ? mine[mine.length - 1].id : undefined;
 
   return (
@@ -214,11 +221,30 @@ export default function Chat() {
           ListEmptyComponent={
             <View style={styles.emptyChat}>
               <Text style={styles.emptyChatText}>
-                You matched with {name ?? "this runner"}! Say hi, and maybe suggest a route you both like.
+                You matched with {name ?? "this runner"}! Say hi, or tap the runner to suggest a run together.
               </Text>
             </View>
           }
           renderItem={({ item: m }) => {
+            if (m.kind === "run_date" && m.runDate) {
+              return (
+                <RunDateCard
+                  run={runs[m.runDate.id] ?? m.runDate}
+                  myId={myId}
+                  token={token}
+                  otherName={name ?? "They"}
+                  onUpdated={(run) => setRuns((current) => ({ ...current, [run.id]: run }))}
+                />
+              );
+            }
+            if (m.kind === "system") {
+              const who = m.senderId === myId ? "You" : name ?? "They";
+              return (
+                <Text style={styles.systemNote}>
+                  {who}: {m.body} · {formatClock(m.createdAt)}
+                </Text>
+              );
+            }
             const isMine = m.senderId === myId;
             return (
               <View style={[styles.bubbleRow, isMine && styles.bubbleRowMine]}>
@@ -241,6 +267,13 @@ export default function Chat() {
         </View>
       ) : (
         <View style={styles.composer}>
+          <Pressable
+            style={styles.runButton}
+            onPress={() => setSuggestOpen(true)}
+            accessibilityLabel="Suggest a run"
+          >
+            <Ionicons name="walk" size={22} color="#4ecdc4" />
+          </Pressable>
           <TextInput
             style={styles.input}
             placeholder="Message"
@@ -262,6 +295,18 @@ export default function Chat() {
           </Pressable>
         </View>
       )}
+
+      <SuggestRunSheet
+        visible={suggestOpen}
+        token={token}
+        matchId={matchId}
+        name={name ?? "your match"}
+        onClose={() => setSuggestOpen(false)}
+        onSent={(card) => {
+          setMessages((current) => merge(current ?? [], [card]));
+          setSuggestOpen(false);
+        }}
+      />
 
       {userId && (
         <SafetySheet
@@ -333,6 +378,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 15,
   },
+  runButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#4ecdc4",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  systemNote: { color: "#64748b", fontSize: 12, textAlign: "center", marginVertical: 6 },
   sendButton: {
     width: 40,
     height: 40,

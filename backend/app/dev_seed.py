@@ -18,6 +18,7 @@ from geoalchemy2 import WKTElement
 from PIL import Image, ImageDraw, ImageFont
 from sqlalchemy import delete, select, text
 
+from app import run_dates
 from app.config import get_settings
 from app.db import SessionLocal
 from app.models import (
@@ -26,6 +27,7 @@ from app.models import (
     Message,
     Profile,
     ProfilePhoto,
+    RunDate,
     RunningProfile,
     Swipe,
     User,
@@ -193,6 +195,22 @@ def dev_auto_reply(match_id: uuid.UUID, sender_id: uuid.UUID) -> None:
         db.add(reply)
         db.commit()
         publish_message(reply, [match.user_a_id, match.user_b_id])
+
+
+def dev_auto_accept_run(run_date_id: uuid.UUID, proposer_id: uuid.UUID) -> None:
+    """Development only: a seed runner accepts your run suggestion a couple of seconds later."""
+    with SessionLocal() as db:
+        run = db.get(RunDate, run_date_id)
+        match = db.get(Match, run.match_id) if run else None
+        if match is None or match.ended_at is not None:
+            return
+        other = db.get(User, match.other_user_id(proposer_id))
+        if other is None or not other.phone.startswith(SEED_PHONE_PREFIX):
+            return
+        time.sleep(2)
+        db.refresh(run)
+        if run.status == "proposed":
+            run_dates.respond(db, run, match, other, "accept")
 
 
 def main() -> None:

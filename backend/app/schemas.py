@@ -196,13 +196,28 @@ class MessageBody(CamelModel):
         return v
 
 
+class RunDateOut(CamelModel):
+    id: uuid.UUID
+    match_id: uuid.UUID
+    proposed_by_id: uuid.UUID
+    starts_at: datetime
+    place: str
+    distance_km: int | None
+    note: str | None
+    status: str
+    responded_at: datetime | None
+
+
 class MessageOut(CamelModel):
     id: uuid.UUID
     match_id: uuid.UUID
     sender_id: uuid.UUID
+    kind: str = "text"
     body: str
     created_at: datetime
     read_at: datetime | None
+    # Current state of the run, for run_date cards
+    run_date: RunDateOut | None = None
 
 
 class LastMessage(CamelModel):
@@ -279,3 +294,38 @@ class ResolveBody(CamelModel):
         if self.action == "suspend" and self.suspend_days is None:
             raise ValueError("Choose how many days to suspend for.")
         return self
+
+
+MAX_DAYS_AHEAD = 60
+
+
+class RunDateBody(CamelModel):
+    starts_at: datetime
+    place: str = Field(max_length=120)
+    distance_km: int | None = Field(default=None, ge=1, le=100)
+    note: str | None = Field(default=None, max_length=300)
+
+    @field_validator("starts_at")
+    @classmethod
+    def sensible_time(cls, v: datetime) -> datetime:
+        if v.tzinfo is None:
+            raise ValueError("Include a timezone with the start time.")
+        now = datetime.now(v.tzinfo)
+        if v <= now:
+            raise ValueError("Pick a time in the future.")
+        if (v - now).days >= MAX_DAYS_AHEAD:
+            raise ValueError(f"Runs can be planned up to {MAX_DAYS_AHEAD} days ahead.")
+        return v
+
+    @field_validator("place")
+    @classmethod
+    def place_given(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError("Please say where to meet.")
+        return v
+
+    @field_validator("note")
+    @classmethod
+    def blank_note_is_none(cls, v: str | None) -> str | None:
+        return (v or "").strip() or None

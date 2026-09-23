@@ -51,14 +51,14 @@ def match_summary(db: Session, match: Match, me: User, *, with_chat: bool = Fals
     return summary
 
 
-def _active_match(db: Session, me: User, match_id: uuid.UUID) -> Match:
+def active_match(db: Session, me: User, match_id: uuid.UUID) -> Match:
     match = db.get(Match, match_id)
     if match is None or me.id not in (match.user_a_id, match.user_b_id) or match.ended_at is not None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This match isn't available.")
     return match
 
 
-def _check_rate_limits(db: Session, me: User, settings: Settings) -> None:
+def check_rate_limits(db: Session, me: User, settings: Settings) -> None:
     now = utcnow()
 
     def sent_since(since) -> int:
@@ -102,7 +102,7 @@ def list_matches(user: CurrentUser, db: DbSession) -> list[MatchSummary]:
 
 @router.delete("/matches/{match_id}", status_code=status.HTTP_204_NO_CONTENT)
 def unmatch(match_id: uuid.UUID, user: CurrentUser, db: DbSession) -> Response:
-    match = _active_match(db, user, match_id)
+    match = active_match(db, user, match_id)
     match.ended_at = utcnow()
     match.ended_by_id = user.id
     db.commit()
@@ -123,7 +123,7 @@ def list_messages(
 ) -> list[Message]:
     """Messages oldest-first. No cursor: the latest page. `before`: an older page
     (scrolling up). `after`: anything newer (catching up after a reconnect)."""
-    match = _active_match(db, user, match_id)
+    match = active_match(db, user, match_id)
     stmt = select(Message).where(Message.match_id == match.id)
     key = tuple_(Message.created_at, Message.id)
 
@@ -153,8 +153,8 @@ def send_message(
     settings: AppSettings,
     background: BackgroundTasks,
 ) -> MessageOut:
-    match = _active_match(db, user, match_id)
-    _check_rate_limits(db, user, settings)
+    match = active_match(db, user, match_id)
+    check_rate_limits(db, user, settings)
     message = Message(match_id=match.id, sender_id=user.id, body=body.body, created_at=utcnow())
     db.add(message)
     db.commit()
@@ -166,7 +166,7 @@ def send_message(
 
 @router.post("/matches/{match_id}/read", status_code=status.HTTP_204_NO_CONTENT)
 def mark_read(match_id: uuid.UUID, user: CurrentUser, db: DbSession) -> Response:
-    match = _active_match(db, user, match_id)
+    match = active_match(db, user, match_id)
     now = utcnow()
     result = db.execute(
         update(Message)

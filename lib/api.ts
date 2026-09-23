@@ -15,6 +15,7 @@ import type {
   ReportDetail,
   ReportSummary,
   Photo,
+  RunDate,
   RunningProfile,
   VerificationState,
 } from "./types";
@@ -191,6 +192,17 @@ export const sendMessage = (token: string, matchId: string, body: string) =>
 
 export const markRead = (token: string, matchId: string) =>
   apiRequest<void>(`/matches/${matchId}/read`, { method: "POST", token });
+
+// --- Run dates ---
+// Posts a run suggestion card into the chat. startsAt must include a timezone offset.
+export const suggestRun = (
+  token: string,
+  matchId: string,
+  run: { startsAt: string; place: string; distanceKm?: number; note?: string }
+) => apiRequest<Message>(`/matches/${matchId}/run-dates`, { method: "POST", body: run, token });
+
+export const answerRun = (token: string, runDateId: string, action: "accept" | "decline" | "cancel") =>
+  apiRequest<RunDate>(`/run-dates/${runDateId}/${action}`, { method: "POST", token });
 
 // --- Safety ---
 export const blockUser = (token: string, userId: string) =>
