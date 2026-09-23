@@ -1,5 +1,27 @@
 export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
 
+export interface Me {
+  id: string;
+  phone: string;
+  verificationStatus: VerificationStatus;
+  profileComplete: boolean;
+}
+
+export interface Photo {
+  id: string;
+  url: string;
+  position: number;
+}
+
+// The signed-in user's own profile, as returned by /me/profile
+export interface MyProfile {
+  displayName: string;
+  birthDate: string; // YYYY-MM-DD
+  age: number;
+  bio: string | null;
+  photos: Photo[];
+}
+
 export interface RunningStats {
   averagePaceMinPerKm: number;
   weeklyDistanceKm: number;

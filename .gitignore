@@ -8,3 +8,11 @@ web-build/
 .DS_Store
 ios/
 android/
+
+# Python
+__pycache__/
+.venv/
+.pytest_cache/
+
+# Uploaded photos (local dev storage)
+backend/media/

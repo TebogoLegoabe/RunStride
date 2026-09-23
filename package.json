@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
+    "phone": "node scripts/start-phone.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"
@@ -11,7 +12,9 @@
   "dependencies": {
     "@expo/metro-runtime": "~3.2.0",
     "expo": "~51.0.0",
+    "expo-image-picker": "~15.1.0",
     "expo-router": "~3.5.0",
+    "expo-secure-store": "~13.0.2",
     "expo-status-bar": "~1.12.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",

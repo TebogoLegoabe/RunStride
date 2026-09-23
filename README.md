@@ -9,26 +9,54 @@ Single codebase, three targets: Web, iOS, Android — via Expo + Expo Router
 
 ## Stack
 - **Frontend:** Expo + Expo Router (TypeScript)
-- **Backend:** FastAPI (Python) — separate service, not in this repo yet
+- **Backend:** FastAPI (Python) in `backend/`, run with Docker Compose
 - **Database:** PostgreSQL + PostGIS
 - **Identity verification:** Onfido or Persona
 - **Fitness data:** Strava OAuth
 - **Chat:** Stream Chat or custom WebSockets
 
 ## Getting started
+
+### Backend (API + Postgres/PostGIS)
+Requires Docker Desktop.
+```bash
+docker compose up -d --build    # starts db + api, runs migrations
+curl localhost:8000/health      # {"status":"ok"}
+```
+- API docs: http://localhost:8000/docs
+- In development no SMS is sent: the OTP code is printed to the API logs.
+  Watch them with `docker compose logs -f api`.
+- Run tests: `docker compose exec api pytest`
+- New migration after changing `backend/app/models.py`:
+  `docker compose exec api alembic revision --autogenerate -m "describe change"`
+- Postgres is exposed on host port **5433** (user/password/db: `runstride`).
+- Uploaded photos are stored in `backend/media/` (git-ignored) for development.
+  They are re-encoded on upload, which strips EXIF metadata such as GPS location.
+
+### App
 ```bash
 npm install
 npx expo start
 ```
-Press `w` for web, or scan the QR code for iOS/Android via Expo Go.
+Press `w` for web.
+
+To test on a physical phone (same Wi-Fi as the computer), use:
+```bash
+npm run phone
+```
+This detects the computer's LAN IP and points both the QR code and the app's
+API calls at it. (Plain `expo start` shows `127.0.0.1` on newer Windows 11
+builds, which phones can't reach.)
 
 ## Project structure
 ```
+backend/        FastAPI service (app/, alembic/ migrations, tests/)
 app/            screens/routes (Expo Router — shared across all platforms)
   (app)/        routes only reachable after verification passes
 components/     shared UI components
 lib/
   api.ts        central API client
+  session.ts    auth token storage (SecureStore / localStorage on web)
   types.ts      shared types (mirrors backend schema)
   hooks/        shared business logic
 assets/         icons, images, fonts

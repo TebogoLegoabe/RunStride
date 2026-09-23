@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: runstride
+      POSTGRES_PASSWORD: runstride
+      POSTGRES_DB: runstride
+    ports:
+      # 5433 on the host so it doesn't clash with a locally installed Postgres
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/docker/initdb/20-create-test-db.sql:/docker-entrypoint-initdb.d/20-create-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U runstride -d runstride"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://runstride:runstride@db:5432/runstride
+      TEST_DATABASE_URL: postgresql+psycopg://runstride:runstride@db:5432/runstride_test
+      # File-change events don't cross the Windows -> Linux bind mount, so poll for --reload
+      WATCHFILES_FORCE_POLLING: "true"
+    env_file:
+      - path: ./backend/.env
+        required: false
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
