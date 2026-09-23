@@ -21,6 +21,7 @@ from app.models import (
     User,
     VerificationStatus,
 )
+from app.moderation import is_usable, not_blocked_with, open_reporter_count
 from app.routers.matches import match_summary
 from app.schemas import DiscoverCard, LocationBody, SwipeResponse, age_on
 from app.security import utcnow
@@ -90,6 +91,11 @@ def _candidates(
             ),
             # Don't show people who already passed on me
             ~exists().where(Swipe.swiper_id == User.id, Swipe.target_id == me.id, Swipe.liked.is_(False)),
+            # Safety: blocks either way, suspended/banned accounts, and anyone several
+            # different people have reported (hidden until a moderator reviews)
+            not_blocked_with(me.id),
+            is_usable(),
+            open_reporter_count() < settings.report_auto_hide_threshold,
         )
         .options(selectinload(User.profile).selectinload(Profile.photos), selectinload(User.running_profile))
         .order_by(distance)

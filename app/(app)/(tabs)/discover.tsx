@@ -15,6 +15,7 @@ import {
 import { getToken } from "../../../lib/session";
 import type { DiscoverCard, MatchSummary, RunningProfile } from "../../../lib/types";
 import { RunnerCard } from "../../../components/RunnerCard";
+import { SafetySheet } from "../../../components/SafetySheet";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 // Fetch more cards when this few are left
@@ -37,6 +38,7 @@ export default function Discover() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [match, setMatch] = useState<MatchSummary | null>(null);
+  const [safetyOpen, setSafetyOpen] = useState(false);
 
   const loadFeed = useCallback(async (t: string) => {
     try {
@@ -128,7 +130,7 @@ export default function Discover() {
     setMatch(null);
     router.push({
       pathname: "/chat/[matchId]",
-      params: { matchId: match.id, name: match.displayName, photo: match.photo ?? "" },
+      params: { matchId: match.id, userId: match.userId, name: match.displayName, photo: match.photo ?? "" },
     });
   };
 
@@ -187,7 +189,7 @@ export default function Discover() {
 
         {card ? (
           <>
-            <RunnerCard key={card.userId} card={card} mine={mine} />
+            <RunnerCard key={card.userId} card={card} mine={mine} onOptions={() => setSafetyOpen(true)} />
             <View style={styles.actions}>
               <Pressable
                 style={[styles.actionButton, styles.passButton]}
@@ -220,6 +222,20 @@ export default function Discover() {
           </View>
         )}
       </ScrollView>
+
+      {card && (
+        <SafetySheet
+          visible={safetyOpen}
+          token={token}
+          person={{ id: card.userId, name: card.displayName }}
+          onClose={() => setSafetyOpen(false)}
+          onDone={() => {
+            // Reported or blocked: they're gone from the feed for good
+            setSafetyOpen(false);
+            setCards((current) => current.filter((c) => c.userId !== card.userId));
+          }}
+        />
+      )}
 
       <Modal visible={match !== null} transparent animationType="fade" onRequestClose={() => setMatch(null)}>
         <View style={styles.modalBackdrop}>

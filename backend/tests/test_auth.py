@@ -53,6 +53,7 @@ def test_verify_creates_user_and_returns_token(client, sms, db):
         "hasRunningProfile": False,
         "hasDatingPreferences": False,
         "hasLocation": False,
+        "isAdmin": False,
     }
 
 

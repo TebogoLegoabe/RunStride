@@ -45,6 +45,7 @@ class MeResponse(CamelModel):
     has_running_profile: bool
     has_dating_preferences: bool
     has_location: bool
+    is_admin: bool
 
 
 MIN_AGE = 18
@@ -212,3 +213,69 @@ class LastMessage(CamelModel):
 
 MatchSummary.model_rebuild()
 SwipeResponse.model_rebuild()
+
+
+ReportReason = Literal["fake_profile", "harassment", "inappropriate", "underage", "unsafe_meeting", "spam", "other"]
+ModerationAction = Literal["dismiss", "warn", "suspend", "ban"]
+
+
+class ReportBody(CamelModel):
+    reported_user_id: uuid.UUID
+    match_id: uuid.UUID | None = None
+    reason: ReportReason
+    details: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("details")
+    @classmethod
+    def blank_details_is_none(cls, v: str | None) -> str | None:
+        return (v or "").strip() or None
+
+    @model_validator(mode="after")
+    def other_needs_details(self) -> "ReportBody":
+        if self.reason == "other" and not self.details:
+            raise ValueError("Please tell us what happened.")
+        return self
+
+
+class ReportCreated(CamelModel):
+    id: uuid.UUID
+
+
+class ReportPerson(CamelModel):
+    id: uuid.UUID | None
+    display_name: str | None
+
+
+class ReportedPerson(ReportPerson):
+    account_status: str | None
+    open_report_count: int
+    total_report_count: int
+
+
+class ReportSummary(CamelModel):
+    id: uuid.UUID
+    reason: str
+    details: str | None
+    status: str
+    created_at: datetime
+    reporter: ReportPerson
+    reported: ReportedPerson
+    resolution: str | None
+    resolution_note: str | None
+    resolved_at: datetime | None
+
+
+class ReportDetail(ReportSummary):
+    evidence: dict
+
+
+class ResolveBody(CamelModel):
+    action: ModerationAction
+    note: str | None = Field(default=None, max_length=1000)
+    suspend_days: int | None = Field(default=None, ge=1, le=365)
+
+    @model_validator(mode="after")
+    def suspend_needs_days(self) -> "ResolveBody":
+        if self.action == "suspend" and self.suspend_days is None:
+            raise ValueError("Choose how many days to suspend for.")
+        return self

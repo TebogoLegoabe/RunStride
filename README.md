@@ -33,6 +33,9 @@ curl localhost:8000/health      # {"status":"ok"}
 - Fill the discover feed with fake runners (development only):
   `docker compose exec api python -m app.dev_seed` (near your shared location);
   remove them with `docker compose exec api python -m app.dev_seed --clear`.
+- Make an account a moderator (shows the Moderation tab):
+  `docker compose exec api python -m app.admin_cli grant 0821234567`
+  (`revoke` to remove, `list` to see all admins).
 - Uploaded photos are stored in `backend/media/` (git-ignored) for development.
   They are re-encoded on upload, which strips EXIF metadata such as GPS location.
 

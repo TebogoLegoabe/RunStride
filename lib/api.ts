@@ -3,13 +3,17 @@
 // live in one place.
 
 import { Platform } from "react-native";
+import type { ReportReason } from "./options";
 import type {
   DatingPreferences,
   DiscoverCard,
   MatchSummary,
   Message,
   SwipeResult,
+  ModerationAction,
   MyProfile,
+  ReportDetail,
+  ReportSummary,
   Photo,
   RunningProfile,
   VerificationState,
@@ -187,3 +191,26 @@ export const sendMessage = (token: string, matchId: string, body: string) =>
 
 export const markRead = (token: string, matchId: string) =>
   apiRequest<void>(`/matches/${matchId}/read`, { method: "POST", token });
+
+// --- Safety ---
+export const blockUser = (token: string, userId: string) =>
+  apiRequest<void>(`/users/${userId}/block`, { method: "POST", token });
+
+// Reporting also blocks the person
+export const reportUser = (
+  token: string,
+  report: { reportedUserId: string; matchId?: string; reason: ReportReason; details?: string }
+) => apiRequest<{ id: string }>("/reports", { method: "POST", body: report, token });
+
+// --- Moderation (admins only) ---
+export const getReports = (token: string, status: "open" | "resolved" = "open") =>
+  apiRequest<ReportSummary[]>(`/admin/reports?status=${status}`, { token });
+
+export const getReport = (token: string, reportId: string) =>
+  apiRequest<ReportDetail>(`/admin/reports/${reportId}`, { token });
+
+export const resolveReport = (
+  token: string,
+  reportId: string,
+  body: { action: ModerationAction; note?: string; suspendDays?: number }
+) => apiRequest<ReportDetail>(`/admin/reports/${reportId}/resolve`, { method: "POST", body, token });

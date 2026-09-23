@@ -1,4 +1,4 @@
-import type { Gender, Goal, RunTime, Terrain } from "./options";
+import type { Gender, Goal, ReportReason, RunTime, Terrain } from "./options";
 
 export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
 
@@ -66,6 +66,38 @@ export interface Me {
   hasRunningProfile: boolean;
   hasDatingPreferences: boolean;
   hasLocation: boolean;
+  isAdmin: boolean;
+}
+
+export type ModerationAction = "dismiss" | "warn" | "suspend" | "ban";
+
+// Moderation queue (admins only)
+export interface ReportSummary {
+  id: string;
+  reason: ReportReason;
+  details: string | null;
+  status: "open" | "resolved";
+  createdAt: string;
+  reporter: { id: string | null; displayName: string | null };
+  reported: {
+    id: string | null; // null if they've deleted their account
+    displayName: string | null;
+    accountStatus: "active" | "suspended" | "banned" | null;
+    openReportCount: number;
+    totalReportCount: number;
+  };
+  resolution: ModerationAction | null;
+  resolutionNote: string | null;
+  resolvedAt: string | null;
+}
+
+export interface ReportDetail extends ReportSummary {
+  // Copied when the report was made
+  evidence: {
+    capturedAt: string;
+    profile: { displayName: string | null; bio: string | null; photos: string[] };
+    messages: { fromReported: boolean; body: string; createdAt: string }[];
+  };
 }
 
 export interface RunningProfile {

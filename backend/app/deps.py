@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.config import Settings, get_settings
 from app.db import get_db
 from app.models import User
+from app.moderation import lockout_message
 from app.security import decode_access_token
 
 DbSession = Annotated[Session, Depends(get_db)]
@@ -34,7 +35,19 @@ def get_current_user(
     user = db.get(User, user_id)
     if user is None:
         raise unauthorized
+    locked = lockout_message(user)
+    if locked:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=locked)
     return user
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def require_admin(user: CurrentUser) -> User:
+    if not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins only.")
+    return user
+
+
+AdminUser = Annotated[User, Depends(require_admin)]

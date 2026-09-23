@@ -42,7 +42,19 @@ export const SHOW_ME = [
 
 export const DISTANCES_KM = [5, 10, 25, 50, 100] as const;
 
+// Must match ReportReason in backend/app/schemas.py
+export const REPORT_REASONS = [
+  { value: "fake_profile", label: "Fake profile" },
+  { value: "harassment", label: "Harassment or hate" },
+  { value: "inappropriate", label: "Inappropriate photos or messages" },
+  { value: "unsafe_meeting", label: "Felt unsafe meeting in person" },
+  { value: "underage", label: "Seems under 18" },
+  { value: "spam", label: "Spam, scam or asking for money" },
+  { value: "other", label: "Something else" },
+] as const satisfies readonly Option<string>[];
+
 export type Terrain = (typeof TERRAINS)[number]["value"];
 export type Goal = (typeof GOALS)[number]["value"];
 export type RunTime = (typeof RUN_TIMES)[number]["value"];
 export type Gender = (typeof GENDERS)[number]["value"];
+export type ReportReason = (typeof REPORT_REASONS)[number]["value"];

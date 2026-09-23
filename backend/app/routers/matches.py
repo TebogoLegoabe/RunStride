@@ -14,6 +14,7 @@ from app.db import SessionLocal
 from app.deps import AppSettings, CurrentUser, DbSession
 from app.dev_seed import dev_auto_reply
 from app.models import Match, Message, User
+from app.moderation import lockout_message
 from app.realtime import hub, publish_message
 from app.schemas import LastMessage, MatchSummary, MessageBody, MessageOut
 from app.security import decode_access_token, utcnow
@@ -181,9 +182,10 @@ def mark_read(match_id: uuid.UUID, user: CurrentUser, db: DbSession) -> Response
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-def _user_exists(user_id: uuid.UUID) -> bool:
+def _can_connect(user_id: uuid.UUID) -> bool:
     with SessionLocal() as db:
-        return db.get(User, user_id) is not None
+        user = db.get(User, user_id)
+        return user is not None and lockout_message(user) is None
 
 
 @router.websocket("/ws")
@@ -196,7 +198,7 @@ async def websocket(ws: WebSocket) -> None:
         if first.get("type") != "auth":
             raise ValueError("expected auth")
         user_id = decode_access_token(first["token"])
-        if not await run_in_threadpool(_user_exists, user_id):
+        if not await run_in_threadpool(_can_connect, user_id):
             raise ValueError("unknown user")
     except (asyncio.TimeoutError, ValueError, KeyError, TypeError, AttributeError, jwt.PyJWTError, WebSocketDisconnect):
         await ws.close(code=4401)

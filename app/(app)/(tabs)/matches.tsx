@@ -48,7 +48,7 @@ export default function Matches() {
   const openChat = (m: MatchSummary) =>
     router.push({
       pathname: "/chat/[matchId]",
-      params: { matchId: m.id, name: m.displayName, photo: m.photo ?? "" },
+      params: { matchId: m.id, userId: m.userId, name: m.displayName, photo: m.photo ?? "" },
     });
 
   if (matches === null) {

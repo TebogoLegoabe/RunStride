@@ -8,17 +8,17 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   AppState,
 } from "react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ApiError, getMe, getMessages, markRead, mediaUrl, sendMessage, unmatch } from "../../../lib/api";
+import { ApiError, getMe, getMessages, markRead, mediaUrl, sendMessage } from "../../../lib/api";
 import { formatClock } from "../../../lib/format";
 import type { Message } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
+import { SafetySheet } from "../../../components/SafetySheet";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const PAGE_SIZE = 30; // matches the API's default page
@@ -35,7 +35,12 @@ function merge(current: Message[], incoming: Message[]): Message[] {
 
 export default function Chat() {
   const router = useRouter();
-  const { matchId, name, photo } = useLocalSearchParams<{ matchId: string; name?: string; photo?: string }>();
+  const { matchId, userId, name, photo } = useLocalSearchParams<{
+    matchId: string;
+    userId?: string;
+    name?: string;
+    photo?: string;
+  }>();
   const { token, connected, subscribe, refreshUnread } = useChat();
   const [myId, setMyId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[] | null>(null);
@@ -44,7 +49,7 @@ export default function Chat() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [ended, setEnded] = useState(false);
-  const [confirmUnmatch, setConfirmUnmatch] = useState(false);
+  const [safetyOpen, setSafetyOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Newest message we have, for catching up after a reconnect
   const lastId = useRef<string | null>(null);
@@ -157,19 +162,6 @@ export default function Chat() {
     }
   };
 
-  const doUnmatch = async () => {
-    if (!token) return;
-    try {
-      await unmatch(token, matchId);
-      refreshUnread();
-      router.back();
-    } catch (e) {
-      handleError(e);
-    } finally {
-      setConfirmUnmatch(false);
-    }
-  };
-
   // Newest first for the inverted list (it starts scrolled to the bottom)
   const newestFirst = messages ? [...messages].reverse() : [];
   const mine = messages?.filter((m) => m.senderId === myId) ?? [];
@@ -192,11 +184,11 @@ export default function Chat() {
         <Text style={styles.headerName} numberOfLines={1}>
           {name ?? "Chat"}
         </Text>
-        {!ended && (
+        {!ended && userId && (
           <Pressable
-            onPress={() => setConfirmUnmatch(true)}
+            onPress={() => setSafetyOpen(true)}
             style={styles.headerButton}
-            accessibilityLabel="Conversation options"
+            accessibilityLabel="Report, block or unmatch"
           >
             <Ionicons name="ellipsis-horizontal" size={22} color="#94a3b8" />
           </Pressable>
@@ -271,27 +263,20 @@ export default function Chat() {
         </View>
       )}
 
-      <Modal
-        visible={confirmUnmatch}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setConfirmUnmatch(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Unmatch {name}?</Text>
-            <Text style={styles.modalBody}>
-              You'll both lose this conversation and won't see each other again.
-            </Text>
-            <Pressable style={styles.dangerButton} onPress={doUnmatch}>
-              <Text style={styles.dangerButtonText}>Unmatch</Text>
-            </Pressable>
-            <Pressable style={styles.cancelButton} onPress={() => setConfirmUnmatch(false)}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      {userId && (
+        <SafetySheet
+          visible={safetyOpen}
+          token={token}
+          person={{ id: userId, name: name ?? "this runner" }}
+          matchId={matchId}
+          onClose={() => setSafetyOpen(false)}
+          onDone={() => {
+            setSafetyOpen(false);
+            refreshUnread();
+            router.back();
+          }}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -359,18 +344,4 @@ const styles = StyleSheet.create({
   sendDisabled: { opacity: 0.4 },
   endedBar: { padding: 16, borderTopWidth: 1, borderTopColor: "#1e293b" },
   endedText: { color: "#94a3b8", fontSize: 14, textAlign: "center" },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(2, 6, 23, 0.8)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  modal: { backgroundColor: "#1e293b", borderRadius: 20, padding: 24, width: "100%", maxWidth: 380 },
-  modalTitle: { color: "#ffffff", fontSize: 20, fontWeight: "700", marginBottom: 8 },
-  modalBody: { color: "#cbd5e1", fontSize: 15, lineHeight: 22, marginBottom: 20 },
-  dangerButton: { backgroundColor: "#ef4444", paddingVertical: 13, borderRadius: 999, alignItems: "center" },
-  dangerButtonText: { color: "#ffffff", fontSize: 16, fontWeight: "600" },
-  cancelButton: { paddingVertical: 13, alignItems: "center", marginTop: 6 },
-  cancelButtonText: { color: "#94a3b8", fontSize: 16 },
 });

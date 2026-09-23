@@ -1,5 +1,6 @@
 import { View, Text, Image, Pressable, StyleSheet } from "react-native";
 import { useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { mediaUrl } from "../lib/api";
 import { formatPace, labelFor } from "../lib/format";
 import { GOALS, RUN_TIMES, TERRAINS } from "../lib/options";
@@ -9,9 +10,11 @@ type Props = {
   card: DiscoverCard;
   // The viewer's own running profile, to highlight what they have in common
   mine: RunningProfile | null;
+  // Opens report/block options
+  onOptions?: () => void;
 };
 
-export function RunnerCard({ card, mine }: Props) {
+export function RunnerCard({ card, mine, onOptions }: Props) {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [photoWidth, setPhotoWidth] = useState(0);
   const photoCount = card.photos.length;
@@ -51,6 +54,15 @@ export function RunnerCard({ card, mine }: Props) {
               <View key={i} style={[styles.photoBar, i === photoIndex && styles.photoBarOn]} />
             ))}
           </View>
+        )}
+        {onOptions && (
+          <Pressable
+            style={styles.optionsButton}
+            onPress={onOptions}
+            accessibilityLabel={`Report or block ${card.displayName}`}
+          >
+            <Ionicons name="ellipsis-horizontal" size={20} color="#ffffff" />
+          </Pressable>
         )}
         <View style={styles.photoFooter}>
           <View style={styles.nameRow}>
@@ -100,6 +112,17 @@ const styles = StyleSheet.create({
   photoBars: { position: "absolute", top: 10, left: 10, right: 10, flexDirection: "row", gap: 4 },
   photoBar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.35)" },
   photoBarOn: { backgroundColor: "#ffffff" },
+  optionsButton: {
+    position: "absolute",
+    top: 22,
+    right: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   photoFooter: {
     position: "absolute",
     left: 0,

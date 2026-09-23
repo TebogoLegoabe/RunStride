@@ -56,7 +56,7 @@ def migrated_db():
 def clean_tables():
     yield
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE users, profiles, profile_photos, otp_codes, verification_inquiries, running_profiles, dating_preferences, swipes, matches, messages CASCADE"))
+        conn.execute(text("TRUNCATE users, profiles, profile_photos, otp_codes, verification_inquiries, running_profiles, dating_preferences, swipes, matches, messages, blocks, reports CASCADE"))
 
 
 @pytest.fixture
@@ -171,6 +171,6 @@ def make_runner(client, sms, settings):
             "/me/location", json={"latitude": JHB[0] + km_north * KM_LAT, "longitude": JHB[1]}, headers=h
         ).raise_for_status()
         user_id = client.get("/me", headers=h).json()["id"]
-        return {"headers": h, "id": user_id}
+        return {"headers": h, "id": user_id, "phone": phone}
 
     return make

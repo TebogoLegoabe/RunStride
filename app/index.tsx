@@ -17,6 +17,8 @@ export default function Welcome() {
         router.replace(routeFor(await getMe(token)));
       } catch (e) {
         if (e instanceof ApiError && e.status === 401) await clearToken();
+        // Suspended or banned: the signed-in area explains why
+        if (e instanceof ApiError && e.status === 403) router.replace("/discover");
       }
     })();
   }, [router]);

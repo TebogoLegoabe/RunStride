@@ -3,6 +3,7 @@ import uuid
 from datetime import date, datetime
 
 from geoalchemy2 import Geography
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import (
     ARRAY,
     Boolean,
@@ -22,6 +23,12 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
+
+
+class AccountStatus(str, enum.Enum):
+    active = "active"
+    suspended = "suspended"
+    banned = "banned"
 
 
 class VerificationStatus(str, enum.Enum):
@@ -53,6 +60,10 @@ class User(Base):
         Geography(geometry_type="POINT", srid=4326, spatial_index=False)
     )
     location_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Moderation
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    account_status: Mapped[str] = mapped_column(String(20), default="active", server_default="active")
+    suspended_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     profile: Mapped["Profile | None"] = relationship(back_populates="user", cascade="all, delete-orphan")
     running_profile: Mapped["RunningProfile | None"] = relationship(cascade="all, delete-orphan")
@@ -182,6 +193,42 @@ class Message(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     # When the other person saw it
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Block(Base):
+    """blocker never sees blocked again, and vice versa."""
+
+    __tablename__ = "blocks"
+    __table_args__ = (Index("ix_blocks_blocked_id", "blocked_id"),)
+
+    blocker_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    blocked_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Report(Base):
+    __tablename__ = "reports"
+    __table_args__ = (
+        Index("ix_reports_status_created_at", "status", "created_at"),
+        Index("ix_reports_reported_id", "reported_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    # SET NULL rather than CASCADE: a report must outlive either account being deleted
+    reporter_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    reported_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    match_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("matches.id", ondelete="SET NULL"))
+    reason: Mapped[str] = mapped_column(String(30))
+    details: Mapped[str | None] = mapped_column(Text)
+    # Copy of the reported profile and conversation taken when the report was made
+    evidence: Mapped[dict] = mapped_column(JSONB)
+    status: Mapped[str] = mapped_column(String(20), default="open", server_default="open")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    # dismiss / warn / suspend / ban
+    resolution: Mapped[str | None] = mapped_column(String(20))
+    resolution_note: Mapped[str | None] = mapped_column(Text)
 
 
 class VerificationInquiry(Base):

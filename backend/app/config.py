@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     new_account_hours: int = 24
     new_account_messages_per_hour: int = 30
 
+    # Hide someone from Discover once this many different people have open reports against them
+    report_auto_hide_threshold: int = 3
+
     # Expo web dev server origins
     cors_origins: list[str] = ["http://localhost:8081", "http://localhost:19006"]
 

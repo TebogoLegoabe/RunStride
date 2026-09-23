@@ -7,6 +7,7 @@ from sqlalchemy import select, update
 from app.config import Settings
 from app.deps import AppSettings, DbSession
 from app.models import OtpCode, User
+from app.moderation import lockout_message
 from app.phone import InvalidPhoneNumber, normalize_phone
 from app.schemas import OtpSendRequest, OtpSendResponse, OtpVerifyRequest, OtpVerifyResponse
 from app.security import create_access_token, generate_otp, hash_otp, otp_matches, utcnow
@@ -102,6 +103,10 @@ def verify_otp(body: OtpVerifyRequest, db: DbSession, settings: AppSettings) -> 
 
     otp.consumed_at = now
     user = db.scalar(select(User).where(User.phone == phone))
+    locked = lockout_message(user) if user else None
+    if locked:
+        db.commit()  # still use up the code
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=locked)
     if user is None:
         user = User(phone=phone)
         db.add(user)
