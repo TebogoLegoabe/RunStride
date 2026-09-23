@@ -24,7 +24,7 @@ export default function VerifyIdentity() {
         const next = await refreshVerification(t);
         setState(next);
         setError(null);
-        if (next.status === "verified") router.replace("/(app)");
+        if (next.status === "verified") router.replace("/discover");
       } catch (e) {
         setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
       } finally {

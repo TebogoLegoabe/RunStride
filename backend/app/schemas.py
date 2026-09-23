@@ -174,8 +174,41 @@ class MatchSummary(CamelModel):
     display_name: str
     photo: str | None
     matched_at: datetime
+    last_message: "LastMessage | None" = None
+    unread_count: int = 0
 
 
 class SwipeResponse(CamelModel):
     matched: bool
     match: MatchSummary | None = None
+
+
+class MessageBody(CamelModel):
+    body: str = Field(max_length=1000)
+
+    @field_validator("body")
+    @classmethod
+    def not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Message can't be empty.")
+        return v
+
+
+class MessageOut(CamelModel):
+    id: uuid.UUID
+    match_id: uuid.UUID
+    sender_id: uuid.UUID
+    body: str
+    created_at: datetime
+    read_at: datetime | None
+
+
+class LastMessage(CamelModel):
+    body: str
+    sender_id: uuid.UUID
+    created_at: datetime
+
+
+MatchSummary.model_rebuild()
+SwipeResponse.model_rebuild()

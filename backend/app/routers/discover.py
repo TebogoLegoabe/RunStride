@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
 from geoalchemy2 import WKTElement
-from sqlalchemy import exists, func, or_, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, aliased, selectinload
 
@@ -21,7 +21,8 @@ from app.models import (
     User,
     VerificationStatus,
 )
-from app.schemas import DiscoverCard, LocationBody, MatchSummary, SwipeResponse, age_on
+from app.routers.matches import match_summary
+from app.schemas import DiscoverCard, LocationBody, SwipeResponse, age_on
 from app.security import utcnow
 
 router = APIRouter(tags=["discover"])
@@ -122,18 +123,6 @@ def _card(user: User, distance_m: float, my_traits: RunnerTraits) -> DiscoverCar
     )
 
 
-def _match_summary(db: Session, match: Match, me: User) -> MatchSummary:
-    other = db.get(User, match.user_b_id if match.user_a_id == me.id else match.user_a_id)
-    photos = other.profile.photos if other.profile else []
-    return MatchSummary(
-        id=match.id,
-        user_id=other.id,
-        display_name=other.profile.display_name if other.profile else "RunStride runner",
-        photo=photos[0].url if photos else None,
-        matched_at=match.created_at,
-    )
-
-
 @router.put("/me/location", status_code=status.HTTP_204_NO_CONTENT)
 def set_location(body: LocationBody, user: CurrentUser, db: DbSession) -> Response:
     lat = round(body.latitude, LOCATION_DECIMALS)
@@ -181,7 +170,7 @@ def _swipe(db: Session, me: User, settings: Settings, target_id: uuid.UUID, like
 
     if match is None:
         return SwipeResponse(matched=False)
-    return SwipeResponse(matched=True, match=_match_summary(db, match, me))
+    return SwipeResponse(matched=True, match=match_summary(db, match, me))
 
 
 @router.post("/discover/{target_id}/like", response_model=SwipeResponse)
@@ -192,13 +181,3 @@ def like(target_id: uuid.UUID, user: CurrentUser, db: DbSession, settings: AppSe
 @router.post("/discover/{target_id}/pass", response_model=SwipeResponse)
 def pass_(target_id: uuid.UUID, user: CurrentUser, db: DbSession, settings: AppSettings) -> SwipeResponse:
     return _swipe(db, user, settings, target_id, liked=False)
-
-
-@router.get("/matches", response_model=list[MatchSummary])
-def list_matches(user: CurrentUser, db: DbSession) -> list[MatchSummary]:
-    matches = db.scalars(
-        select(Match)
-        .where(or_(Match.user_a_id == user.id, Match.user_b_id == user.id))
-        .order_by(Match.created_at.desc())
-    ).all()
-    return [_match_summary(db, m, user) for m in matches]

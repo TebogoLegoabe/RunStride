@@ -9,6 +9,8 @@
 import argparse
 import math
 import random
+import time
+import uuid
 from datetime import date
 from io import BytesIO
 
@@ -20,6 +22,8 @@ from app.config import get_settings
 from app.db import SessionLocal
 from app.models import (
     DatingPreferences,
+    Match,
+    Message,
     Profile,
     ProfilePhoto,
     RunningProfile,
@@ -27,6 +31,8 @@ from app.models import (
     User,
     VerificationStatus,
 )
+from app.realtime import publish_message
+from app.security import utcnow
 from app.storage import LocalPhotoStorage
 
 # Real South African numbers never start with 0 after +27, so these can't collide with real users
@@ -51,6 +57,14 @@ BIOS = [
     "Recovering sprinter learning to love the long run.",
     "Comrades one day. For now: 10Ks and good conversation.",
     None,
+]
+REPLIES = [
+    "Haha love that! Are you a morning or evening runner?",
+    "Nice! What's your favourite route around here?",
+    "I'm training for a half at the moment. You?",
+    "A parkrun date could be fun, keen?",
+    "Sounds good! What pace do you usually run?",
+    "That's awesome. I'm always looking for a running buddy.",
 ]
 COLORS = ["#4ecdc4", "#f59e0b", "#8b5cf6", "#ef4444", "#10b981", "#3b82f6", "#ec4899"]
 
@@ -162,6 +176,23 @@ def default_center() -> tuple[float, float]:
             {"seed": f"{SEED_PHONE_PREFIX}%"},
         ).first()
     return (row[0], row[1]) if row else JOHANNESBURG
+
+
+def dev_auto_reply(match_id: uuid.UUID, sender_id: uuid.UUID) -> None:
+    """Development only: a seed runner answers your message a couple of seconds later,
+    so live chat can be tried with one account. Real users never trigger this."""
+    with SessionLocal() as db:
+        match = db.get(Match, match_id)
+        if match is None or match.ended_at is not None:
+            return
+        other = db.get(User, match.other_user_id(sender_id))
+        if other is None or not other.phone.startswith(SEED_PHONE_PREFIX):
+            return
+        time.sleep(2)  # feels like someone typing
+        reply = Message(match_id=match.id, sender_id=other.id, body=random.choice(REPLIES), created_at=utcnow())
+        db.add(reply)
+        db.commit()
+        publish_message(reply, [match.user_a_id, match.user_b_id])
 
 
 def main() -> None:

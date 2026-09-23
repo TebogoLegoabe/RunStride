@@ -163,6 +163,25 @@ class Match(Base):
     user_a_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     user_b_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Set when either person unmatches. The chat closes, but messages are kept for safety reports.
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ended_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+    def other_user_id(self, user_id: uuid.UUID) -> uuid.UUID:
+        return self.user_b_id if self.user_a_id == user_id else self.user_a_id
+
+
+class Message(Base):
+    __tablename__ = "messages"
+    __table_args__ = (Index("ix_messages_match_id_created_at", "match_id", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    match_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("matches.id", ondelete="CASCADE"))
+    sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # When the other person saw it
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class VerificationInquiry(Base):

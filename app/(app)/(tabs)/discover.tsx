@@ -11,10 +11,10 @@ import {
   mediaUrl,
   passRunner,
   updateLocation,
-} from "../../lib/api";
-import { getToken } from "../../lib/session";
-import type { DiscoverCard, MatchSummary, RunningProfile } from "../../lib/types";
-import { RunnerCard } from "../../components/RunnerCard";
+} from "../../../lib/api";
+import { getToken } from "../../../lib/session";
+import type { DiscoverCard, MatchSummary, RunningProfile } from "../../../lib/types";
+import { RunnerCard } from "../../../components/RunnerCard";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 // Fetch more cards when this few are left
@@ -123,6 +123,15 @@ export default function Discover() {
     if (remaining.length <= REFILL_AT) loadFeed(token);
   };
 
+  const openMatchChat = () => {
+    if (!match) return;
+    setMatch(null);
+    router.push({
+      pathname: "/chat/[matchId]",
+      params: { matchId: match.id, name: match.displayName, photo: match.photo ?? "" },
+    });
+  };
+
   const banner = unverified && (
     <View style={styles.devBanner}>
       <Text style={styles.devBannerTitle}>ID verification: in development</Text>
@@ -218,11 +227,14 @@ export default function Discover() {
             <Text style={styles.matchTitle}>It's a match!</Text>
             {match?.photo && <Image source={{ uri: mediaUrl(match.photo) }} style={styles.matchPhoto} />}
             <Text style={styles.body}>
-              You and {match?.displayName} both liked each other. Chat is coming soon, so you'll
-              be able to plan your first run together.
+              You and {match?.displayName} both liked each other. Say hi and plan your first run
+              together.
             </Text>
-            <Pressable style={styles.primaryButton} onPress={() => setMatch(null)}>
-              <Text style={styles.primaryButtonText}>Keep discovering</Text>
+            <Pressable style={styles.primaryButton} onPress={openMatchChat}>
+              <Text style={styles.primaryButtonText}>Send a message</Text>
+            </Pressable>
+            <Pressable style={styles.textButton} onPress={() => setMatch(null)}>
+              <Text style={styles.textButtonText}>Keep discovering</Text>
             </Pressable>
           </View>
         </View>
@@ -273,6 +285,8 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.5 },
   primaryButtonText: { color: "#0f172a", fontSize: 16, fontWeight: "600" },
+  textButton: { paddingVertical: 12, alignItems: "center", marginTop: 4 },
+  textButtonText: { color: "#94a3b8", fontSize: 15 },
   secondaryButton: {
     borderColor: "#4ecdc4",
     borderWidth: 1,

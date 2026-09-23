@@ -7,6 +7,7 @@ import type {
   DatingPreferences,
   DiscoverCard,
   MatchSummary,
+  Message,
   SwipeResult,
   MyProfile,
   Photo,
@@ -14,7 +15,7 @@ import type {
   VerificationState,
 } from "./types";
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -166,3 +167,23 @@ export const passRunner = (token: string, userId: string) =>
   apiRequest<SwipeResult>(`/discover/${userId}/pass`, { method: "POST", token });
 
 export const getMatches = (token: string) => apiRequest<MatchSummary[]>("/matches", { token });
+
+export const unmatch = (token: string, matchId: string) =>
+  apiRequest<void>(`/matches/${matchId}`, { method: "DELETE", token });
+
+// --- Chat ---
+// Oldest-first. `before`: an older page. `after`: anything newer than that message.
+export const getMessages = (
+  token: string,
+  matchId: string,
+  cursor: { before?: string; after?: string } = {}
+) => {
+  const params = new URLSearchParams(cursor as Record<string, string>).toString();
+  return apiRequest<Message[]>(`/matches/${matchId}/messages${params ? `?${params}` : ""}`, { token });
+};
+
+export const sendMessage = (token: string, matchId: string, body: string) =>
+  apiRequest<Message>(`/matches/${matchId}/messages`, { method: "POST", body: { body }, token });
+
+export const markRead = (token: string, matchId: string) =>
+  apiRequest<void>(`/matches/${matchId}/read`, { method: "POST", token });

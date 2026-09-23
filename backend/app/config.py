@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     # Declined/failed inquiries allowed before the user has to contact support
     max_verification_attempts: int = 3
 
+    # Chat rate limits. New accounts get a tighter hourly cap (a common spam/scam pattern).
+    messages_per_minute: int = 20
+    new_account_hours: int = 24
+    new_account_messages_per_hour: int = 30
+
     # Expo web dev server origins
     cors_origins: list[str] = ["http://localhost:8081", "http://localhost:19006"]
 

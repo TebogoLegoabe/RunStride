@@ -9,5 +9,5 @@ export function routeFor(me: Me): Href<string> {
   if (me.verificationRequired && me.verificationStatus !== "verified") return "/verify-identity";
   if (!me.hasRunningProfile) return "/running-preferences";
   if (!me.hasDatingPreferences) return "/dating-preferences";
-  return "/(app)";
+  return "/discover";
 }

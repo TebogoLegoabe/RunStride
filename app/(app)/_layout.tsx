@@ -4,10 +4,10 @@ import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { ApiError, getMe } from "../../lib/api";
 import { routeFor } from "../../lib/routing";
 import { clearToken, getToken } from "../../lib/session";
+import { ChatProvider } from "../../components/ChatProvider";
 
-// Layout for signed-in screens. Only verified users with a complete profile get in;
-// everyone else is sent to the onboarding step they're on.
-// Becomes the tab bar (Discover, Chats, Profile) once those screens exist.
+// Layout for signed-in screens. Only users who finished onboarding get in; everyone
+// else is sent to the step they're on. Tabs live in (tabs); chat opens on top of them.
 export default function AppLayout() {
   const router = useRouter();
   const [allowed, setAllowed] = useState(false);
@@ -21,7 +21,7 @@ export default function AppLayout() {
       }
       try {
         const next = routeFor(await getMe(token));
-        if (next === "/(app)") setAllowed(true);
+        if (next === "/discover") setAllowed(true);
         else router.replace(next);
       } catch (e) {
         if (e instanceof ApiError && e.status === 401) await clearToken();
@@ -37,7 +37,11 @@ export default function AppLayout() {
       </View>
     );
   }
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <ChatProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </ChatProvider>
+  );
 }
 
 const styles = StyleSheet.create({

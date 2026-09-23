@@ -27,11 +27,30 @@ export interface DiscoverCard {
 
 export interface MatchSummary {
   id: string;
-  userId: string;
+  userId: string; // the other person
   displayName: string;
   photo: string | null;
   matchedAt: string;
+  lastMessage: { body: string; senderId: string; createdAt: string } | null;
+  unreadCount: number;
 }
+
+export interface Message {
+  id: string;
+  matchId: string;
+  senderId: string;
+  body: string;
+  createdAt: string;
+  readAt: string | null;
+}
+
+// Pushed by the server over the WebSocket
+export type RealtimeEvent =
+  | { type: "ready" }
+  | { type: "pong" }
+  | { type: "message"; message: Message }
+  | { type: "read"; matchId: string; readAt: string }
+  | { type: "match_ended"; matchId: string };
 
 export interface SwipeResult {
   matched: boolean;
