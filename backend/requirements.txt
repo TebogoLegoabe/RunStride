@@ -9,3 +9,4 @@ phonenumbers>=8.13,<10
 python-multipart>=0.0.18
 pillow>=11.0
 httpx>=0.28,<1
+geoalchemy2>=0.15,<1

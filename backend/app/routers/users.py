@@ -16,4 +16,5 @@ def get_me(user: CurrentUser, settings: AppSettings) -> MeResponse:
         profile_complete=user.profile_complete,
         has_running_profile=user.running_profile is not None,
         has_dating_preferences=user.dating_preferences is not None,
+        has_location=user.location is not None,
     )

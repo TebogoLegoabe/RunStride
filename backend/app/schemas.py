@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -44,6 +44,7 @@ class MeResponse(CamelModel):
     profile_complete: bool
     has_running_profile: bool
     has_dating_preferences: bool
+    has_location: bool
 
 
 MIN_AGE = 18
@@ -143,3 +144,38 @@ class DatingPreferencesBody(CamelModel):
         if self.age_min > self.age_max:
             raise ValueError("Minimum age can't be higher than maximum age.")
         return self
+
+
+class LocationBody(CamelModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+
+
+class DiscoverCard(CamelModel):
+    user_id: uuid.UUID
+    display_name: str
+    age: int
+    bio: str | None
+    photos: list[str]
+    # Whole km, at least 1. Locations are stored rounded, so this is approximate by design.
+    distance_km: int
+    verified: bool
+    compatibility: int
+    pace_seconds_per_km: int
+    weekly_km: int
+    terrains: list[str]
+    goals: list[str]
+    run_times: list[str]
+
+
+class MatchSummary(CamelModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    display_name: str
+    photo: str | None
+    matched_at: datetime
+
+
+class SwipeResponse(CamelModel):
+    matched: bool
+    match: MatchSummary | None = None

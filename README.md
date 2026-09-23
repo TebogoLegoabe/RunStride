@@ -30,6 +30,9 @@ curl localhost:8000/health      # {"status":"ok"}
 - New migration after changing `backend/app/models.py`:
   `docker compose exec api alembic revision --autogenerate -m "describe change"`
 - Postgres is exposed on host port **5433** (user/password/db: `runstride`).
+- Fill the discover feed with fake runners (development only):
+  `docker compose exec api python -m app.dev_seed` (near your shared location);
+  remove them with `docker compose exec api python -m app.dev_seed --clear`.
 - Uploaded photos are stored in `backend/media/` (git-ignored) for development.
   They are re-encoded on upload, which strips EXIF metadata such as GPS location.
 

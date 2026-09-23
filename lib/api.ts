@@ -5,6 +5,9 @@
 import { Platform } from "react-native";
 import type {
   DatingPreferences,
+  DiscoverCard,
+  MatchSummary,
+  SwipeResult,
   MyProfile,
   Photo,
   RunningProfile,
@@ -148,6 +151,18 @@ export const startIdVerification = (token: string) =>
 export const refreshVerification = (token: string) =>
   apiRequest<VerificationState>("/verification/refresh", { method: "POST", token });
 
-// --- Matching ---
+// --- Discover & matching ---
+// The server rounds this to ~1 km before storing it
+export const updateLocation = (token: string, latitude: number, longitude: number) =>
+  apiRequest<void>("/me/location", { method: "PUT", body: { latitude, longitude }, token });
+
 export const getDiscoverFeed = (token: string) =>
-  apiRequest<import("./types").Profile[]>("/matches/discover", { token });
+  apiRequest<DiscoverCard[]>("/discover", { token });
+
+export const likeRunner = (token: string, userId: string) =>
+  apiRequest<SwipeResult>(`/discover/${userId}/like`, { method: "POST", token });
+
+export const passRunner = (token: string, userId: string) =>
+  apiRequest<SwipeResult>(`/discover/${userId}/pass`, { method: "POST", token });
+
+export const getMatches = (token: string) => apiRequest<MatchSummary[]>("/matches", { token });

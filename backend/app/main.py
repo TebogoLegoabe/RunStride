@@ -11,7 +11,7 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.deps import DbSession
 from app.persona import PersonaError, PersonaNotConfigured
-from app.routers import auth, preferences, profile, users, verification
+from app.routers import auth, discover, preferences, profile, users, verification
 from app.storage import MEDIA_URL_PREFIX
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -62,6 +62,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(profile.router)
 app.include_router(preferences.router)
+app.include_router(discover.router)
 app.include_router(verification.router)
 
 media_dir = Path(get_settings().media_dir)

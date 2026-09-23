@@ -2,8 +2,10 @@ import enum
 import uuid
 from datetime import date, datetime
 
+from geoalchemy2 import Geography
 from sqlalchemy import (
     ARRAY,
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -46,6 +48,11 @@ class User(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Rounded to ~1 km before storing (see routers/discover.py); never shown to other users
+    location: Mapped[object | None] = mapped_column(
+        Geography(geometry_type="POINT", srid=4326, spatial_index=False)
+    )
+    location_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     profile: Mapped["Profile | None"] = relationship(back_populates="user", cascade="all, delete-orphan")
     running_profile: Mapped["RunningProfile | None"] = relationship(cascade="all, delete-orphan")
@@ -128,6 +135,34 @@ class DatingPreferences(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class Swipe(Base):
+    """One user's like or pass on another. Each pair is decided once."""
+
+    __tablename__ = "swipes"
+    __table_args__ = (Index("ix_swipes_target_id", "target_id"),)
+
+    swiper_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    target_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    liked: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Match(Base):
+    """Two users who liked each other. user_a_id < user_b_id so each pair is stored once."""
+
+    __tablename__ = "matches"
+    __table_args__ = (
+        UniqueConstraint("user_a_id", "user_b_id"),
+        CheckConstraint("user_a_id < user_b_id", name="ordered_pair"),
+        Index("ix_matches_user_b_id", "user_b_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_a_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    user_b_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class VerificationInquiry(Base):

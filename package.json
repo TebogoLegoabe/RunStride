@@ -13,6 +13,7 @@
     "@expo/metro-runtime": "~3.2.0",
     "expo": "~51.0.0",
     "expo-image-picker": "~15.1.0",
+    "expo-location": "~17.0.1",
     "expo-router": "~3.5.0",
     "expo-secure-store": "~13.0.2",
     "expo-status-bar": "~1.12.0",
