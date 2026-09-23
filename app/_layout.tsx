@@ -11,6 +11,8 @@ export default function RootLayout() {
         <Stack.Screen name="verify" />
         <Stack.Screen name="profile-setup" />
         <Stack.Screen name="verify-identity" />
+        <Stack.Screen name="running-preferences" />
+        <Stack.Screen name="dating-preferences" />
         <Stack.Screen name="(app)" />
       </Stack>
     </>

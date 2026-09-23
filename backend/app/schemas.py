@@ -1,7 +1,8 @@
 import uuid
 from datetime import date
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
 
 from app.models import VerificationStatus
@@ -41,6 +42,8 @@ class MeResponse(CamelModel):
     # False only in development while ID verification is switched off
     verification_required: bool
     profile_complete: bool
+    has_running_profile: bool
+    has_dating_preferences: bool
 
 
 MIN_AGE = 18
@@ -103,3 +106,40 @@ class VerificationStateResponse(CamelModel):
 
 class VerificationStartResponse(CamelModel):
     verification_url: str
+
+
+Terrain = Literal["road", "trail", "track", "treadmill"]
+Goal = Literal["social", "fitness", "5k", "10k", "half_marathon", "marathon", "ultra"]
+RunTime = Literal["early_morning", "morning", "lunchtime", "evening"]
+Gender = Literal["woman", "man", "non_binary"]
+
+
+def _dedupe(values: list) -> list:
+    return list(dict.fromkeys(values))
+
+
+class RunningProfileBody(CamelModel):
+    # 2:30 to 20:00 min/km
+    pace_seconds_per_km: int = Field(ge=150, le=1200)
+    weekly_km: int = Field(ge=0, le=400)
+    terrains: list[Terrain] = Field(min_length=1)
+    goals: list[Goal] = Field(min_length=1)
+    run_times: list[RunTime] = Field(default_factory=list)
+
+    _dedupe_lists = field_validator("terrains", "goals", "run_times")(_dedupe)
+
+
+class DatingPreferencesBody(CamelModel):
+    gender: Gender
+    interested_in: list[Gender] = Field(min_length=1)
+    age_min: int = Field(ge=18, le=99)
+    age_max: int = Field(ge=18, le=99)
+    max_distance_km: int = Field(ge=1, le=500)
+
+    _dedupe_lists = field_validator("interested_in")(_dedupe)
+
+    @model_validator(mode="after")
+    def age_range_in_order(self) -> "DatingPreferencesBody":
+        if self.age_min > self.age_max:
+            raise ValueError("Minimum age can't be higher than maximum age.")
+        return self

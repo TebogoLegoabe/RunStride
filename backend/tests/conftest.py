@@ -6,6 +6,12 @@ from pathlib import Path
 os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL", "postgresql+psycopg://runstride:runstride@localhost:5433/runstride_test"
 )
+# Tests assume production-like defaults, whatever a developer has in backend/.env
+# (environment variables take priority over the .env file)
+os.environ["REQUIRE_ID_VERIFICATION"] = "true"
+os.environ["PERSONA_API_KEY"] = ""
+os.environ["PERSONA_INQUIRY_TEMPLATE_ID"] = ""
+os.environ["PERSONA_WEBHOOK_SECRET"] = ""
 
 import pytest  # noqa: E402
 from alembic import command  # noqa: E402
@@ -47,7 +53,7 @@ def migrated_db():
 def clean_tables():
     yield
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE users, profiles, profile_photos, otp_codes, verification_inquiries CASCADE"))
+        conn.execute(text("TRUNCATE users, profiles, profile_photos, otp_codes, verification_inquiries, running_profiles, dating_preferences CASCADE"))
 
 
 @pytest.fixture

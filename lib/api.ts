@@ -3,7 +3,13 @@
 // live in one place.
 
 import { Platform } from "react-native";
-import type { MyProfile, Photo, VerificationState } from "./types";
+import type {
+  DatingPreferences,
+  MyProfile,
+  Photo,
+  RunningProfile,
+  VerificationState,
+} from "./types";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -76,12 +82,14 @@ export const getMe = (token: string) =>
 // --- Profile ---
 export type ProfileInput = { displayName: string; birthDate: string; bio: string };
 
-// Resolves to null if the user hasn't created a profile yet
+// For "get my X" endpoints: null means the user hasn't saved one yet
+const nullIfMissing = (e: unknown) => {
+  if (e instanceof ApiError && e.status === 404) return null;
+  throw e;
+};
+
 export const getMyProfile = (token: string) =>
-  apiRequest<MyProfile>("/me/profile", { token }).catch((e) => {
-    if (e instanceof ApiError && e.status === 404) return null;
-    throw e;
-  });
+  apiRequest<MyProfile>("/me/profile", { token }).catch(nullIfMissing);
 
 export const saveMyProfile = (token: string, profile: ProfileInput) =>
   apiRequest<MyProfile>("/me/profile", { method: "PUT", body: profile, token });
@@ -111,6 +119,19 @@ export async function uploadPhoto(token: string, uri: string): Promise<Photo> {
 
 export const deletePhoto = (token: string, photoId: string) =>
   apiRequest<void>(`/me/photos/${photoId}`, { method: "DELETE", token });
+
+// --- Preferences ---
+export const getRunningProfile = (token: string) =>
+  apiRequest<RunningProfile>("/me/running-profile", { token }).catch(nullIfMissing);
+
+export const saveRunningProfile = (token: string, body: RunningProfile) =>
+  apiRequest<RunningProfile>("/me/running-profile", { method: "PUT", body, token });
+
+export const getDatingPreferences = (token: string) =>
+  apiRequest<DatingPreferences>("/me/dating-preferences", { token }).catch(nullIfMissing);
+
+export const saveDatingPreferences = (token: string, body: DatingPreferences) =>
+  apiRequest<DatingPreferences>("/me/dating-preferences", { method: "PUT", body, token });
 
 // --- Verification ---
 export const getVerification = (token: string) =>

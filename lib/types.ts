@@ -1,3 +1,5 @@
+import type { Gender, Goal, RunTime, Terrain } from "./options";
+
 export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
 
 export interface VerificationState {
@@ -12,6 +14,24 @@ export interface Me {
   verificationStatus: VerificationStatus;
   verificationRequired: boolean; // false only in development while ID verification is off
   profileComplete: boolean;
+  hasRunningProfile: boolean;
+  hasDatingPreferences: boolean;
+}
+
+export interface RunningProfile {
+  paceSecondsPerKm: number; // e.g. 330 = 5:30 min/km
+  weeklyKm: number;
+  terrains: Terrain[];
+  goals: Goal[];
+  runTimes: RunTime[];
+}
+
+export interface DatingPreferences {
+  gender: Gender;
+  interestedIn: Gender[];
+  ageMin: number;
+  ageMax: number;
+  maxDistanceKm: number;
 }
 
 export interface Photo {

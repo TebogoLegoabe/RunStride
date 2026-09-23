@@ -14,4 +14,6 @@ def get_me(user: CurrentUser, settings: AppSettings) -> MeResponse:
         verification_status=user.verification_status,
         verification_required=settings.require_id_verification,
         profile_complete=user.profile_complete,
+        has_running_profile=user.running_profile is not None,
+        has_dating_preferences=user.dating_preferences is not None,
     )

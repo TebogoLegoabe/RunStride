@@ -3,6 +3,8 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
+    ARRAY,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -46,6 +48,8 @@ class User(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     profile: Mapped["Profile | None"] = relationship(back_populates="user", cascade="all, delete-orphan")
+    running_profile: Mapped["RunningProfile | None"] = relationship(cascade="all, delete-orphan")
+    dating_preferences: Mapped["DatingPreferences | None"] = relationship(cascade="all, delete-orphan")
 
     @property
     def profile_complete(self) -> bool:
@@ -82,6 +86,48 @@ class ProfilePhoto(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     profile: Mapped[Profile] = relationship(back_populates="photos")
+
+
+class RunningProfile(Base):
+    """How someone runs. Filled in by hand now; Strava can populate it later."""
+
+    __tablename__ = "running_profiles"
+    __table_args__ = (
+        CheckConstraint("pace_seconds_per_km BETWEEN 150 AND 1200", name="pace_range"),
+        CheckConstraint("weekly_km BETWEEN 0 AND 400", name="weekly_km_range"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    # Typical easy-run pace, e.g. 330 = 5:30 min/km
+    pace_seconds_per_km: Mapped[int] = mapped_column(SmallInteger)
+    weekly_km: Mapped[int] = mapped_column(SmallInteger)
+    # Allowed values live in app/schemas.py (Terrain, Goal, RunTime)
+    terrains: Mapped[list[str]] = mapped_column(ARRAY(String(20)))
+    goals: Mapped[list[str]] = mapped_column(ARRAY(String(20)))
+    run_times: Mapped[list[str]] = mapped_column(ARRAY(String(20)))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class DatingPreferences(Base):
+    __tablename__ = "dating_preferences"
+    __table_args__ = (
+        CheckConstraint("age_min >= 18 AND age_max <= 99 AND age_min <= age_max", name="age_range"),
+        CheckConstraint("max_distance_km BETWEEN 1 AND 500", name="distance_range"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    gender: Mapped[str] = mapped_column(String(20))
+    interested_in: Mapped[list[str]] = mapped_column(ARRAY(String(20)))
+    age_min: Mapped[int] = mapped_column(SmallInteger)
+    age_max: Mapped[int] = mapped_column(SmallInteger)
+    max_distance_km: Mapped[int] = mapped_column(SmallInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class VerificationInquiry(Base):
