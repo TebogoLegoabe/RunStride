@@ -329,3 +329,59 @@ class RunDateBody(CamelModel):
     @classmethod
     def blank_note_is_none(cls, v: str | None) -> str | None:
         return (v or "").strip() or None
+
+
+MAX_TRUSTED_CONTACTS = 3
+
+
+class TrustedContactBody(CamelModel):
+    name: str = Field(max_length=60)
+    phone: str = Field(max_length=32)
+
+    @field_validator("name")
+    @classmethod
+    def name_given(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Please enter their name.")
+        return v
+
+
+class TrustedContactOut(CamelModel):
+    id: uuid.UUID
+    name: str
+    phone: str
+
+
+class LocationUpdate(CamelModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    accuracy_m: float | None = Field(default=None, ge=0, le=100_000)
+
+
+class ShareOut(CamelModel):
+    id: uuid.UUID
+    # active / alert / ended / expired
+    status: str
+    url: str
+    started_at: datetime
+    expires_at: datetime
+    alert_at: datetime | None
+    location_at: datetime | None
+
+
+class CheckInBody(CamelModel):
+    outcome: Literal["ok", "problem"]
+
+
+class RunSafetyOut(CamelModel):
+    """Everything the run safety screen needs for one run date."""
+
+    run: RunDateOut
+    other_user_id: uuid.UUID
+    other_name: str
+    share_opens_at: datetime
+    share_closes_at: datetime
+    share: ShareOut | None
+    trusted_contacts: list[TrustedContactOut]
+    check_in: str | None

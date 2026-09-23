@@ -10,12 +10,15 @@ import type {
   MatchSummary,
   Message,
   SwipeResult,
+  TrustedContact,
   ModerationAction,
   MyProfile,
   ReportDetail,
   ReportSummary,
   Photo,
   RunDate,
+  RunSafety,
+  RunShare,
   RunningProfile,
   VerificationState,
 } from "./types";
@@ -226,3 +229,33 @@ export const resolveReport = (
   reportId: string,
   body: { action: ModerationAction; note?: string; suspendDays?: number }
 ) => apiRequest<ReportDetail>(`/admin/reports/${reportId}/resolve`, { method: "POST", body, token });
+
+// --- Run-day safety ---
+export const getRunSafety = (token: string, runDateId: string) =>
+  apiRequest<RunSafety>(`/run-dates/${runDateId}/safety`, { token });
+
+export const addTrustedContact = (token: string, contact: { name: string; phone: string }) =>
+  apiRequest<TrustedContact>("/me/trusted-contacts", { method: "POST", body: contact, token });
+
+export const removeTrustedContact = (token: string, contactId: string) =>
+  apiRequest<void>(`/me/trusted-contacts/${contactId}`, { method: "DELETE", token });
+
+export const startSharing = (token: string, runDateId: string) =>
+  apiRequest<RunShare>(`/run-dates/${runDateId}/share`, { method: "POST", token });
+
+// Exact position, visible only through the share link while sharing
+export const sendShareLocation = (
+  token: string,
+  shareId: string,
+  position: { latitude: number; longitude: number; accuracyM?: number }
+) => apiRequest<void>(`/shares/${shareId}/location`, { method: "PUT", body: position, token });
+
+// The panic button
+export const raiseAlert = (token: string, shareId: string) =>
+  apiRequest<RunShare>(`/shares/${shareId}/alert`, { method: "POST", token });
+
+export const stopSharing = (token: string, shareId: string) =>
+  apiRequest<RunShare>(`/shares/${shareId}/end`, { method: "POST", token });
+
+export const checkInRun = (token: string, runDateId: string, outcome: "ok" | "problem") =>
+  apiRequest<void>(`/run-dates/${runDateId}/check-in`, { method: "POST", body: { outcome }, token });

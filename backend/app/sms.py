@@ -22,3 +22,12 @@ def get_sms_sender() -> SmsSender:
         # Swap in a real provider (Twilio, Clickatell, ...) before deploying.
         raise RuntimeError("No SMS provider configured for this environment")
     return ConsoleSmsSender()
+
+
+def get_optional_sms_sender() -> SmsSender | None:
+    """For messages that must not block the action they belong to (e.g. panic alerts):
+    None when no provider is configured, instead of an error."""
+    try:
+        return get_sms_sender()
+    except RuntimeError:
+        return None

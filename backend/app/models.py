@@ -11,6 +11,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -205,6 +206,58 @@ class RunDate(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancelled_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+
+class TrustedContact(Base):
+    """Someone a runner trusts to follow their location during a run date."""
+
+    __tablename__ = "trusted_contacts"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(60))
+    phone: Mapped[str] = mapped_column(String(20))  # E.164
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class RunShare(Base):
+    """A runner sharing their live location during a run date, via a secret link."""
+
+    __tablename__ = "run_shares"
+    __table_args__ = (
+        Index("ix_run_shares_user_id_run_date_id", "user_id", "run_date_id"),
+        CheckConstraint("status IN ('active', 'alert', 'ended')", name="run_share_status_values"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    run_date_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("run_dates.id", ondelete="CASCADE"))
+    # The secret in the public link. Anyone holding it can see the location, so it's long and random.
+    token: Mapped[str] = mapped_column(String(64), unique=True)
+    # active: sharing. alert: the runner pressed the panic button. ended: stopped.
+    # Past expires_at a share is treated as expired whatever this says.
+    status: Mapped[str] = mapped_column(String(20), default="active", server_default="active")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    alert_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Exact position, kept only while sharing (cleared when it ends, unless there was an alert)
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
+    accuracy_m: Mapped[float | None] = mapped_column(Float)
+    location_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class RunCheckIn(Base):
+    """How a run date went, according to one of the two runners. Private to them."""
+
+    __tablename__ = "run_check_ins"
+    __table_args__ = (CheckConstraint("outcome IN ('ok', 'problem')", name="check_in_outcome_values"),)
+
+    run_date_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("run_dates.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    outcome: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Message(Base):

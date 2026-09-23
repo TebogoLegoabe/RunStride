@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     # Hide someone from Discover once this many different people have open reports against them
     report_auto_hide_threshold: int = 3
 
+    # Base URL for links people outside the app open (run tracking pages). Empty: use the
+    # address the request came in on. Set to the public HTTPS domain in production.
+    public_base_url: str = ""
+
     # Expo web dev server origins
     cors_origins: list[str] = ["http://localhost:8081", "http://localhost:19006"]
 

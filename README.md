@@ -51,6 +51,8 @@ docker compose --profile tunnel up -d tunnel
 docker compose logs tunnel      # copy the https://....trycloudflare.com URL
 ```
 and set `<that URL>/webhooks/persona` as the webhook URL in Persona.
+The same tunnel URL, set as `PUBLIC_BASE_URL` in `backend/.env`, makes run-sharing
+links (`/s/<token>`) open on any phone, not just ones on your Wi-Fi.
 
 ### App
 ```bash

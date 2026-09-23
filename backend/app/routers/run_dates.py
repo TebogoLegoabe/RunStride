@@ -30,13 +30,28 @@ def suggest_run(
     return card
 
 
-@router.post("/run-dates/{run_date_id}/{action}", response_model=RunDateOut)
-def answer_run(
-    run_date_id: uuid.UUID, action: run_dates.RunDateAction, user: CurrentUser, db: DbSession
-) -> RunDate:
+def _answer(db: DbSession, user: CurrentUser, run_date_id: uuid.UUID, action: run_dates.RunDateAction) -> RunDate:
     run = db.get(RunDate, run_date_id)
     match = db.get(Match, run.match_id) if run else None
     if match is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Run not found.")
     active_match(db, user, match.id)  # participants only, and the match must still be on
     return run_dates.respond(db, run, match, user, action)
+
+
+# Three explicit routes rather than /{action}, which would swallow other /run-dates/{id}/... paths
+
+
+@router.post("/run-dates/{run_date_id}/accept", response_model=RunDateOut)
+def accept_run(run_date_id: uuid.UUID, user: CurrentUser, db: DbSession) -> RunDate:
+    return _answer(db, user, run_date_id, "accept")
+
+
+@router.post("/run-dates/{run_date_id}/decline", response_model=RunDateOut)
+def decline_run(run_date_id: uuid.UUID, user: CurrentUser, db: DbSession) -> RunDate:
+    return _answer(db, user, run_date_id, "decline")
+
+
+@router.post("/run-dates/{run_date_id}/cancel", response_model=RunDateOut)
+def cancel_run(run_date_id: uuid.UUID, user: CurrentUser, db: DbSession) -> RunDate:
+    return _answer(db, user, run_date_id, "cancel")

@@ -19,7 +19,9 @@ from app.routers import (
     preferences,
     profile,
     run_dates,
+    run_safety,
     safety,
+    share_page,
     users,
     verification,
 )
@@ -76,6 +78,8 @@ app.include_router(preferences.router)
 app.include_router(discover.router)
 app.include_router(matches.router)
 app.include_router(run_dates.router)
+app.include_router(run_safety.router)
+app.include_router(share_page.router)
 app.include_router(safety.router)
 app.include_router(admin.router)
 app.include_router(verification.router)

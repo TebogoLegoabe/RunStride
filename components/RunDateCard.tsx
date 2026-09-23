@@ -1,5 +1,6 @@
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { useState } from "react";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ApiError, answerRun } from "../lib/api";
 import { formatRunTime } from "../lib/format";
@@ -23,6 +24,7 @@ const STATUS_TEXT: Record<RunDate["status"], string> = {
 };
 
 export function RunDateCard({ run, myId, token, otherName, onUpdated }: Props) {
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mine = run.proposedById === myId;
@@ -58,7 +60,7 @@ export function RunDateCard({ run, myId, token, otherName, onUpdated }: Props) {
       {run.note && <Text style={styles.note}>“{run.note}”</Text>}
 
       <Text style={[styles.status, run.status === "accepted" && styles.statusAccepted]}>
-        {past && live ? "This time has passed" : STATUS_TEXT[run.status]}
+        {past && run.status === "proposed" ? "This time has passed" : STATUS_TEXT[run.status]}
       </Text>
 
       {error && <Text style={styles.error}>{error}</Text>}
@@ -72,6 +74,12 @@ export function RunDateCard({ run, myId, token, otherName, onUpdated }: Props) {
             {busy ? <ActivityIndicator color="#0f172a" /> : <Text style={styles.acceptText}>I'm in!</Text>}
           </Pressable>
         </View>
+      )}
+      {run.status === "accepted" && (
+        <Pressable style={styles.safetyButton} onPress={() => router.push(`/run/${run.id}`)}>
+          <Ionicons name={past ? "chatbubble-ellipses-outline" : "shield-checkmark-outline"} size={16} color="#0f172a" />
+          <Text style={styles.safetyText}>{past ? "How did it go?" : "Run safety & live sharing"}</Text>
+        </Pressable>
       )}
       {!past && live && (mine || run.status === "accepted") && (
         <Pressable style={styles.cancel} onPress={() => act("cancel")} disabled={busy}>
@@ -111,6 +119,17 @@ const styles = StyleSheet.create({
   acceptText: { color: "#0f172a", fontWeight: "700", fontSize: 15 },
   decline: { borderColor: "#475569", borderWidth: 1 },
   declineText: { color: "#cbd5e1", fontSize: 15 },
+  safetyButton: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#4ecdc4",
+    paddingVertical: 10,
+    borderRadius: 999,
+    marginTop: 12,
+  },
+  safetyText: { color: "#0f172a", fontWeight: "700", fontSize: 14 },
   cancel: { marginTop: 10, alignSelf: "flex-start" },
   cancelText: { color: "#94a3b8", fontSize: 13, textDecorationLine: "underline" },
 });

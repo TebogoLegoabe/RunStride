@@ -25,7 +25,7 @@ from sqlalchemy import text  # noqa: E402
 from app.config import get_settings  # noqa: E402
 from app.db import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
-from app.sms import get_sms_sender  # noqa: E402
+from app.sms import get_optional_sms_sender, get_sms_sender  # noqa: E402
 from app.storage import LocalPhotoStorage, get_photo_storage  # noqa: E402
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -56,7 +56,7 @@ def migrated_db():
 def clean_tables():
     yield
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE users, profiles, profile_photos, otp_codes, verification_inquiries, running_profiles, dating_preferences, swipes, matches, messages, blocks, reports, run_dates CASCADE"))
+        conn.execute(text("TRUNCATE users, profiles, profile_photos, otp_codes, verification_inquiries, running_profiles, dating_preferences, swipes, matches, messages, blocks, reports, run_dates, trusted_contacts, run_shares, run_check_ins CASCADE"))
 
 
 @pytest.fixture
@@ -78,6 +78,7 @@ def storage(tmp_path) -> LocalPhotoStorage:
 @pytest.fixture
 def client(sms, settings, storage):
     app.dependency_overrides[get_sms_sender] = lambda: sms
+    app.dependency_overrides[get_optional_sms_sender] = lambda: sms
     app.dependency_overrides[get_settings] = lambda: settings
     app.dependency_overrides[get_photo_storage] = lambda: storage
     with TestClient(app) as c:

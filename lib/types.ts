@@ -147,3 +147,31 @@ export interface MyProfile {
   photos: Photo[];
 }
 
+
+export interface TrustedContact {
+  id: string;
+  name: string;
+  phone: string;
+}
+
+export interface RunShare {
+  id: string;
+  status: "active" | "alert" | "ended" | "expired";
+  url: string; // the private tracking page to send to trusted contacts
+  startedAt: string;
+  expiresAt: string;
+  alertAt: string | null;
+  locationAt: string | null;
+}
+
+// Everything the run safety screen needs for one run
+export interface RunSafety {
+  run: RunDate;
+  otherUserId: string;
+  otherName: string;
+  shareOpensAt: string;
+  shareClosesAt: string;
+  share: RunShare | null;
+  trustedContacts: TrustedContact[];
+  checkIn: "ok" | "problem" | null;
+}
