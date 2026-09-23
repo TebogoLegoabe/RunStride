@@ -26,6 +26,18 @@ class Settings(BaseSettings):
     max_photos: int = 6
     max_photo_bytes: int = 10 * 1024 * 1024
 
+    # Persona ID verification. Sandbox and production use the same API; the key decides which.
+    persona_api_key: str = ""
+    persona_inquiry_template_id: str = ""
+    persona_webhook_secret: str = ""
+    persona_api_base_url: str = "https://api.withpersona.com/api/v1"
+    persona_api_version: str = "2023-01-05"
+    # Development only: let users into the app without ID verification (while Persona
+    # isn't set up yet). Can't be turned off outside development.
+    require_id_verification: bool = True
+    # Declined/failed inquiries allowed before the user has to contact support
+    max_verification_attempts: int = 3
+
     # Expo web dev server origins
     cors_origins: list[str] = ["http://localhost:8081", "http://localhost:19006"]
 
@@ -36,6 +48,8 @@ class Settings(BaseSettings):
     def model_post_init(self, __context) -> None:
         if not self.is_development and self.secret_key == DEV_SECRET_KEY:
             raise ValueError("SECRET_KEY must be set outside development")
+        if not self.is_development and not self.require_id_verification:
+            raise ValueError("REQUIRE_ID_VERIFICATION can only be turned off in development")
 
 
 @lru_cache

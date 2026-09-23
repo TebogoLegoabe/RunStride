@@ -1,7 +1,8 @@
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ApiError, sendOtp, verifyOtp } from "../lib/api";
+import { ApiError, getMe, sendOtp, verifyOtp } from "../lib/api";
+import { routeFor } from "../lib/routing";
 import { saveToken } from "../lib/session";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
@@ -22,7 +23,7 @@ export default function Verify() {
     try {
       const res = await verifyOtp(phone, code);
       await saveToken(res.token);
-      router.replace(res.profileComplete ? "/(app)" : "/profile-setup");
+      router.replace(routeFor(await getMe(res.token)));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
       setCode("");

@@ -10,7 +10,8 @@ from sqlalchemy import text
 
 from app.config import get_settings
 from app.deps import DbSession
-from app.routers import auth, profile, users
+from app.persona import PersonaError, PersonaNotConfigured
+from app.routers import auth, profile, users, verification
 from app.storage import MEDIA_URL_PREFIX
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -41,9 +42,26 @@ def jsonable_errors(errors) -> list[dict]:
     return [{"loc": list(e["loc"]), "msg": e["msg"], "type": e["type"]} for e in errors]
 
 
+@app.exception_handler(PersonaNotConfigured)
+def persona_not_configured(request: Request, exc: PersonaNotConfigured) -> JSONResponse:
+    logging.getLogger("runstride.persona").error("Persona is not configured: %s", exc)
+    return JSONResponse(status_code=503, content={"detail": "ID verification isn't set up yet."})
+
+
+@app.exception_handler(PersonaError)
+def persona_error(request: Request, exc: PersonaError) -> JSONResponse:
+    # 502 also tells Persona to retry a webhook delivery later
+    logging.getLogger("runstride.persona").error("Persona request failed: %s", exc)
+    return JSONResponse(
+        status_code=502,
+        content={"detail": "ID verification is temporarily unavailable. Please try again shortly."},
+    )
+
+
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(profile.router)
+app.include_router(verification.router)
 
 media_dir = Path(get_settings().media_dir)
 media_dir.mkdir(parents=True, exist_ok=True)

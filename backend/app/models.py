@@ -84,6 +84,23 @@ class ProfilePhoto(Base):
     profile: Mapped[Profile] = relationship(back_populates="photos")
 
 
+class VerificationInquiry(Base):
+    """One attempt at ID verification with the provider (Persona)."""
+
+    __tablename__ = "verification_inquiries"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    provider: Mapped[str] = mapped_column(String(20))
+    provider_inquiry_id: Mapped[str] = mapped_column(String(64), unique=True)
+    # The provider's own status (e.g. Persona: created, pending, completed, approved, declined...)
+    provider_status: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class OtpCode(Base):
     __tablename__ = "otp_codes"
     __table_args__ = (Index("ix_otp_codes_phone_created_at", "phone", "created_at"),)

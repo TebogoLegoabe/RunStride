@@ -1,9 +1,16 @@
 export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
 
+export interface VerificationState {
+  status: VerificationStatus;
+  attemptsRemaining: number;
+  canStart: boolean; // a new attempt, or resuming an unfinished one
+}
+
 export interface Me {
   id: string;
   phone: string;
   verificationStatus: VerificationStatus;
+  verificationRequired: boolean; // false only in development while ID verification is off
   profileComplete: boolean;
 }
 

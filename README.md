@@ -33,6 +33,19 @@ curl localhost:8000/health      # {"status":"ok"}
 - Uploaded photos are stored in `backend/media/` (git-ignored) for development.
   They are re-encoded on upload, which strips EXIF metadata such as GPS location.
 
+### ID verification (Persona)
+Fill in the `PERSONA_*` values in `backend/.env` (sandbox keys for development),
+then `docker compose up -d`. Without them, the verification endpoints return 503.
+
+The app gets results two ways: it asks the API to check with Persona whenever
+the user returns from the verification flow, and Persona sends webhooks to
+`POST /webhooks/persona`. Webhooks need a public URL; for local testing:
+```bash
+docker compose --profile tunnel up -d tunnel
+docker compose logs tunnel      # copy the https://....trycloudflare.com URL
+```
+and set `<that URL>/webhooks/persona` as the webhook URL in Persona.
+
 ### App
 ```bash
 npm install

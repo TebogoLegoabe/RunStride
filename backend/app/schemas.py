@@ -38,6 +38,8 @@ class MeResponse(CamelModel):
     id: uuid.UUID
     phone: str
     verification_status: VerificationStatus
+    # False only in development while ID verification is switched off
+    verification_required: bool
     profile_complete: bool
 
 
@@ -90,3 +92,14 @@ class ProfileResponse(CamelModel):
     age: int
     bio: str | None
     photos: list[PhotoResponse]
+
+
+class VerificationStateResponse(CamelModel):
+    status: VerificationStatus
+    attempts_remaining: int
+    # True when the user can open the verification flow (new attempt or resume)
+    can_start: bool
+
+
+class VerificationStartResponse(CamelModel):
+    verification_url: str

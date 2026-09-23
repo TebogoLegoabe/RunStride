@@ -10,6 +10,7 @@ export default function RootLayout() {
         <Stack.Screen name="signup" />
         <Stack.Screen name="verify" />
         <Stack.Screen name="profile-setup" />
+        <Stack.Screen name="verify-identity" />
         <Stack.Screen name="(app)" />
       </Stack>
     </>

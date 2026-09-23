@@ -48,6 +48,7 @@ def test_verify_creates_user_and_returns_token(client, sms, db):
         "id": str(user.id),
         "phone": PHONE_E164,
         "verificationStatus": "unverified",
+        "verificationRequired": True,
         "profileComplete": False,
     }
 

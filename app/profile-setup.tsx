@@ -11,7 +11,16 @@ import {
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { ApiError, deletePhoto, getMyProfile, mediaUrl, saveMyProfile, uploadPhoto } from "../lib/api";
+import {
+  ApiError,
+  deletePhoto,
+  getMe,
+  getMyProfile,
+  mediaUrl,
+  saveMyProfile,
+  uploadPhoto,
+} from "../lib/api";
+import { routeFor } from "../lib/routing";
 import { getToken } from "../lib/session";
 import type { Photo } from "../lib/types";
 
@@ -138,8 +147,7 @@ export default function ProfileSetup() {
         const photo = await uploadPhoto(token, slot.uri);
         setSlots((current) => current.map((s) => (s.key === slot.key ? { ...s, photo } : s)));
       }
-      // TODO: next step is ID verification (Phase 2) before entering the main app
-      router.replace("/(app)");
+      router.replace(routeFor(await getMe(token)));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     } finally {

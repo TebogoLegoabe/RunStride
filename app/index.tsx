@@ -1,8 +1,25 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { useEffect } from "react";
 import { useRouter } from "expo-router";
+import { ApiError, getMe } from "../lib/api";
+import { routeFor } from "../lib/routing";
+import { clearToken, getToken } from "../lib/session";
 
 export default function Welcome() {
   const router = useRouter();
+
+  // Already signed in: skip straight to wherever onboarding left off
+  useEffect(() => {
+    (async () => {
+      const token = await getToken();
+      if (!token) return;
+      try {
+        router.replace(routeFor(await getMe(token)));
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 401) await clearToken();
+      }
+    })();
+  }, [router]);
 
   return (
     <View style={styles.container}>

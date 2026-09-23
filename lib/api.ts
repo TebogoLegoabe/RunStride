@@ -3,7 +3,7 @@
 // live in one place.
 
 import { Platform } from "react-native";
-import type { MyProfile, Photo } from "./types";
+import type { MyProfile, Photo, VerificationState } from "./types";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -113,11 +113,19 @@ export const deletePhoto = (token: string, photoId: string) =>
   apiRequest<void>(`/me/photos/${photoId}`, { method: "DELETE", token });
 
 // --- Verification ---
+export const getVerification = (token: string) =>
+  apiRequest<VerificationState>("/verification", { token });
+
+// Returns a single-use link to Persona's hosted ID + selfie flow
 export const startIdVerification = (token: string) =>
   apiRequest<{ verificationUrl: string }>("/verification/start", {
     method: "POST",
     token,
   });
+
+// Asks the backend to fetch the latest result from Persona
+export const refreshVerification = (token: string) =>
+  apiRequest<VerificationState>("/verification/refresh", { method: "POST", token });
 
 // --- Matching ---
 export const getDiscoverFeed = (token: string) =>
