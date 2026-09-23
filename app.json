@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "RunStride",
+    "slug": "runstride",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "runstride",
+    "splash": {
+      "backgroundColor": "#0f172a"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tebogolegoabe.runstride"
+    },
+    "android": {
+      "package": "com.tebogolegoabe.runstride"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": ["expo-router"]
+  }
+}
