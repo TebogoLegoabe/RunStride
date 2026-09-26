@@ -18,6 +18,18 @@ class Settings(BaseSettings):
     otp_resend_cooldown_seconds: int = 30
     otp_max_sends_per_hour: int = 5
 
+    # Guards against SMS pumping (bots requesting codes to run up the SMS bill)
+    otp_max_sends_per_ip_per_hour: int = 10
+    otp_max_sends_per_day: int = 2000  # across everyone; raise as real usage grows
+    # Countries (ISO codes) people can sign up from
+    sms_allowed_regions: list[str] = ["ZA"]
+
+    # SMS delivery: "console" (development: printed to the logs) or "bulksms"
+    sms_provider: str = "console"
+    bulksms_token_id: str = ""
+    bulksms_token_secret: str = ""
+    bulksms_base_url: str = "https://api.bulksms.com/v1"
+
     # Numbers typed without a country code ("082 123 4567") are read as South African.
     default_phone_region: str = "ZA"
 

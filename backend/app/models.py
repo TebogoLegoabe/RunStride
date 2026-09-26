@@ -338,12 +338,17 @@ class VerificationInquiry(Base):
 
 class OtpCode(Base):
     __tablename__ = "otp_codes"
-    __table_args__ = (Index("ix_otp_codes_phone_created_at", "phone", "created_at"),)
+    __table_args__ = (
+        Index("ix_otp_codes_phone_created_at", "phone", "created_at"),
+        Index("ix_otp_codes_request_ip_created_at", "request_ip", "created_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     phone: Mapped[str] = mapped_column(String(20))
     # HMAC of the code, never the code itself
     code_hash: Mapped[str] = mapped_column(String(64))
+    # Where the request came from, for per-address rate limiting
+    request_ip: Mapped[str | None] = mapped_column(String(45))
     attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

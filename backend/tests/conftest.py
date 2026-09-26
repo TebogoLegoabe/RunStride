@@ -14,6 +14,8 @@ os.environ["REQUIRE_ID_VERIFICATION"] = "true"
 os.environ["PERSONA_API_KEY"] = ""
 os.environ["PERSONA_INQUIRY_TEMPLATE_ID"] = ""
 os.environ["PERSONA_WEBHOOK_SECRET"] = ""
+# Never send real texts from tests
+os.environ["SMS_PROVIDER"] = "console"
 
 import pytest  # noqa: E402
 from PIL import Image  # noqa: E402

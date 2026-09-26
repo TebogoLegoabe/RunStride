@@ -54,6 +54,14 @@ and set `<that URL>/webhooks/persona` as the webhook URL in Persona.
 The same tunnel URL, set as `PUBLIC_BASE_URL` in `backend/.env`, makes run-sharing
 links (`/s/<token>`) open on any phone, not just ones on your Wi-Fi.
 
+### SMS (BulkSMS)
+In development, texts (sign-in codes, panic alerts) are printed to the API logs.
+To send real SMS, create an API token in BulkSMS (Settings -> API Tokens), then in
+`backend/.env` set `SMS_PROVIDER=bulksms`, `BULKSMS_TOKEN_ID` and `BULKSMS_TOKEN_SECRET`,
+and run `docker compose up -d`. Sign-in codes are limited to South African numbers,
+10 per network address per hour, and 2000 per day overall (see `backend/app/config.py`)
+to stop bots running up the SMS bill.
+
 ### App
 ```bash
 npm install
