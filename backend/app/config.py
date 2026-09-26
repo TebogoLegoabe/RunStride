@@ -33,8 +33,17 @@ class Settings(BaseSettings):
     # Numbers typed without a country code ("082 123 4567") are read as South African.
     default_phone_region: str = "ZA"
 
-    # Local photo storage for development; swap for S3/Cloudinary before launch
+    # Photo storage: "local" (files in media_dir, served by the API; development only)
+    # or "s3" (any S3-compatible service: Cloudflare R2, AWS S3, MinIO)
+    photo_storage: str = "local"
     media_dir: str = "media"
+    s3_endpoint_url: str = ""  # R2: https://<account id>.r2.cloudflarestorage.com. Empty for AWS.
+    s3_region: str = "auto"  # "auto" for R2; e.g. "af-south-1" for AWS Cape Town
+    s3_bucket: str = ""
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+    # Where browsers fetch photos from, e.g. https://photos.runstride.app or an r2.dev URL
+    s3_public_base_url: str = ""
     max_photos: int = 6
     max_photo_bytes: int = 10 * 1024 * 1024
 

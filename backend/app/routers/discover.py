@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
 from geoalchemy2 import WKTElement
-from sqlalchemy import exists, func, select
+from sqlalchemy import any_, exists, func, literal, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, aliased, selectinload
 
@@ -78,7 +78,7 @@ def _candidates(
             exists().where(ProfilePhoto.user_id == User.id),
             # Gender, both ways
             DatingPreferences.gender.in_(prefs.interested_in),
-            DatingPreferences.interested_in.any(prefs.gender),
+            literal(prefs.gender) == any_(DatingPreferences.interested_in),
             # Age, both ways
             their_age.between(prefs.age_min, prefs.age_max),
             DatingPreferences.age_min <= my_age,

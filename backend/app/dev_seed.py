@@ -35,7 +35,7 @@ from app.models import (
 )
 from app.realtime import publish_message
 from app.security import utcnow
-from app.storage import LocalPhotoStorage
+from app.storage import get_photo_storage
 
 # Real South African numbers never start with 0 after +27, so these can't collide with real users
 SEED_PHONE_PREFIX = "+270000"
@@ -102,7 +102,7 @@ def pick_interested_in(gender: str) -> list[str]:
 
 
 def seed(count: int, center: tuple[float, float]) -> None:
-    storage = LocalPhotoStorage(get_settings().media_dir)
+    storage = get_photo_storage()
     today = date.today()
     with SessionLocal() as db:
         existing = db.scalars(select(User.phone).where(User.phone.like(f"{SEED_PHONE_PREFIX}%"))).all()
@@ -155,7 +155,7 @@ def seed(count: int, center: tuple[float, float]) -> None:
 
 
 def clear() -> None:
-    storage = LocalPhotoStorage(get_settings().media_dir)
+    storage = get_photo_storage()
     with SessionLocal() as db:
         seed_users = select(User.id).where(User.phone.like(f"{SEED_PHONE_PREFIX}%"))
         urls = db.scalars(select(ProfilePhoto.url).where(ProfilePhoto.user_id.in_(seed_users))).all()

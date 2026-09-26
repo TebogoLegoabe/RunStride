@@ -16,6 +16,8 @@ os.environ["PERSONA_INQUIRY_TEMPLATE_ID"] = ""
 os.environ["PERSONA_WEBHOOK_SECRET"] = ""
 # Never send real texts from tests
 os.environ["SMS_PROVIDER"] = "console"
+# Tests use temporary local folders (or a simulated S3) for photos
+os.environ["PHOTO_STORAGE"] = "local"
 
 import pytest  # noqa: E402
 from PIL import Image  # noqa: E402

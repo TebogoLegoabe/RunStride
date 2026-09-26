@@ -36,8 +36,8 @@ curl localhost:8000/health      # {"status":"ok"}
 - Make an account a moderator (shows the Moderation tab):
   `docker compose exec api python -m app.admin_cli grant 0821234567`
   (`revoke` to remove, `list` to see all admins).
-- Uploaded photos are stored in `backend/media/` (git-ignored) for development.
-  They are re-encoded on upload, which strips EXIF metadata such as GPS location.
+- Photos are re-encoded on upload, which strips EXIF metadata such as GPS location.
+  In development they're stored in `backend/media/` (git-ignored); see *Photo storage* below.
 
 ### ID verification (Persona)
 Fill in the `PERSONA_*` values in `backend/.env` (sandbox keys for development),
@@ -53,6 +53,20 @@ docker compose logs tunnel      # copy the https://....trycloudflare.com URL
 and set `<that URL>/webhooks/persona` as the webhook URL in Persona.
 The same tunnel URL, set as `PUBLIC_BASE_URL` in `backend/.env`, makes run-sharing
 links (`/s/<token>`) open on any phone, not just ones on your Wi-Fi.
+
+### Photo storage (Cloudflare R2)
+`PHOTO_STORAGE=local` keeps photos in `backend/media/` (development only). For real
+storage, any S3-compatible bucket works; Cloudflare R2 is the default choice (no fees
+for downloads, which matter for a photo-heavy app):
+1. Cloudflare dashboard -> R2 -> create a bucket, e.g. `runstride-photos`.
+2. In the bucket's Settings, turn on public access: connect a custom domain (for
+   production) or enable the r2.dev URL (fine for testing; it's rate-limited).
+3. R2 -> Manage API tokens -> create a token with Object Read & Write on that bucket.
+4. In `backend/.env`: `PHOTO_STORAGE=s3`, `S3_ENDPOINT_URL=https://<account id>.r2.cloudflarestorage.com`,
+   `S3_REGION=auto`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and
+   `S3_PUBLIC_BASE_URL` (the custom domain or r2.dev URL). Then `docker compose up -d`.
+
+Photos uploaded while using local storage stay on disk; they aren't moved to the bucket.
 
 ### SMS (BulkSMS)
 In development, texts (sign-in codes, panic alerts) are printed to the API logs.

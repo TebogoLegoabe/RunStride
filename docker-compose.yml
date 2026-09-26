@@ -46,5 +46,14 @@ services:
     depends_on:
       - api
 
+  # Optional local S3-compatible server, to try PHOTO_STORAGE=s3 without a cloud account.
+  # Start with:  docker compose --profile s3 up -d s3
+  # Data lives in memory: it's for trying things out, not keeping photos.
+  s3:
+    image: motoserver/moto:latest
+    profiles: ["s3"]
+    ports:
+      - "9000:5000"
+
 volumes:
   pgdata:
