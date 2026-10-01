@@ -5,6 +5,7 @@ import * as WebBrowser from "expo-web-browser";
 import { ApiError, refreshVerification, startIdVerification } from "../lib/api";
 import { getToken } from "../lib/session";
 import type { VerificationState } from "../lib/types";
+import { colors } from "../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 
@@ -81,7 +82,7 @@ export default function VerifyIdentity() {
   if (!state) {
     return (
       <View style={[styles.container, styles.centered]}>
-        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color="#4ecdc4" />}
+        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color={colors.primary} />}
       </View>
     );
   }
@@ -138,7 +139,7 @@ export default function VerifyIdentity() {
           disabled={busy}
         >
           {busy ? (
-            <ActivityIndicator color="#0f172a" />
+            <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <Text style={styles.primaryButtonText}>{content.action}</Text>
           )}
@@ -157,7 +158,7 @@ export default function VerifyIdentity() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: colors.bg,
     padding: 24,
     justifyContent: "center",
     width: "100%",
@@ -165,18 +166,18 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   centered: { alignItems: "center" },
-  title: { fontSize: 26, fontWeight: "700", color: "#ffffff", marginBottom: 12 },
-  body: { fontSize: 15, lineHeight: 22, color: "#cbd5e1", marginBottom: 20 },
-  privacy: { fontSize: 13, lineHeight: 19, color: "#94a3b8", marginBottom: 32 },
-  error: { color: "#f87171", fontSize: 14, marginBottom: 16, textAlign: "center" },
+  title: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 12 },
+  body: { fontSize: 15, lineHeight: 22, color: colors.text, marginBottom: 20 },
+  privacy: { fontSize: 13, lineHeight: 19, color: colors.textMuted, marginBottom: 32 },
+  error: { color: colors.dangerText, fontSize: 14, marginBottom: 16, textAlign: "center" },
   primaryButton: {
-    backgroundColor: "#4ecdc4",
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: "center",
   },
   buttonDisabled: { opacity: 0.5 },
-  primaryButtonText: { color: "#0f172a", fontSize: 16, fontWeight: "600" },
+  primaryButtonText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
   linkButton: { marginTop: 20, alignItems: "center" },
-  linkText: { color: "#94a3b8", fontSize: 14 },
+  linkText: { color: colors.textMuted, fontSize: 14 },
 });

@@ -1,4 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { colors } from "../lib/theme";
 
 type Props<T extends string> = {
   options: readonly { value: T; label: string }[];
@@ -46,10 +47,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#334155",
-    backgroundColor: "#1e293b",
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
-  chipOn: { backgroundColor: "#4ecdc4", borderColor: "#4ecdc4" },
-  label: { color: "#cbd5e1", fontSize: 14 },
-  labelOn: { color: "#0f172a", fontWeight: "600" },
+  chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  label: { color: colors.text, fontSize: 14 },
+  labelOn: { color: colors.onPrimary, fontWeight: "600" },
 });

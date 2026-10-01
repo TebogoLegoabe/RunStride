@@ -30,6 +30,7 @@ import { formatClock, formatRunTime } from "../../../lib/format";
 import type { RunSafety, RunShare } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { SafetySheet } from "../../../components/SafetySheet";
+import { colors } from "../../../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const MAX_CONTACTS = 3;
@@ -130,7 +131,7 @@ export default function RunSafetyScreen() {
   if (!data) {
     return (
       <View style={[styles.container, styles.centered]}>
-        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color="#4ecdc4" />}
+        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color={colors.primary} />}
       </View>
     );
   }
@@ -202,7 +203,7 @@ export default function RunSafetyScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Pressable onPress={() => router.back()} style={styles.back} accessibilityLabel="Back">
-        <Ionicons name="chevron-back" size={24} color="#e2e8f0" />
+        <Ionicons name="chevron-back" size={24} color={colors.textBright} />
         <Text style={styles.backText}>Chat</Text>
       </Pressable>
 
@@ -240,7 +241,7 @@ export default function RunSafetyScreen() {
             </Pressable>
             {share!.status !== "alert" && (
               <Pressable style={styles.panicButton} onPress={() => setConfirmAlert(true)} disabled={busy}>
-                <Ionicons name="alert-circle" size={22} color="#ffffff" />
+                <Ionicons name="alert-circle" size={22} color={colors.heading} />
                 <Text style={styles.panicText}>I need help</Text>
               </Pressable>
             )}
@@ -271,7 +272,7 @@ export default function RunSafetyScreen() {
             </Text>
             <Pressable style={styles.primaryButton} onPress={begin} disabled={busy}>
               {busy ? (
-                <ActivityIndicator color="#0f172a" />
+                <ActivityIndicator color={colors.onPrimary} />
               ) : (
                 <Text style={styles.primaryText}>Start sharing my location</Text>
               )}
@@ -336,7 +337,7 @@ export default function RunSafetyScreen() {
               <Text style={styles.contactPhone}>{c.phone}</Text>
             </View>
             <Pressable onPress={() => removeContact(c.id)} disabled={busy} accessibilityLabel={`Remove ${c.name}`}>
-              <Ionicons name="close-circle" size={22} color="#64748b" />
+              <Ionicons name="close-circle" size={22} color={colors.textFaint} />
             </Pressable>
           </View>
         ))}
@@ -348,7 +349,7 @@ export default function RunSafetyScreen() {
             <TextInput
               style={styles.input}
               placeholder="Name, e.g. Mom"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.textFaint}
               value={contactName}
               onChangeText={setContactName}
               maxLength={60}
@@ -356,7 +357,7 @@ export default function RunSafetyScreen() {
             <TextInput
               style={styles.input}
               placeholder="Phone number"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.textFaint}
               keyboardType="phone-pad"
               value={contactPhone}
               onChangeText={setContactPhone}
@@ -385,7 +386,7 @@ export default function RunSafetyScreen() {
                 : "You have no trusted contacts, so nobody will be texted. The tracking page will show you need help. If you're in danger, call 10111 or 112 now."}
             </Text>
             <Pressable style={styles.panicButton} onPress={panic} disabled={busy}>
-              {busy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.panicText}>Send alert</Text>}
+              {busy ? <ActivityIndicator color={colors.heading} /> : <Text style={styles.panicText}>Send alert</Text>}
             </Pressable>
             <Pressable style={styles.cancelButton} onPress={() => setConfirmAlert(false)}>
               <Text style={styles.cancelText}>Cancel</Text>
@@ -410,89 +411,89 @@ export default function RunSafetyScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a" },
+  container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
   content: { padding: 16, paddingTop: 44, paddingBottom: 48, maxWidth: 560, width: "100%", alignSelf: "center" },
   back: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  backText: { color: "#e2e8f0", fontSize: 16 },
-  title: { color: "#ffffff", fontSize: 24, fontWeight: "700" },
-  subtitle: { color: "#94a3b8", fontSize: 15, marginTop: 4 },
-  section: { color: "#ffffff", fontSize: 17, fontWeight: "700", marginTop: 24, marginBottom: 8 },
-  box: { backgroundColor: "#1e293b", borderRadius: 14, padding: 14 },
-  alertBox: { borderColor: "#ef4444", borderWidth: 2 },
-  body: { color: "#cbd5e1", fontSize: 15, lineHeight: 22 },
-  alertText: { color: "#fecaca", fontSize: 15, lineHeight: 22, fontWeight: "600" },
-  liveDot: { color: "#4ecdc4" },
-  warning: { color: "#fbbf24", fontSize: 14, marginTop: 10 },
-  error: { color: "#f87171", fontSize: 14, marginTop: 10 },
-  label: { color: "#94a3b8", fontSize: 13, marginBottom: 4 },
-  link: { color: "#4ecdc4", fontSize: 14 },
+  backText: { color: colors.textBright, fontSize: 16 },
+  title: { color: colors.heading, fontSize: 24, fontWeight: "700" },
+  subtitle: { color: colors.textMuted, fontSize: 15, marginTop: 4 },
+  section: { color: colors.heading, fontSize: 17, fontWeight: "700", marginTop: 24, marginBottom: 8 },
+  box: { backgroundColor: colors.surface, borderRadius: 14, padding: 14 },
+  alertBox: { borderColor: colors.danger, borderWidth: 2 },
+  body: { color: colors.text, fontSize: 15, lineHeight: 22 },
+  alertText: { color: colors.dangerSoft, fontSize: 15, lineHeight: 22, fontWeight: "600" },
+  liveDot: { color: colors.primary },
+  warning: { color: colors.warningText, fontSize: 14, marginTop: 10 },
+  error: { color: colors.dangerText, fontSize: 14, marginTop: 10 },
+  label: { color: colors.textMuted, fontSize: 13, marginBottom: 4 },
+  link: { color: colors.primary, fontSize: 14 },
   fallback: { marginTop: 12 },
-  note: { color: "#64748b", fontSize: 12, marginTop: 20, textAlign: "center" },
+  note: { color: colors.textFaint, fontSize: 12, marginTop: 20, textAlign: "center" },
   primaryButton: {
-    backgroundColor: "#4ecdc4",
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: "center",
     marginTop: 14,
   },
-  primaryText: { color: "#0f172a", fontSize: 16, fontWeight: "700" },
+  primaryText: { color: colors.onPrimary, fontSize: 16, fontWeight: "700" },
   outlineButton: {
-    borderColor: "#4ecdc4",
+    borderColor: colors.primary,
     borderWidth: 1,
     paddingVertical: 12,
     borderRadius: 999,
     alignItems: "center",
     marginTop: 12,
   },
-  outlineText: { color: "#4ecdc4", fontSize: 15, fontWeight: "600" },
+  outlineText: { color: colors.primary, fontSize: 15, fontWeight: "600" },
   panicButton: {
     flexDirection: "row",
     gap: 8,
-    backgroundColor: "#ef4444",
+    backgroundColor: colors.danger,
     paddingVertical: 16,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 12,
   },
-  panicText: { color: "#ffffff", fontSize: 17, fontWeight: "800" },
+  panicText: { color: colors.heading, fontSize: 17, fontWeight: "800" },
   callRow: { flexDirection: "row", gap: 10, marginTop: 12 },
   callButton: {
     flex: 1,
-    borderColor: "#ef4444",
+    borderColor: colors.danger,
     borderWidth: 1,
     paddingVertical: 11,
     borderRadius: 999,
     alignItems: "center",
   },
-  callText: { color: "#f87171", fontSize: 15, fontWeight: "600" },
+  callText: { color: colors.dangerText, fontSize: 15, fontWeight: "600" },
   safeButton: { paddingVertical: 12, alignItems: "center", marginTop: 8 },
-  safeText: { color: "#94a3b8", fontSize: 15, textDecorationLine: "underline" },
-  okButton: { flex: 1, backgroundColor: "#4ecdc4", paddingVertical: 12, borderRadius: 999, alignItems: "center" },
-  okText: { color: "#0f172a", fontSize: 15, fontWeight: "700" },
+  safeText: { color: colors.textMuted, fontSize: 15, textDecorationLine: "underline" },
+  okButton: { flex: 1, backgroundColor: colors.primary, paddingVertical: 12, borderRadius: 999, alignItems: "center" },
+  okText: { color: colors.onPrimary, fontSize: 15, fontWeight: "700" },
   problemButton: {
     flex: 1,
-    borderColor: "#f87171",
+    borderColor: colors.dangerText,
     borderWidth: 1,
     paddingVertical: 12,
     borderRadius: 999,
     alignItems: "center",
   },
-  problemText: { color: "#f87171", fontSize: 15, fontWeight: "600" },
+  problemText: { color: colors.dangerText, fontSize: 15, fontWeight: "600" },
   contactRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 10,
-    borderBottomColor: "#334155",
+    borderBottomColor: colors.border,
     borderBottomWidth: 1,
   },
   contactText: { flex: 1 },
-  contactName: { color: "#ffffff", fontSize: 15, fontWeight: "600" },
-  contactPhone: { color: "#94a3b8", fontSize: 13 },
+  contactName: { color: colors.heading, fontSize: 15, fontWeight: "600" },
+  contactPhone: { color: colors.textMuted, fontSize: 13 },
   input: {
-    backgroundColor: "#0f172a",
-    color: "#ffffff",
+    backgroundColor: colors.bg,
+    color: colors.heading,
     borderRadius: 12,
     padding: 13,
     fontSize: 15,
@@ -500,13 +501,13 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(2, 6, 23, 0.85)",
+    backgroundColor: colors.backdropStrong,
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
   },
-  modal: { backgroundColor: "#1e293b", borderRadius: 20, padding: 22, width: "100%", maxWidth: 400 },
-  modalTitle: { color: "#ffffff", fontSize: 20, fontWeight: "700", marginBottom: 10 },
+  modal: { backgroundColor: colors.surface, borderRadius: 20, padding: 22, width: "100%", maxWidth: 400 },
+  modalTitle: { color: colors.heading, fontSize: 20, fontWeight: "700", marginBottom: 10 },
   cancelButton: { paddingVertical: 12, alignItems: "center", marginTop: 6 },
-  cancelText: { color: "#94a3b8", fontSize: 15 },
+  cancelText: { color: colors.textMuted, fontSize: 15 },
 });

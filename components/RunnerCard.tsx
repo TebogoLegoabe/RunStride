@@ -5,6 +5,7 @@ import { mediaUrl } from "../lib/api";
 import { formatPace, labelFor } from "../lib/format";
 import { GOALS, RUN_TIMES, TERRAINS } from "../lib/options";
 import type { DiscoverCard, RunningProfile } from "../lib/types";
+import { colors } from "../lib/theme";
 
 type Props = {
   card: DiscoverCard;
@@ -61,7 +62,7 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
             onPress={onOptions}
             accessibilityLabel={`Report or block ${card.displayName}`}
           >
-            <Ionicons name="ellipsis-horizontal" size={20} color="#ffffff" />
+            <Ionicons name="ellipsis-horizontal" size={20} color={colors.heading} />
           </Pressable>
         )}
         <View style={styles.photoFooter}>
@@ -105,13 +106,13 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     borderRadius: 20,
     overflow: "hidden",
-    backgroundColor: "#1e293b",
+    backgroundColor: colors.surface,
   },
-  photoWrap: { width: "100%", aspectRatio: 4 / 5, backgroundColor: "#334155" },
+  photoWrap: { width: "100%", aspectRatio: 4 / 5, backgroundColor: colors.border },
   photo: { width: "100%", height: "100%" },
   photoBars: { position: "absolute", top: 10, left: 10, right: 10, flexDirection: "row", gap: 4 },
-  photoBar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.35)" },
-  photoBarOn: { backgroundColor: "#ffffff" },
+  photoBar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.photoBarDim },
+  photoBarOn: { backgroundColor: colors.heading },
   optionsButton: {
     position: "absolute",
     top: 22,
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    backgroundColor: colors.scrimStrong,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -130,13 +131,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     padding: 16,
     paddingTop: 40,
-    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    backgroundColor: colors.scrim,
   },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
-  name: { color: "#ffffff", fontSize: 26, fontWeight: "700" },
+  name: { color: colors.heading, fontSize: 26, fontWeight: "700" },
   verified: {
-    color: "#0f172a",
-    backgroundColor: "#4ecdc4",
+    color: colors.onPrimary,
+    backgroundColor: colors.primary,
     fontSize: 12,
     fontWeight: "700",
     paddingHorizontal: 8,
@@ -144,23 +145,23 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: "hidden",
   },
-  distance: { color: "#e2e8f0", fontSize: 14, marginTop: 2 },
+  distance: { color: colors.textBright, fontSize: 14, marginTop: 2 },
   details: { padding: 16 },
   statsRow: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 12 },
   matchPill: {
-    backgroundColor: "rgba(78, 205, 196, 0.15)",
-    borderColor: "#4ecdc4",
+    backgroundColor: colors.primaryTint,
+    borderColor: colors.primary,
     borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  matchText: { color: "#4ecdc4", fontWeight: "700", fontSize: 13 },
-  stat: { color: "#cbd5e1", fontSize: 14 },
+  matchText: { color: colors.primary, fontWeight: "700", fontSize: 13 },
+  stat: { color: colors.text, fontSize: 14 },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 12 },
-  tag: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: "#334155" },
-  tagShared: { backgroundColor: "#4ecdc4" },
-  tagText: { color: "#cbd5e1", fontSize: 13 },
-  tagTextShared: { color: "#0f172a", fontWeight: "600" },
-  bio: { color: "#e2e8f0", fontSize: 15, lineHeight: 21 },
+  tag: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: colors.border },
+  tagShared: { backgroundColor: colors.primary },
+  tagText: { color: colors.text, fontSize: 13 },
+  tagTextShared: { color: colors.onPrimary, fontWeight: "600" },
+  bio: { color: colors.textBright, fontSize: 15, lineHeight: 21 },
 });

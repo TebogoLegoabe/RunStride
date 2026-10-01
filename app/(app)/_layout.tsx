@@ -5,6 +5,7 @@ import { ApiError, getMe } from "../../lib/api";
 import { routeFor } from "../../lib/routing";
 import { clearToken, getToken } from "../../lib/session";
 import { ChatProvider } from "../../components/ChatProvider";
+import { colors } from "../../lib/theme";
 
 // Layout for signed-in screens. Only users who finished onboarding get in; everyone
 // else is sent to the step they're on. Tabs live in (tabs); chat opens on top of them.
@@ -59,7 +60,7 @@ export default function AppLayout() {
   if (!allowed) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator color="#4ecdc4" />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -71,10 +72,10 @@ export default function AppLayout() {
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, backgroundColor: "#0f172a", alignItems: "center", justifyContent: "center" },
+  loading: { flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" },
   lockedBox: { padding: 24, maxWidth: 420, width: "100%" },
-  lockedTitle: { color: "#ffffff", fontSize: 24, fontWeight: "700", marginBottom: 10 },
-  lockedBody: { color: "#cbd5e1", fontSize: 15, lineHeight: 22, marginBottom: 24 },
-  button: { borderColor: "#4ecdc4", borderWidth: 1, paddingVertical: 13, borderRadius: 999, alignItems: "center" },
-  buttonText: { color: "#4ecdc4", fontSize: 16, fontWeight: "600" },
+  lockedTitle: { color: colors.heading, fontSize: 24, fontWeight: "700", marginBottom: 10 },
+  lockedBody: { color: colors.text, fontSize: 15, lineHeight: 22, marginBottom: 24 },
+  button: { borderColor: colors.primary, borderWidth: 1, paddingVertical: 13, borderRadius: 999, alignItems: "center" },
+  buttonText: { color: colors.primary, fontSize: 16, fontWeight: "600" },
 });

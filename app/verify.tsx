@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ApiError, getMe, sendOtp, verifyOtp } from "../lib/api";
 import { routeFor } from "../lib/routing";
 import { saveToken } from "../lib/session";
+import { colors } from "../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 
@@ -65,7 +66,7 @@ export default function Verify() {
       <TextInput
         style={styles.input}
         placeholder="6-digit code"
-        placeholderTextColor="#64748b"
+        placeholderTextColor={colors.textFaint}
         keyboardType="number-pad"
         autoComplete="sms-otp"
         textContentType="oneTimeCode"
@@ -84,7 +85,7 @@ export default function Verify() {
         disabled={!canSubmit}
       >
         {loading ? (
-          <ActivityIndicator color="#0f172a" />
+          <ActivityIndicator color={colors.onPrimary} />
         ) : (
           <Text style={styles.primaryButtonText}>Verify</Text>
         )}
@@ -98,12 +99,12 @@ export default function Verify() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a", padding: 24, justifyContent: "center" },
-  title: { fontSize: 26, fontWeight: "700", color: "#ffffff", marginBottom: 8 },
-  subtitle: { fontSize: 14, color: "#94a3b8", marginBottom: 32 },
+  container: { flex: 1, backgroundColor: colors.bg, padding: 24, justifyContent: "center" },
+  title: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 8 },
+  subtitle: { fontSize: 14, color: colors.textMuted, marginBottom: 32 },
   input: {
-    backgroundColor: "#1e293b",
-    color: "#ffffff",
+    backgroundColor: colors.surface,
+    color: colors.heading,
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
@@ -111,16 +112,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 8,
   },
-  error: { color: "#f87171", fontSize: 14, marginTop: -8, marginBottom: 16, textAlign: "center" },
-  notice: { color: "#4ecdc4", fontSize: 14, marginTop: -8, marginBottom: 16, textAlign: "center" },
+  error: { color: colors.dangerText, fontSize: 14, marginTop: -8, marginBottom: 16, textAlign: "center" },
+  notice: { color: colors.primary, fontSize: 14, marginTop: -8, marginBottom: 16, textAlign: "center" },
   primaryButton: {
-    backgroundColor: "#4ecdc4",
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: "center",
   },
   buttonDisabled: { opacity: 0.5 },
-  primaryButtonText: { color: "#0f172a", fontSize: 16, fontWeight: "600" },
+  primaryButtonText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
   linkButton: { marginTop: 20, alignItems: "center" },
-  linkText: { color: "#94a3b8", fontSize: 14 },
+  linkText: { color: colors.textMuted, fontSize: 14 },
 });

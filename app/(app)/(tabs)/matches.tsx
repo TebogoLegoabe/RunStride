@@ -5,6 +5,7 @@ import { ApiError, getMatches, getMe, mediaUrl } from "../../../lib/api";
 import { formatWhen } from "../../../lib/format";
 import type { MatchSummary } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
+import { colors } from "../../../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const OFFLINE_POLL_MS = 15_000;
@@ -54,7 +55,7 @@ export default function Matches() {
   if (matches === null) {
     return (
       <View style={[styles.container, styles.centered]}>
-        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color="#4ecdc4" />}
+        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color={colors.primary} />}
       </View>
     );
   }
@@ -121,19 +122,19 @@ export default function Matches() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a", paddingTop: 48 },
+  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
   centered: { alignItems: "center", justifyContent: "center" },
   heading: {
     fontSize: 26,
     fontWeight: "700",
-    color: "#ffffff",
+    color: colors.heading,
     paddingHorizontal: 16,
     marginBottom: 12,
     maxWidth: 640,
     width: "100%",
     alignSelf: "center",
   },
-  error: { color: "#f87171", fontSize: 14, marginBottom: 12, textAlign: "center" },
+  error: { color: colors.dangerText, fontSize: 14, marginBottom: 12, textAlign: "center" },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -144,37 +145,37 @@ const styles = StyleSheet.create({
     width: "100%",
     alignSelf: "center",
   },
-  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: "#334155" },
-  avatarEmpty: { borderWidth: 1, borderColor: "#475569" },
+  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.border },
+  avatarEmpty: { borderWidth: 1, borderColor: colors.borderStrong },
   rowText: { flex: 1, minWidth: 0 },
   rowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: 8 },
   rowBottom: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 3 },
-  name: { color: "#ffffff", fontSize: 16, flexShrink: 1 },
+  name: { color: colors.heading, fontSize: 16, flexShrink: 1 },
   bold: { fontWeight: "700" },
-  when: { color: "#64748b", fontSize: 12 },
-  preview: { color: "#94a3b8", fontSize: 14, flex: 1 },
-  previewNew: { color: "#4ecdc4" },
-  previewUnread: { color: "#e2e8f0", fontWeight: "600" },
+  when: { color: colors.textFaint, fontSize: 12 },
+  preview: { color: colors.textMuted, fontSize: 14, flex: 1 },
+  previewNew: { color: colors.primary },
+  previewUnread: { color: colors.textBright, fontWeight: "600" },
   badge: {
     minWidth: 20,
     height: 20,
     borderRadius: 10,
     paddingHorizontal: 6,
-    backgroundColor: "#4ecdc4",
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  badgeText: { color: "#0f172a", fontSize: 12, fontWeight: "700" },
+  badgeText: { color: colors.onPrimary, fontSize: 12, fontWeight: "700" },
   emptyWrap: { flexGrow: 1 },
   empty: { flex: 1, justifyContent: "center", padding: 24, maxWidth: 420, width: "100%", alignSelf: "center" },
-  emptyTitle: { fontSize: 22, fontWeight: "700", color: "#ffffff", marginBottom: 8 },
-  emptyBody: { fontSize: 15, lineHeight: 22, color: "#cbd5e1", marginBottom: 24 },
+  emptyTitle: { fontSize: 22, fontWeight: "700", color: colors.heading, marginBottom: 8 },
+  emptyBody: { fontSize: 15, lineHeight: 22, color: colors.text, marginBottom: 24 },
   secondaryButton: {
-    borderColor: "#4ecdc4",
+    borderColor: colors.primary,
     borderWidth: 1,
     paddingVertical: 13,
     borderRadius: 999,
     alignItems: "center",
   },
-  secondaryButtonText: { color: "#4ecdc4", fontSize: 16, fontWeight: "600" },
+  secondaryButtonText: { color: colors.primary, fontSize: 16, fontWeight: "600" },
 });

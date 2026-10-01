@@ -7,6 +7,7 @@ import { REPORT_REASONS } from "../../../lib/options";
 import type { ReportSummary } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { ChoiceChips } from "../../../components/ChoiceChips";
+import { colors } from "../../../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const VIEWS = [
@@ -55,7 +56,7 @@ export default function ModerationQueue() {
       </View>
 
       {reports === null ? (
-        <ActivityIndicator color="#4ecdc4" style={styles.spinner} />
+        <ActivityIndicator color={colors.primary} style={styles.spinner} />
       ) : (
         <FlatList
           data={reports}
@@ -91,25 +92,25 @@ export default function ModerationQueue() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a", paddingTop: 48 },
+  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
   inner: { paddingHorizontal: 16, maxWidth: 720, width: "100%", alignSelf: "center" },
-  heading: { fontSize: 26, fontWeight: "700", color: "#ffffff", marginBottom: 12 },
-  error: { color: "#f87171", fontSize: 14, marginBottom: 12 },
+  heading: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 12 },
+  error: { color: colors.dangerText, fontSize: 14, marginBottom: 12 },
   spinner: { marginTop: 32 },
-  empty: { color: "#94a3b8", fontSize: 15, textAlign: "center", marginTop: 32 },
+  empty: { color: colors.textMuted, fontSize: 15, textAlign: "center", marginTop: 32 },
   row: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#1e293b",
+    borderBottomColor: colors.surface,
     maxWidth: 720,
     width: "100%",
     alignSelf: "center",
   },
   rowTop: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
-  reason: { color: "#ffffff", fontSize: 16, fontWeight: "600", flexShrink: 1 },
-  when: { color: "#64748b", fontSize: 12 },
-  meta: { color: "#94a3b8", fontSize: 14, marginTop: 3 },
-  details: { color: "#cbd5e1", fontSize: 14, marginTop: 6, fontStyle: "italic" },
-  resolution: { color: "#4ecdc4", fontSize: 13, marginTop: 6 },
+  reason: { color: colors.heading, fontSize: 16, fontWeight: "600", flexShrink: 1 },
+  when: { color: colors.textFaint, fontSize: 12 },
+  meta: { color: colors.textMuted, fontSize: 14, marginTop: 3 },
+  details: { color: colors.text, fontSize: 14, marginTop: 6, fontStyle: "italic" },
+  resolution: { color: colors.primary, fontSize: 13, marginTop: 6 },
 });

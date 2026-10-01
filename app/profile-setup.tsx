@@ -20,9 +20,10 @@ import {
   saveMyProfile,
   uploadPhoto,
 } from "../lib/api";
-import { routeFor } from "../lib/routing";
+import { afterSave } from "../lib/routing";
 import { getToken } from "../lib/session";
 import type { Photo } from "../lib/types";
+import { colors } from "../lib/theme";
 
 const MAX_PHOTOS = 6;
 const MAX_BIO = 500;
@@ -92,7 +93,7 @@ export default function ProfileSetup() {
 
   const pickPhoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [4, 5],
       quality: 0.8,
@@ -147,7 +148,7 @@ export default function ProfileSetup() {
         const photo = await uploadPhoto(token, slot.uri);
         setSlots((current) => current.map((s) => (s.key === slot.key ? { ...s, photo } : s)));
       }
-      router.replace(routeFor(await getMe(token)));
+      afterSave(router, await getMe(token));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     } finally {
@@ -158,7 +159,7 @@ export default function ProfileSetup() {
   if (initializing) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color="#4ecdc4" />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -201,7 +202,7 @@ export default function ProfileSetup() {
       <TextInput
         style={styles.input}
         placeholder="What should people call you?"
-        placeholderTextColor="#64748b"
+        placeholderTextColor={colors.textFaint}
         autoComplete="given-name"
         maxLength={50}
         value={name}
@@ -214,7 +215,7 @@ export default function ProfileSetup() {
         <TextInput
           style={[styles.input, styles.dateInput]}
           placeholder="DD"
-          placeholderTextColor="#64748b"
+          placeholderTextColor={colors.textFaint}
           keyboardType="number-pad"
           maxLength={2}
           value={day}
@@ -223,7 +224,7 @@ export default function ProfileSetup() {
         <TextInput
           style={[styles.input, styles.dateInput]}
           placeholder="MM"
-          placeholderTextColor="#64748b"
+          placeholderTextColor={colors.textFaint}
           keyboardType="number-pad"
           maxLength={2}
           value={month}
@@ -232,7 +233,7 @@ export default function ProfileSetup() {
         <TextInput
           style={[styles.input, styles.yearInput]}
           placeholder="YYYY"
-          placeholderTextColor="#64748b"
+          placeholderTextColor={colors.textFaint}
           keyboardType="number-pad"
           maxLength={4}
           value={year}
@@ -244,7 +245,7 @@ export default function ProfileSetup() {
       <TextInput
         style={[styles.input, styles.bioInput]}
         placeholder="Favourite route, next race, why you run..."
-        placeholderTextColor="#64748b"
+        placeholderTextColor={colors.textFaint}
         multiline
         maxLength={MAX_BIO}
         value={bio}
@@ -262,7 +263,7 @@ export default function ProfileSetup() {
         disabled={saving}
       >
         {saving ? (
-          <ActivityIndicator color="#0f172a" />
+          <ActivityIndicator color={colors.onPrimary} />
         ) : (
           <Text style={styles.primaryButtonText}>Continue</Text>
         )}
@@ -272,28 +273,28 @@ export default function ProfileSetup() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a" },
+  container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
   content: { padding: 24, paddingTop: 64, paddingBottom: 48, width: "100%", maxWidth: 560, alignSelf: "center" },
-  title: { fontSize: 26, fontWeight: "700", color: "#ffffff", marginBottom: 8 },
-  subtitle: { fontSize: 14, color: "#94a3b8", marginBottom: 32 },
-  label: { fontSize: 15, fontWeight: "600", color: "#ffffff", marginBottom: 6 },
-  hint: { fontSize: 13, color: "#94a3b8", marginBottom: 12 },
+  title: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 8 },
+  subtitle: { fontSize: 14, color: colors.textMuted, marginBottom: 32 },
+  label: { fontSize: 15, fontWeight: "600", color: colors.heading, marginBottom: 6 },
+  hint: { fontSize: 13, color: colors.textMuted, marginBottom: 12 },
   photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 28 },
   photoSlot: {
     width: "31%",
     aspectRatio: 4 / 5,
     borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: "#1e293b",
+    backgroundColor: colors.surface,
   },
   photo: { width: "100%", height: "100%" },
   mainBadge: {
     position: "absolute",
     left: 6,
     bottom: 6,
-    backgroundColor: "#4ecdc4",
-    color: "#0f172a",
+    backgroundColor: colors.primary,
+    color: colors.onPrimary,
     fontSize: 11,
     fontWeight: "700",
     paddingHorizontal: 6,
@@ -308,22 +309,22 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "rgba(15, 23, 42, 0.8)",
+    backgroundColor: colors.scrimStronger,
     alignItems: "center",
     justifyContent: "center",
   },
-  removeText: { color: "#ffffff", fontSize: 13 },
+  removeText: { color: colors.heading, fontSize: 13 },
   addSlot: {
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "#475569",
+    borderColor: colors.borderStrong,
   },
-  addText: { color: "#4ecdc4", fontSize: 32, fontWeight: "300" },
+  addText: { color: colors.primary, fontSize: 32, fontWeight: "300" },
   input: {
-    backgroundColor: "#1e293b",
-    color: "#ffffff",
+    backgroundColor: colors.surface,
+    color: colors.heading,
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
@@ -333,14 +334,14 @@ const styles = StyleSheet.create({
   dateInput: { width: 72, textAlign: "center" },
   yearInput: { width: 96, textAlign: "center" },
   bioInput: { minHeight: 110, textAlignVertical: "top", marginBottom: 6 },
-  counter: { color: "#64748b", fontSize: 12, textAlign: "right", marginBottom: 24 },
-  error: { color: "#f87171", fontSize: 14, marginBottom: 16, textAlign: "center" },
+  counter: { color: colors.textFaint, fontSize: 12, textAlign: "right", marginBottom: 24 },
+  error: { color: colors.dangerText, fontSize: 14, marginBottom: 16, textAlign: "center" },
   primaryButton: {
-    backgroundColor: "#4ecdc4",
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: "center",
   },
   buttonDisabled: { opacity: 0.5 },
-  primaryButtonText: { color: "#0f172a", fontSize: 16, fontWeight: "600" },
+  primaryButtonText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
 });

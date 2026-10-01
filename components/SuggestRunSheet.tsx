@@ -13,6 +13,7 @@ import { ApiError, suggestRun } from "../lib/api";
 import { toIsoWithOffset } from "../lib/format";
 import type { Message } from "../lib/types";
 import { ChoiceChips } from "./ChoiceChips";
+import { colors } from "../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const DAYS_SHOWN = 14;
@@ -111,7 +112,7 @@ export function SuggestRunSheet({ visible, token, matchId, name, onClose, onSent
               value={time}
               onChangeText={setTime}
               placeholder="HH:MM"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.textFaint}
               maxLength={5}
               accessibilityLabel="Start time"
             />
@@ -122,7 +123,7 @@ export function SuggestRunSheet({ visible, token, matchId, name, onClose, onSent
               value={place}
               onChangeText={setPlace}
               placeholder="e.g. Delta Park parkrun start, or Emmarentia Dam main gate"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.textFaint}
               maxLength={120}
             />
 
@@ -138,7 +139,7 @@ export function SuggestRunSheet({ visible, token, matchId, name, onClose, onSent
               value={note}
               onChangeText={setNote}
               placeholder="Anything else? e.g. easy pace, coffee after (optional)"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.textFaint}
               multiline
               maxLength={300}
             />
@@ -153,7 +154,7 @@ export function SuggestRunSheet({ visible, token, matchId, name, onClose, onSent
             {error && <Text style={styles.error}>{error}</Text>}
 
             <Pressable style={[styles.primary, busy && styles.disabled]} onPress={send} disabled={busy}>
-              {busy ? <ActivityIndicator color="#0f172a" /> : <Text style={styles.primaryText}>Send suggestion</Text>}
+              {busy ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.primaryText}>Send suggestion</Text>}
             </Pressable>
             <Pressable style={styles.cancel} onPress={onClose} disabled={busy}>
               <Text style={styles.cancelText}>Cancel</Text>
@@ -166,15 +167,15 @@ export function SuggestRunSheet({ visible, token, matchId, name, onClose, onSent
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(2, 6, 23, 0.8)" },
+  backdrop: { flex: 1, backgroundColor: colors.backdrop },
   scroll: { flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 16 },
-  sheet: { backgroundColor: "#1e293b", borderRadius: 20, padding: 20, width: "100%", maxWidth: 480 },
-  title: { color: "#ffffff", fontSize: 20, fontWeight: "700", marginBottom: 16 },
-  label: { color: "#ffffff", fontSize: 15, fontWeight: "600", marginBottom: 10 },
+  sheet: { backgroundColor: colors.surface, borderRadius: 20, padding: 20, width: "100%", maxWidth: 480 },
+  title: { color: colors.heading, fontSize: 20, fontWeight: "700", marginBottom: 16 },
+  label: { color: colors.heading, fontSize: 15, fontWeight: "600", marginBottom: 10 },
   dayScroll: { marginBottom: 0 },
   input: {
-    backgroundColor: "#0f172a",
-    color: "#ffffff",
+    backgroundColor: colors.bg,
+    color: colors.heading,
     borderRadius: 12,
     padding: 14,
     fontSize: 15,
@@ -183,18 +184,18 @@ const styles = StyleSheet.create({
   timeInput: { width: 100, textAlign: "center", marginTop: -12 },
   noteInput: { minHeight: 70, textAlignVertical: "top" },
   tip: {
-    borderColor: "#4ecdc4",
+    borderColor: colors.primary,
     borderWidth: 1,
-    backgroundColor: "rgba(78, 205, 196, 0.1)",
+    backgroundColor: colors.primaryTintSoft,
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
   },
-  tipText: { color: "#cbd5e1", fontSize: 13, lineHeight: 19 },
-  error: { color: "#f87171", fontSize: 14, marginBottom: 12, textAlign: "center" },
-  primary: { backgroundColor: "#4ecdc4", paddingVertical: 14, borderRadius: 999, alignItems: "center" },
-  primaryText: { color: "#0f172a", fontSize: 16, fontWeight: "600" },
+  tipText: { color: colors.text, fontSize: 13, lineHeight: 19 },
+  error: { color: colors.dangerText, fontSize: 14, marginBottom: 12, textAlign: "center" },
+  primary: { backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 999, alignItems: "center" },
+  primaryText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
   disabled: { opacity: 0.5 },
   cancel: { paddingVertical: 12, alignItems: "center", marginTop: 4 },
-  cancelText: { color: "#94a3b8", fontSize: 15 },
+  cancelText: { color: colors.textMuted, fontSize: 15 },
 });

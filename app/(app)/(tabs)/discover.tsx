@@ -16,6 +16,7 @@ import { getToken } from "../../../lib/session";
 import type { DiscoverCard, MatchSummary, RunningProfile } from "../../../lib/types";
 import { RunnerCard } from "../../../components/RunnerCard";
 import { SafetySheet } from "../../../components/SafetySheet";
+import { colors } from "../../../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 // Fetch more cards when this few are left
@@ -147,7 +148,7 @@ export default function Discover() {
   if (phase === "loading") {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color="#4ecdc4" />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -169,7 +170,7 @@ export default function Discover() {
             disabled={busy}
           >
             {busy ? (
-              <ActivityIndicator color="#0f172a" />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <Text style={styles.primaryButtonText}>Enable location</Text>
             )}
@@ -260,7 +261,7 @@ export default function Discover() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a" },
+  container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
   scroll: { padding: 16, paddingTop: 48, paddingBottom: 40 },
   devBanner: {
@@ -268,18 +269,18 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#f59e0b",
-    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    borderColor: colors.warning,
+    backgroundColor: colors.warningTint,
     alignSelf: "center",
     maxWidth: 420,
     width: "100%",
   },
-  devBannerTitle: { color: "#fbbf24", fontWeight: "700", fontSize: 14, marginBottom: 4 },
-  devBannerText: { color: "#fde68a", fontSize: 13, lineHeight: 19 },
+  devBannerTitle: { color: colors.warningText, fontWeight: "700", fontSize: 14, marginBottom: 4 },
+  devBannerText: { color: colors.warningSoft, fontSize: 13, lineHeight: 19 },
   message: { flex: 1, justifyContent: "center", padding: 24, maxWidth: 420, width: "100%", alignSelf: "center" },
-  title: { fontSize: 24, fontWeight: "700", color: "#ffffff", marginBottom: 10 },
-  body: { fontSize: 15, lineHeight: 22, color: "#cbd5e1", marginBottom: 24 },
-  error: { color: "#f87171", fontSize: 14, marginBottom: 16, textAlign: "center" },
+  title: { fontSize: 24, fontWeight: "700", color: colors.heading, marginBottom: 10 },
+  body: { fontSize: 15, lineHeight: 22, color: colors.text, marginBottom: 24 },
+  error: { color: colors.dangerText, fontSize: 14, marginBottom: 16, textAlign: "center" },
   actions: { flexDirection: "row", justifyContent: "center", gap: 32, marginTop: 20 },
   actionButton: {
     width: 68,
@@ -289,43 +290,43 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 2,
   },
-  passButton: { borderColor: "#64748b", backgroundColor: "#1e293b" },
-  likeButton: { borderColor: "#4ecdc4", backgroundColor: "rgba(78, 205, 196, 0.15)" },
-  passIcon: { color: "#cbd5e1", fontSize: 26 },
-  likeIcon: { color: "#4ecdc4", fontSize: 30 },
+  passButton: { borderColor: colors.textFaint, backgroundColor: colors.surface },
+  likeButton: { borderColor: colors.pink, backgroundColor: colors.pinkTint },
+  passIcon: { color: colors.text, fontSize: 26 },
+  likeIcon: { color: colors.pink, fontSize: 30 },
   primaryButton: {
-    backgroundColor: "#4ecdc4",
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: "center",
   },
   buttonDisabled: { opacity: 0.5 },
-  primaryButtonText: { color: "#0f172a", fontSize: 16, fontWeight: "600" },
+  primaryButtonText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
   textButton: { paddingVertical: 12, alignItems: "center", marginTop: 4 },
-  textButtonText: { color: "#94a3b8", fontSize: 15 },
+  textButtonText: { color: colors.textMuted, fontSize: 15 },
   secondaryButton: {
-    borderColor: "#4ecdc4",
+    borderColor: colors.primary,
     borderWidth: 1,
     paddingVertical: 13,
     borderRadius: 999,
     alignItems: "center",
   },
-  secondaryButtonText: { color: "#4ecdc4", fontSize: 16, fontWeight: "600" },
+  secondaryButtonText: { color: colors.primary, fontSize: 16, fontWeight: "600" },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(2, 6, 23, 0.8)",
+    backgroundColor: colors.backdrop,
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
   },
   modal: {
-    backgroundColor: "#1e293b",
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 24,
     width: "100%",
     maxWidth: 380,
     alignItems: "stretch",
   },
-  matchTitle: { fontSize: 30, fontWeight: "800", color: "#4ecdc4", textAlign: "center", marginBottom: 16 },
+  matchTitle: { fontSize: 30, fontWeight: "800", color: colors.pink, textAlign: "center", marginBottom: 16 },
   matchPhoto: { width: 120, height: 150, borderRadius: 16, alignSelf: "center", marginBottom: 16 },
 });

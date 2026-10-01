@@ -2,6 +2,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { ApiError, sendOtp } from "../lib/api";
+import { colors } from "../lib/theme";
 
 export default function Signup() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function Signup() {
       <TextInput
         style={styles.input}
         placeholder="Phone number"
-        placeholderTextColor="#64748b"
+        placeholderTextColor={colors.textFaint}
         keyboardType="phone-pad"
         autoComplete="tel"
         value={phone}
@@ -50,7 +51,7 @@ export default function Signup() {
         disabled={!canSubmit}
       >
         {loading ? (
-          <ActivityIndicator color="#0f172a" />
+          <ActivityIndicator color={colors.onPrimary} />
         ) : (
           <Text style={styles.primaryButtonText}>Send Code</Text>
         )}
@@ -60,24 +61,24 @@ export default function Signup() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a", padding: 24, justifyContent: "center" },
-  title: { fontSize: 26, fontWeight: "700", color: "#ffffff", marginBottom: 8 },
-  subtitle: { fontSize: 14, color: "#94a3b8", marginBottom: 32 },
+  container: { flex: 1, backgroundColor: colors.bg, padding: 24, justifyContent: "center" },
+  title: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 8 },
+  subtitle: { fontSize: 14, color: colors.textMuted, marginBottom: 32 },
   input: {
-    backgroundColor: "#1e293b",
-    color: "#ffffff",
+    backgroundColor: colors.surface,
+    color: colors.heading,
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
     fontSize: 16,
   },
-  error: { color: "#f87171", fontSize: 14, marginTop: -8, marginBottom: 16 },
+  error: { color: colors.dangerText, fontSize: 14, marginTop: -8, marginBottom: 16 },
   primaryButton: {
-    backgroundColor: "#4ecdc4",
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: "center",
   },
   buttonDisabled: { opacity: 0.5 },
-  primaryButtonText: { color: "#0f172a", fontSize: 16, fontWeight: "600" },
+  primaryButtonText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
 });

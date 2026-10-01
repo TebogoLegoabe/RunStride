@@ -2,11 +2,13 @@
 
     docker compose exec api python -m app.dev_seed             # 30 runners near the newest real user with a location
     docker compose exec api python -m app.dev_seed --count 50
+    docker compose exec api python -m app.dev_seed --match-me   # all compatible with you
     docker compose exec api python -m app.dev_seed --lat -26.20 --lng 28.04
     docker compose exec api python -m app.dev_seed --clear     # remove every seed runner and their photos
 """
 
 import argparse
+from dataclasses import dataclass
 import math
 import random
 import time
@@ -101,7 +103,59 @@ def pick_interested_in(gender: str) -> list[str]:
     return ["woman", "man", "non_binary"]
 
 
-def seed(count: int, center: tuple[float, float]) -> None:
+@dataclass(frozen=True)
+class MatchTarget:
+    """The real user --match-me generates runners for."""
+
+    phone: str
+    gender: str
+    age: int
+    interested_in: list[str]
+    age_min: int
+    age_max: int
+
+
+def newest_real_user() -> MatchTarget | None:
+    """The most recently active real user who has finished their dating preferences."""
+    with SessionLocal() as db:
+        user = db.scalar(
+            select(User)
+            .join(DatingPreferences, DatingPreferences.user_id == User.id)
+            .join(Profile, Profile.user_id == User.id)
+            .where(User.phone.not_like(f"{SEED_PHONE_PREFIX}%"))
+            .order_by(User.last_login_at.desc().nulls_last())
+            .limit(1)
+        )
+        if user is None:
+            return None
+        prefs, today = user.dating_preferences, date.today()
+        born = user.profile.birth_date
+        age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+        return MatchTarget(user.phone, prefs.gender, age, list(prefs.interested_in), prefs.age_min, prefs.age_max)
+
+
+def identity_for(target: MatchTarget | None) -> tuple[str, int, list[str], int, int]:
+    """(gender, age, interested_in, age_min, age_max) for one seed runner.
+
+    With a target, the runner is someone the target could match with: a gender they want,
+    an age in their range, wanting the target's gender, with the target's age in range.
+    """
+    if target is None:
+        gender = random.choices(["woman", "man", "non_binary"], weights=[45, 45, 10])[0]
+        age = random.randint(21, 45)
+        return gender, age, pick_interested_in(gender), max(18, age - random.randint(4, 8)), min(99, age + random.randint(4, 10))
+
+    gender = random.choice(target.interested_in)
+    age = random.randint(max(18, target.age_min), min(99, target.age_max))
+    interested_in = {target.gender}
+    if random.random() < 0.3:
+        interested_in.add(random.choice(["woman", "man", "non_binary"]))
+    age_min = max(18, min(age - random.randint(3, 8), target.age))
+    age_max = min(99, max(age + random.randint(3, 8), target.age))
+    return gender, age, sorted(interested_in), age_min, age_max
+
+
+def seed(count: int, center: tuple[float, float], target: MatchTarget | None = None) -> None:
     storage = get_photo_storage()
     today = date.today()
     with SessionLocal() as db:
@@ -109,9 +163,8 @@ def seed(count: int, center: tuple[float, float]) -> None:
         next_number = len(existing) + 1
         real_user_ids = db.scalars(select(User.id).where(User.phone.not_like(f"{SEED_PHONE_PREFIX}%"))).all()
         for i in range(count):
-            gender = random.choices(["woman", "man", "non_binary"], weights=[45, 45, 10])[0]
+            gender, age, interested_in, age_min, age_max = identity_for(target)
             name = random.choice(NAMES[gender])
-            age = random.randint(21, 45)
             lat, lng = random_point_near(*center, RADIUS_KM)
 
             user = User(
@@ -139,10 +192,10 @@ def seed(count: int, center: tuple[float, float]) -> None:
             )
             user.dating_preferences = DatingPreferences(
                 gender=gender,
-                interested_in=pick_interested_in(gender),
-                age_min=max(18, age - random.randint(4, 8)),
-                age_max=min(99, age + random.randint(4, 10)),
-                max_distance_km=random.choice([25, 50, 100]),
+                interested_in=interested_in,
+                age_min=age_min,
+                age_max=age_max,
+                max_distance_km=100 if target else random.choice([25, 50, 100]),
             )
             db.add(user)
             db.flush()
@@ -151,6 +204,8 @@ def seed(count: int, center: tuple[float, float]) -> None:
                     db.add(Swipe(swiper_id=user.id, target_id=real_user_id, liked=True))
         db.commit()
     print(f"Created {count} seed runners within {RADIUS_KM} km of {center[0]:.2f}, {center[1]:.2f}.")
+    if target:
+        print(f"All of them match the preferences of {target.phone}.")
     print("Some already like you: like them back to see a match.")
 
 
@@ -221,13 +276,23 @@ def main() -> None:
     parser.add_argument("--lat", type=float)
     parser.add_argument("--lng", type=float)
     parser.add_argument("--clear", action="store_true", help="remove all seed runners")
+    parser.add_argument(
+        "--match-me",
+        action="store_true",
+        help="make every runner a possible match for the most recently active real user",
+    )
     args = parser.parse_args()
 
     if args.clear:
         clear()
         return
     center = (args.lat, args.lng) if args.lat is not None and args.lng is not None else default_center()
-    seed(args.count, center)
+    target = None
+    if args.match_me:
+        target = newest_real_user()
+        if target is None:
+            raise SystemExit("No real user with dating preferences yet: finish onboarding in the app first.")
+    seed(args.count, center, target)
 
 
 if __name__ == "__main__":

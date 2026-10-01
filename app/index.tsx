@@ -1,9 +1,10 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 import { useEffect } from "react";
 import { useRouter } from "expo-router";
 import { ApiError, getMe } from "../lib/api";
 import { routeFor } from "../lib/routing";
 import { clearToken, getToken } from "../lib/session";
+import { colors } from "../lib/theme";
 
 export default function Welcome() {
   const router = useRouter();
@@ -25,7 +26,12 @@ export default function Welcome() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>RunStride</Text>
+      <Image
+        source={require("../assets/logo.png")}
+        style={styles.logo}
+        resizeMode="contain"
+        accessibilityLabel="RunStride"
+      />
       <Text style={styles.subtitle}>Find someone who runs at your pace.</Text>
 
       <Pressable
@@ -41,31 +47,27 @@ export default function Welcome() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: colors.bg,
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
   },
-  title: {
-    fontSize: 40,
-    fontWeight: "700",
-    color: "#ffffff",
-    marginBottom: 8,
-  },
+  // The logo art is 364x343; keep that shape
+  logo: { width: 240, height: 226, marginBottom: 20 },
   subtitle: {
     fontSize: 16,
-    color: "#94a3b8",
+    color: colors.textMuted,
     marginBottom: 40,
     textAlign: "center",
   },
   primaryButton: {
-    backgroundColor: "#4ecdc4",
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 999,
   },
   primaryButtonText: {
-    color: "#0f172a",
+    color: colors.onPrimary,
     fontSize: 16,
     fontWeight: "600",
   },

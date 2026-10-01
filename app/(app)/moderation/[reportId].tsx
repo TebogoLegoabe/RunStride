@@ -8,6 +8,7 @@ import { REPORT_REASONS } from "../../../lib/options";
 import type { ModerationAction, ReportDetail } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { ChoiceChips } from "../../../components/ChoiceChips";
+import { colors } from "../../../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const SUSPEND_OPTIONS = [
@@ -57,7 +58,7 @@ export default function ReportReview() {
   if (!report) {
     return (
       <View style={[styles.container, styles.centered]}>
-        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color="#4ecdc4" />}
+        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color={colors.primary} />}
       </View>
     );
   }
@@ -68,7 +69,7 @@ export default function ReportReview() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Pressable onPress={() => router.back()} style={styles.back} accessibilityLabel="Back">
-        <Ionicons name="chevron-back" size={24} color="#e2e8f0" />
+        <Ionicons name="chevron-back" size={24} color={colors.textBright} />
         <Text style={styles.backText}>Queue</Text>
       </Pressable>
 
@@ -122,7 +123,7 @@ export default function ReportReview() {
           <TextInput
             style={styles.input}
             placeholder="Note for the record (optional)"
-            placeholderTextColor="#64748b"
+            placeholderTextColor={colors.textFaint}
             multiline
             maxLength={1000}
             value={note}
@@ -155,7 +156,7 @@ export default function ReportReview() {
               )}
             </>
           )}
-          {busy && <ActivityIndicator color="#4ecdc4" style={styles.spinner} />}
+          {busy && <ActivityIndicator color={colors.primary} style={styles.spinner} />}
         </>
       ) : (
         <View style={[styles.box, styles.resolvedBox]}>
@@ -169,30 +170,30 @@ export default function ReportReview() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a" },
+  container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
   content: { padding: 16, paddingTop: 44, paddingBottom: 48, maxWidth: 720, width: "100%", alignSelf: "center" },
   back: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  backText: { color: "#e2e8f0", fontSize: 16 },
-  title: { color: "#ffffff", fontSize: 24, fontWeight: "700", marginBottom: 4 },
-  meta: { color: "#94a3b8", fontSize: 14 },
-  details: { color: "#e2e8f0", fontSize: 15, lineHeight: 22, marginTop: 10, fontStyle: "italic" },
-  section: { color: "#ffffff", fontSize: 16, fontWeight: "700", marginTop: 24, marginBottom: 8 },
-  box: { backgroundColor: "#1e293b", borderRadius: 12, padding: 14 },
+  backText: { color: colors.textBright, fontSize: 16 },
+  title: { color: colors.heading, fontSize: 24, fontWeight: "700", marginBottom: 4 },
+  meta: { color: colors.textMuted, fontSize: 14 },
+  details: { color: colors.textBright, fontSize: 15, lineHeight: 22, marginTop: 10, fontStyle: "italic" },
+  section: { color: colors.heading, fontSize: 16, fontWeight: "700", marginTop: 24, marginBottom: 8 },
+  box: { backgroundColor: colors.surface, borderRadius: 12, padding: 14 },
   resolvedBox: { marginTop: 24 },
-  boxTitle: { color: "#ffffff", fontSize: 16, fontWeight: "600", marginBottom: 4 },
-  bio: { color: "#cbd5e1", fontSize: 14, lineHeight: 20, marginTop: 4 },
+  boxTitle: { color: colors.heading, fontSize: 16, fontWeight: "600", marginBottom: 4 },
+  bio: { color: colors.text, fontSize: 14, lineHeight: 20, marginTop: 4 },
   photos: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 },
-  photo: { width: 72, height: 90, borderRadius: 8, backgroundColor: "#334155" },
+  photo: { width: 72, height: 90, borderRadius: 8, backgroundColor: colors.border },
   msg: { borderRadius: 10, padding: 10, marginBottom: 6, maxWidth: "85%" },
-  msgReported: { backgroundColor: "rgba(239, 68, 68, 0.15)", alignSelf: "flex-start" },
-  msgReporter: { backgroundColor: "#334155", alignSelf: "flex-end" },
-  msgWho: { color: "#94a3b8", fontSize: 11, marginBottom: 2 },
-  msgBody: { color: "#e2e8f0", fontSize: 14, lineHeight: 20 },
-  error: { color: "#f87171", fontSize: 14, marginTop: 16, textAlign: "center" },
+  msgReported: { backgroundColor: colors.dangerTint, alignSelf: "flex-start" },
+  msgReporter: { backgroundColor: colors.border, alignSelf: "flex-end" },
+  msgWho: { color: colors.textMuted, fontSize: 11, marginBottom: 2 },
+  msgBody: { color: colors.textBright, fontSize: 14, lineHeight: 20 },
+  error: { color: colors.dangerText, fontSize: 14, marginTop: 16, textAlign: "center" },
   input: {
-    backgroundColor: "#1e293b",
-    color: "#ffffff",
+    backgroundColor: colors.surface,
+    color: colors.heading,
     borderRadius: 12,
     padding: 14,
     minHeight: 70,
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: 12,
   },
-  label: { color: "#ffffff", fontSize: 15, fontWeight: "600", marginTop: 12, marginBottom: 10 },
+  label: { color: colors.heading, fontSize: 15, fontWeight: "600", marginTop: 12, marginBottom: 10 },
   actions: { flexDirection: "row", gap: 10 },
   action: {
     flex: 1,
@@ -208,15 +209,15 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#475569",
+    borderColor: colors.borderStrong,
     marginBottom: 8,
   },
-  actionText: { color: "#e2e8f0", fontSize: 15, fontWeight: "600" },
-  warnAction: { borderColor: "#f59e0b", backgroundColor: "rgba(245, 158, 11, 0.12)", marginTop: -8 },
-  warnText: { color: "#fbbf24", fontSize: 15, fontWeight: "600" },
-  banOutline: { borderColor: "#ef4444" },
-  banOutlineText: { color: "#f87171", fontSize: 15, fontWeight: "600" },
-  banAction: { backgroundColor: "#ef4444", borderColor: "#ef4444" },
-  banText: { color: "#ffffff", fontSize: 15, fontWeight: "700" },
+  actionText: { color: colors.textBright, fontSize: 15, fontWeight: "600" },
+  warnAction: { borderColor: colors.warning, backgroundColor: colors.warningTint, marginTop: -8 },
+  warnText: { color: colors.warningText, fontSize: 15, fontWeight: "600" },
+  banOutline: { borderColor: colors.danger },
+  banOutlineText: { color: colors.dangerText, fontSize: 15, fontWeight: "600" },
+  banAction: { backgroundColor: colors.danger, borderColor: colors.danger },
+  banText: { color: colors.heading, fontSize: 15, fontWeight: "700" },
   spinner: { marginTop: 12 },
 });

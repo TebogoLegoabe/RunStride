@@ -69,22 +69,22 @@ PAGE = """<!doctype html>
 <style>
   :root { color-scheme: dark; }
   body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-         background: #0f172a; color: #e2e8f0; }
+         background: #2e0444; color: #eadff1; }
   main { max-width: 520px; margin: 0 auto; padding: 24px 16px 48px; }
   h1 { font-size: 22px; margin: 0 0 4px; color: #fff; }
-  .brand { color: #4ecdc4; font-weight: 700; font-size: 14px; margin-bottom: 20px; }
+  .brand { color: #f47c4f; font-weight: 700; font-size: 14px; margin-bottom: 20px; }
   .banner { border-radius: 14px; padding: 16px; margin: 16px 0; line-height: 1.45; }
-  .ok { background: rgba(78,205,196,.12); border: 1px solid #4ecdc4; }
+  .ok { background: rgba(244,124,79,.14); border: 1px solid #f47c4f; }
   .alert { background: rgba(239,68,68,.18); border: 2px solid #ef4444; color: #fecaca; }
   .alert strong { color: #fff; font-size: 18px; display: block; margin-bottom: 6px; }
-  .muted { background: #1e293b; border: 1px solid #334155; color: #94a3b8; }
-  .card { background: #1e293b; border-radius: 14px; padding: 16px; margin: 16px 0; }
-  .label { color: #94a3b8; font-size: 13px; }
+  .muted { background: #43105c; border: 1px solid #5c2378; color: #cdb6dc; }
+  .card { background: #43105c; border-radius: 14px; padding: 16px; margin: 16px 0; }
+  .label { color: #cdb6dc; font-size: 13px; }
   .value { color: #fff; font-size: 16px; margin: 2px 0 12px; }
-  a.button { display: block; text-align: center; background: #4ecdc4; color: #0f172a; font-weight: 700;
+  a.button { display: block; text-align: center; background: #f47c4f; color: #2e0444; font-weight: 700;
              text-decoration: none; padding: 14px; border-radius: 999px; margin-top: 8px; }
   a.call { background: #ef4444; color: #fff; }
-  .small { color: #64748b; font-size: 12px; margin-top: 24px; line-height: 1.5; }
+  .small { color: #a88bbd; font-size: 12px; margin-top: 24px; line-height: 1.5; }
 </style>
 </head>
 <body>

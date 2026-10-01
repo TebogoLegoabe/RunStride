@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { getMe } from "../../../lib/api";
 import { useChat } from "../../../components/ChatProvider";
+import { colors } from "../../../lib/theme";
 
 export default function TabsLayout() {
   const { token, unreadTotal } = useChat();
@@ -16,9 +17,9 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#4ecdc4",
-        tabBarInactiveTintColor: "#64748b",
-        tabBarStyle: { backgroundColor: "#0f172a", borderTopColor: "#1e293b" },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textFaint,
+        tabBarStyle: { backgroundColor: colors.bg, borderTopColor: colors.surface },
       }}
     >
       <Tabs.Screen
@@ -34,7 +35,14 @@ export default function TabsLayout() {
           title: "Matches",
           tabBarIcon: ({ color, size }) => <Ionicons name="chatbubbles" color={color} size={size} />,
           tabBarBadge: unreadTotal > 0 ? unreadTotal : undefined,
-          tabBarBadgeStyle: { backgroundColor: "#4ecdc4", color: "#0f172a" },
+          tabBarBadgeStyle: { backgroundColor: colors.primary, color: colors.onPrimary },
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-circle" color={color} size={size} />,
         }}
       />
       <Tabs.Screen

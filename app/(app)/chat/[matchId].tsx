@@ -21,6 +21,7 @@ import { useChat } from "../../../components/ChatProvider";
 import { SafetySheet } from "../../../components/SafetySheet";
 import { RunDateCard } from "../../../components/RunDateCard";
 import { SuggestRunSheet } from "../../../components/SuggestRunSheet";
+import { colors } from "../../../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const PAGE_SIZE = 30; // matches the API's default page
@@ -181,7 +182,7 @@ export default function Chat() {
     >
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.headerButton} accessibilityLabel="Back">
-          <Ionicons name="chevron-back" size={26} color="#e2e8f0" />
+          <Ionicons name="chevron-back" size={26} color={colors.textBright} />
         </Pressable>
         {photo ? (
           <Image source={{ uri: mediaUrl(photo) }} style={styles.headerPhoto} />
@@ -197,14 +198,14 @@ export default function Chat() {
             style={styles.headerButton}
             accessibilityLabel="Report, block or unmatch"
           >
-            <Ionicons name="ellipsis-horizontal" size={22} color="#94a3b8" />
+            <Ionicons name="ellipsis-horizontal" size={22} color={colors.textMuted} />
           </Pressable>
         )}
       </View>
 
       {messages === null ? (
         <View style={styles.centered}>
-          <ActivityIndicator color="#4ecdc4" />
+          <ActivityIndicator color={colors.primary} />
         </View>
       ) : (
         <FlatList
@@ -216,7 +217,7 @@ export default function Chat() {
           onEndReached={loadOlder}
           onEndReachedThreshold={0.3}
           ListFooterComponent={
-            loadingOlder ? <ActivityIndicator color="#4ecdc4" style={styles.olderSpinner} /> : null
+            loadingOlder ? <ActivityIndicator color={colors.primary} style={styles.olderSpinner} /> : null
           }
           ListEmptyComponent={
             <View style={styles.emptyChat}>
@@ -272,12 +273,12 @@ export default function Chat() {
             onPress={() => setSuggestOpen(true)}
             accessibilityLabel="Suggest a run"
           >
-            <Ionicons name="walk" size={22} color="#4ecdc4" />
+            <Ionicons name="walk" size={22} color={colors.primary} />
           </Pressable>
           <TextInput
             style={styles.input}
             placeholder="Message"
-            placeholderTextColor="#64748b"
+            placeholderTextColor={colors.textFaint}
             value={draft}
             onChangeText={setDraft}
             multiline
@@ -291,7 +292,7 @@ export default function Chat() {
             disabled={!draft.trim() || sending}
             accessibilityLabel="Send"
           >
-            <Ionicons name="arrow-up" size={22} color="#0f172a" />
+            <Ionicons name="arrow-up" size={22} color={colors.onPrimary} />
           </Pressable>
         </View>
       )}
@@ -327,7 +328,7 @@ export default function Chat() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a" },
+  container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
     flexDirection: "row",
@@ -337,28 +338,28 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#1e293b",
+    borderBottomColor: colors.surface,
   },
   headerButton: { padding: 6 },
-  headerPhoto: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#334155" },
-  headerPhotoEmpty: { borderWidth: 1, borderColor: "#475569" },
-  headerName: { flex: 1, color: "#ffffff", fontSize: 17, fontWeight: "700" },
+  headerPhoto: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.border },
+  headerPhotoEmpty: { borderWidth: 1, borderColor: colors.borderStrong },
+  headerName: { flex: 1, color: colors.heading, fontSize: 17, fontWeight: "700" },
   list: { flex: 1 },
   listContent: { padding: 12, maxWidth: 720, width: "100%", alignSelf: "center" },
   olderSpinner: { marginVertical: 12 },
   emptyChat: { padding: 24, transform: [{ scaleY: -1 }] }, // counter the inverted list
-  emptyChatText: { color: "#94a3b8", fontSize: 15, lineHeight: 22, textAlign: "center" },
+  emptyChatText: { color: colors.textMuted, fontSize: 15, lineHeight: 22, textAlign: "center" },
   bubbleRow: { marginVertical: 3, alignItems: "flex-start" },
   bubbleRowMine: { alignItems: "flex-end" },
   bubble: { maxWidth: "80%", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8 },
-  bubbleTheirs: { backgroundColor: "#1e293b", borderBottomLeftRadius: 4 },
-  bubbleMine: { backgroundColor: "#4ecdc4", borderBottomRightRadius: 4 },
-  bubbleText: { color: "#e2e8f0", fontSize: 15, lineHeight: 21 },
-  bubbleTextMine: { color: "#0f172a" },
-  time: { color: "#64748b", fontSize: 11, marginTop: 2, alignSelf: "flex-end" },
-  timeMine: { color: "#134e4a" },
-  seen: { color: "#64748b", fontSize: 11, marginTop: 2, marginRight: 4 },
-  error: { color: "#f87171", fontSize: 13, textAlign: "center", paddingHorizontal: 16, paddingBottom: 6 },
+  bubbleTheirs: { backgroundColor: colors.surface, borderBottomLeftRadius: 4 },
+  bubbleMine: { backgroundColor: colors.primary, borderBottomRightRadius: 4 },
+  bubbleText: { color: colors.textBright, fontSize: 15, lineHeight: 21 },
+  bubbleTextMine: { color: colors.onPrimary },
+  time: { color: colors.textFaint, fontSize: 11, marginTop: 2, alignSelf: "flex-end" },
+  timeMine: { color: colors.onPrimaryMuted },
+  seen: { color: colors.textFaint, fontSize: 11, marginTop: 2, marginRight: 4 },
+  error: { color: colors.dangerText, fontSize: 13, textAlign: "center", paddingHorizontal: 16, paddingBottom: 6 },
   composer: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -366,13 +367,13 @@ const styles = StyleSheet.create({
     padding: 10,
     paddingBottom: 16,
     borderTopWidth: 1,
-    borderTopColor: "#1e293b",
+    borderTopColor: colors.surface,
   },
   input: {
     flex: 1,
     maxHeight: 120,
-    backgroundColor: "#1e293b",
-    color: "#ffffff",
+    backgroundColor: colors.surface,
+    color: colors.heading,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -383,20 +384,20 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#4ecdc4",
+    borderColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  systemNote: { color: "#64748b", fontSize: 12, textAlign: "center", marginVertical: 6 },
+  systemNote: { color: colors.textFaint, fontSize: 12, textAlign: "center", marginVertical: 6 },
   sendButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#4ecdc4",
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
   sendDisabled: { opacity: 0.4 },
-  endedBar: { padding: 16, borderTopWidth: 1, borderTopColor: "#1e293b" },
-  endedText: { color: "#94a3b8", fontSize: 14, textAlign: "center" },
+  endedBar: { padding: 16, borderTopWidth: 1, borderTopColor: colors.surface },
+  endedText: { color: colors.textMuted, fontSize: 14, textAlign: "center" },
 });

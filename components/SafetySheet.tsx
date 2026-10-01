@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ApiError, blockUser, reportUser, unmatch } from "../lib/api";
 import { REPORT_REASONS, type ReportReason } from "../lib/options";
 import { ChoiceChips } from "./ChoiceChips";
+import { colors } from "../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 
@@ -80,7 +81,7 @@ export function SafetySheet({ visible, token, person, matchId, onClose, onDone }
       disabled={busy}
     >
       {busy && style !== "plain" ? (
-        <ActivityIndicator color={style === "danger" ? "#ffffff" : "#0f172a"} />
+        <ActivityIndicator color={style === "danger" ? colors.heading : colors.onPrimary} />
       ) : (
         <Text
           style={[
@@ -122,7 +123,7 @@ export function SafetySheet({ visible, token, person, matchId, onClose, onDone }
                 <TextInput
                   style={styles.input}
                   placeholder={reason[0] === "other" ? "Tell us what happened" : "Anything else we should know? (optional)"}
-                  placeholderTextColor="#64748b"
+                  placeholderTextColor={colors.textFaint}
                   multiline
                   maxLength={1000}
                   value={details}
@@ -180,15 +181,15 @@ export function SafetySheet({ visible, token, person, matchId, onClose, onDone }
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(2, 6, 23, 0.8)" },
+  backdrop: { flex: 1, backgroundColor: colors.backdrop },
   scroll: { flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  sheet: { backgroundColor: "#1e293b", borderRadius: 20, padding: 20, width: "100%", maxWidth: 420 },
-  title: { color: "#ffffff", fontSize: 20, fontWeight: "700", marginBottom: 12 },
-  body: { color: "#cbd5e1", fontSize: 15, lineHeight: 22, marginBottom: 16 },
-  label: { color: "#ffffff", fontSize: 15, fontWeight: "600", marginBottom: 10 },
+  sheet: { backgroundColor: colors.surface, borderRadius: 20, padding: 20, width: "100%", maxWidth: 420 },
+  title: { color: colors.heading, fontSize: 20, fontWeight: "700", marginBottom: 12 },
+  body: { color: colors.text, fontSize: 15, lineHeight: 22, marginBottom: 16 },
+  label: { color: colors.heading, fontSize: 15, fontWeight: "600", marginBottom: 10 },
   input: {
-    backgroundColor: "#0f172a",
-    color: "#ffffff",
+    backgroundColor: colors.bg,
+    color: colors.heading,
     borderRadius: 12,
     padding: 14,
     minHeight: 90,
@@ -197,20 +198,20 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 16,
   },
-  error: { color: "#f87171", fontSize: 14, marginBottom: 12, textAlign: "center" },
+  error: { color: colors.dangerText, fontSize: 14, marginBottom: 12, textAlign: "center" },
   button: { paddingVertical: 13, borderRadius: 999, alignItems: "center", marginTop: 8 },
-  buttonText: { color: "#e2e8f0", fontSize: 16 },
-  primary: { backgroundColor: "#4ecdc4" },
-  primaryText: { color: "#0f172a", fontWeight: "600" },
-  danger: { backgroundColor: "#ef4444" },
-  dangerText: { color: "#ffffff", fontWeight: "600" },
+  buttonText: { color: colors.textBright, fontSize: 16 },
+  primary: { backgroundColor: colors.primary },
+  primaryText: { color: colors.onPrimary, fontWeight: "600" },
+  danger: { backgroundColor: colors.danger },
+  dangerText: { color: colors.heading, fontWeight: "600" },
   emergency: {
-    borderColor: "#f59e0b",
+    borderColor: colors.warning,
     borderWidth: 1,
-    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    backgroundColor: colors.warningTint,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
   },
-  emergencyText: { color: "#fde68a", fontSize: 14, lineHeight: 20 },
+  emergencyText: { color: colors.warningSoft, fontSize: 14, lineHeight: 20 },
 });

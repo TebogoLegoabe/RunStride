@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ApiError, answerRun } from "../lib/api";
 import { formatRunTime } from "../lib/format";
 import type { RunDate } from "../lib/types";
+import { colors } from "../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 
@@ -47,13 +48,13 @@ export function RunDateCard({ run, myId, token, otherName, onUpdated }: Props) {
   return (
     <View style={[styles.card, !live && styles.cardDone]}>
       <View style={styles.header}>
-        <Ionicons name="walk" size={18} color="#4ecdc4" />
+        <Ionicons name="walk" size={18} color={colors.primary} />
         <Text style={styles.heading}>{mine ? "You suggested a run" : `${otherName} suggested a run`}</Text>
       </View>
 
       <Text style={styles.when}>{formatRunTime(run.startsAt)}</Text>
       <View style={styles.row}>
-        <Ionicons name="location-outline" size={15} color="#94a3b8" />
+        <Ionicons name="location-outline" size={15} color={colors.textMuted} />
         <Text style={styles.place}>{run.place}</Text>
       </View>
       {run.distanceKm && <Text style={styles.detail}>{run.distanceKm} km</Text>}
@@ -71,13 +72,13 @@ export function RunDateCard({ run, myId, token, otherName, onUpdated }: Props) {
             <Text style={styles.declineText}>Can't make it</Text>
           </Pressable>
           <Pressable style={[styles.button, styles.accept]} onPress={() => act("accept")} disabled={busy}>
-            {busy ? <ActivityIndicator color="#0f172a" /> : <Text style={styles.acceptText}>I'm in!</Text>}
+            {busy ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.acceptText}>I'm in!</Text>}
           </Pressable>
         </View>
       )}
       {run.status === "accepted" && (
         <Pressable style={styles.safetyButton} onPress={() => router.push(`/run/${run.id}`)}>
-          <Ionicons name={past ? "chatbubble-ellipses-outline" : "shield-checkmark-outline"} size={16} color="#0f172a" />
+          <Ionicons name={past ? "chatbubble-ellipses-outline" : "shield-checkmark-outline"} size={16} color={colors.onPrimary} />
           <Text style={styles.safetyText}>{past ? "How did it go?" : "Run safety & live sharing"}</Text>
         </Pressable>
       )}
@@ -95,41 +96,41 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     width: "92%",
     maxWidth: 380,
-    backgroundColor: "#1e293b",
-    borderColor: "#4ecdc4",
+    backgroundColor: colors.surface,
+    borderColor: colors.primary,
     borderWidth: 1,
     borderRadius: 16,
     padding: 14,
     marginVertical: 8,
   },
-  cardDone: { borderColor: "#334155", opacity: 0.75 },
+  cardDone: { borderColor: colors.border, opacity: 0.75 },
   header: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
-  heading: { color: "#94a3b8", fontSize: 13, fontWeight: "600" },
-  when: { color: "#ffffff", fontSize: 18, fontWeight: "700", marginBottom: 4 },
+  heading: { color: colors.textMuted, fontSize: 13, fontWeight: "600" },
+  when: { color: colors.heading, fontSize: 18, fontWeight: "700", marginBottom: 4 },
   row: { flexDirection: "row", alignItems: "center", gap: 4 },
-  place: { color: "#e2e8f0", fontSize: 15, flexShrink: 1 },
-  detail: { color: "#94a3b8", fontSize: 14, marginTop: 2 },
-  note: { color: "#cbd5e1", fontSize: 14, fontStyle: "italic", marginTop: 6 },
-  status: { color: "#94a3b8", fontSize: 13, marginTop: 10 },
-  statusAccepted: { color: "#4ecdc4", fontWeight: "700" },
-  error: { color: "#f87171", fontSize: 13, marginTop: 6 },
+  place: { color: colors.textBright, fontSize: 15, flexShrink: 1 },
+  detail: { color: colors.textMuted, fontSize: 14, marginTop: 2 },
+  note: { color: colors.text, fontSize: 14, fontStyle: "italic", marginTop: 6 },
+  status: { color: colors.textMuted, fontSize: 13, marginTop: 10 },
+  statusAccepted: { color: colors.primary, fontWeight: "700" },
+  error: { color: colors.dangerText, fontSize: 13, marginTop: 6 },
   actions: { flexDirection: "row", gap: 8, marginTop: 12 },
   button: { flex: 1, paddingVertical: 10, borderRadius: 999, alignItems: "center" },
-  accept: { backgroundColor: "#4ecdc4" },
-  acceptText: { color: "#0f172a", fontWeight: "700", fontSize: 15 },
-  decline: { borderColor: "#475569", borderWidth: 1 },
-  declineText: { color: "#cbd5e1", fontSize: 15 },
+  accept: { backgroundColor: colors.primary },
+  acceptText: { color: colors.onPrimary, fontWeight: "700", fontSize: 15 },
+  decline: { borderColor: colors.borderStrong, borderWidth: 1 },
+  declineText: { color: colors.text, fontSize: 15 },
   safetyButton: {
     flexDirection: "row",
     gap: 6,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#4ecdc4",
+    backgroundColor: colors.primary,
     paddingVertical: 10,
     borderRadius: 999,
     marginTop: 12,
   },
-  safetyText: { color: "#0f172a", fontWeight: "700", fontSize: 14 },
+  safetyText: { color: colors.onPrimary, fontWeight: "700", fontSize: 14 },
   cancel: { marginTop: 10, alignSelf: "flex-start" },
-  cancelText: { color: "#94a3b8", fontSize: 13, textDecorationLine: "underline" },
+  cancelText: { color: colors.textMuted, fontSize: 13, textDecorationLine: "underline" },
 });

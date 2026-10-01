@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { ApiError, getMe, getRunningProfile, saveRunningProfile } from "../lib/api";
 import { GOALS, RUN_TIMES, TERRAINS, type Goal, type RunTime, type Terrain } from "../lib/options";
-import { routeFor } from "../lib/routing";
+import { afterSave } from "../lib/routing";
 import { getToken } from "../lib/session";
 import { ChoiceChips } from "../components/ChoiceChips";
+import { colors } from "../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const digits = (t: string) => t.replace(/\D/g, "");
@@ -78,7 +79,7 @@ export default function RunningPreferences() {
         goals,
         runTimes,
       });
-      router.replace(routeFor(await getMe(token)));
+      afterSave(router, await getMe(token));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     } finally {
@@ -89,7 +90,7 @@ export default function RunningPreferences() {
   if (initializing) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color="#4ecdc4" />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -108,7 +109,7 @@ export default function RunningPreferences() {
         <TextInput
           style={[styles.input, styles.smallInput]}
           placeholder="5"
-          placeholderTextColor="#64748b"
+          placeholderTextColor={colors.textFaint}
           keyboardType="number-pad"
           maxLength={2}
           value={paceMin}
@@ -119,7 +120,7 @@ export default function RunningPreferences() {
         <TextInput
           style={[styles.input, styles.smallInput]}
           placeholder="30"
-          placeholderTextColor="#64748b"
+          placeholderTextColor={colors.textFaint}
           keyboardType="number-pad"
           maxLength={2}
           value={paceSec}
@@ -134,7 +135,7 @@ export default function RunningPreferences() {
         <TextInput
           style={[styles.input, styles.smallInput]}
           placeholder="20"
-          placeholderTextColor="#64748b"
+          placeholderTextColor={colors.textFaint}
           keyboardType="number-pad"
           maxLength={3}
           value={weeklyKm}
@@ -162,7 +163,7 @@ export default function RunningPreferences() {
         disabled={saving}
       >
         {saving ? (
-          <ActivityIndicator color="#0f172a" />
+          <ActivityIndicator color={colors.onPrimary} />
         ) : (
           <Text style={styles.primaryButtonText}>Continue</Text>
         )}
@@ -172,30 +173,30 @@ export default function RunningPreferences() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a" },
+  container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
   content: { padding: 24, paddingTop: 64, paddingBottom: 48, width: "100%", maxWidth: 560, alignSelf: "center" },
-  title: { fontSize: 26, fontWeight: "700", color: "#ffffff", marginBottom: 8 },
-  subtitle: { fontSize: 14, lineHeight: 20, color: "#94a3b8", marginBottom: 32 },
-  label: { fontSize: 15, fontWeight: "600", color: "#ffffff", marginBottom: 6 },
-  hint: { fontSize: 13, color: "#94a3b8", marginBottom: 12 },
+  title: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 8 },
+  subtitle: { fontSize: 14, lineHeight: 20, color: colors.textMuted, marginBottom: 32 },
+  label: { fontSize: 15, fontWeight: "600", color: colors.heading, marginBottom: 6 },
+  hint: { fontSize: 13, color: colors.textMuted, marginBottom: 12 },
   inlineRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 24 },
-  inlineText: { color: "#cbd5e1", fontSize: 16 },
+  inlineText: { color: colors.text, fontSize: 16 },
   input: {
-    backgroundColor: "#1e293b",
-    color: "#ffffff",
+    backgroundColor: colors.surface,
+    color: colors.heading,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
   },
   smallInput: { width: 72, textAlign: "center" },
-  error: { color: "#f87171", fontSize: 14, marginBottom: 16, textAlign: "center" },
+  error: { color: colors.dangerText, fontSize: 14, marginBottom: 16, textAlign: "center" },
   primaryButton: {
-    backgroundColor: "#4ecdc4",
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: "center",
   },
   buttonDisabled: { opacity: 0.5 },
-  primaryButtonText: { color: "#0f172a", fontSize: 16, fontWeight: "600" },
+  primaryButtonText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
 });

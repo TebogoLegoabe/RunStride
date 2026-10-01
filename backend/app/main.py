@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.deps import DbSession
 from app.persona import PersonaError, PersonaNotConfigured
 from app.routers import (
+    account,
     admin,
     auth,
     discover,
@@ -73,6 +74,7 @@ def persona_error(request: Request, exc: PersonaError) -> JSONResponse:
 
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(account.router)
 app.include_router(profile.router)
 app.include_router(preferences.router)
 app.include_router(discover.router)

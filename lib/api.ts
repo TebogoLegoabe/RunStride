@@ -2,8 +2,8 @@
 // calling fetch() directly, so auth headers / base URL / error handling
 // live in one place.
 
-import { Platform } from "react-native";
 import type { ReportReason } from "./options";
+import { photoFile } from "./photoFile";
 import type {
   DatingPreferences,
   DiscoverCard,
@@ -91,6 +91,9 @@ export const verifyOtp = (phone: string, code: string) =>
 export const getMe = (token: string) =>
   apiRequest<import("./types").Me>("/me", { token });
 
+// Permanent: removes the account and everything tied to it (reports about the user are kept)
+export const deleteAccount = (token: string) => apiRequest<void>("/me", { method: "DELETE", token });
+
 // --- Profile ---
 export type ProfileInput = { displayName: string; birthDate: string; bio: string };
 
@@ -108,14 +111,7 @@ export const saveMyProfile = (token: string, profile: ProfileInput) =>
 
 export async function uploadPhoto(token: string, uri: string): Promise<Photo> {
   const form = new FormData();
-  if (Platform.OS === "web") {
-    // On web the picker gives a blob:/data: URI; send the actual bytes
-    const blob = await (await fetch(uri)).blob();
-    form.append("file", blob, "photo.jpg");
-  } else {
-    // React Native's FormData accepts a file descriptor object instead of a Blob
-    form.append("file", { uri, name: "photo.jpg", type: "image/jpeg" } as unknown as Blob);
-  }
+  form.append("file", await photoFile(uri), "photo.jpg");
 
   // No Content-Type header: fetch sets the multipart boundary itself
   const res = await fetch(`${API_BASE_URL}/me/photos`, {
