@@ -13,6 +13,9 @@ from app.deps import AppSettings, CurrentUser, DbSession
 from app.matching import RunnerTraits, compatibility
 from app.models import (
     DatingPreferences,
+    Race,
+    RaceAttendance,
+    RaceEvent,
     Match,
     Profile,
     ProfilePhoto,
@@ -23,7 +26,8 @@ from app.models import (
 )
 from app.moderation import is_usable, not_blocked_with, open_reporter_count
 from app.routers.matches import match_summary
-from app.schemas import DiscoverCard, LocationBody, SwipeResponse, age_on
+from app.races import sa_today
+from app.schemas import DiscoverCard, LocationBody, SharedRace, SwipeResponse, age_on
 from app.security import utcnow
 
 router = APIRouter(tags=["discover"])
@@ -58,6 +62,7 @@ def _candidates(
     *,
     only: uuid.UUID | None = None,
     exclude_swiped: bool = True,
+    race_id: uuid.UUID | None = None,
 ) -> list[tuple[User, float]]:
     """Users who fit my preferences AND whose preferences I fit, nearest first, with distance in metres."""
     prefs = me.dating_preferences
@@ -105,9 +110,36 @@ def _candidates(
         stmt = stmt.where(User.verification_status == VerificationStatus.verified)
     if exclude_swiped:
         stmt = stmt.where(~exists().where(Swipe.swiper_id == me.id, Swipe.target_id == User.id))
+    if race_id is not None:
+        stmt = stmt.where(exists().where(RaceAttendance.race_id == race_id, RaceAttendance.user_id == User.id))
     if only is not None:
         stmt = stmt.where(User.id == only)
     return [(row[0], row[1]) for row in db.execute(stmt).all()]
+
+
+def _shared_races(db: Session, me: User, others: list[uuid.UUID]) -> dict[uuid.UUID, list[SharedRace]]:
+    """For each person, the upcoming races you're both going to (with their distance)."""
+    if not others:
+        return {}
+    mine = select(RaceAttendance.race_id).where(RaceAttendance.user_id == me.id)
+    rows = db.execute(
+        select(RaceAttendance.user_id, Race, RaceEvent.label)
+        .join(Race, Race.id == RaceAttendance.race_id)
+        .outerjoin(RaceEvent, RaceEvent.id == RaceAttendance.race_event_id)
+        .where(
+            RaceAttendance.user_id.in_(others),
+            RaceAttendance.race_id.in_(mine),
+            Race.status == "published",
+            Race.ends_on >= sa_today(),
+        )
+        .order_by(Race.starts_on)
+    ).all()
+    shared: dict[uuid.UUID, list[SharedRace]] = {}
+    for user_id, race, label in rows:
+        shared.setdefault(user_id, []).append(
+            SharedRace(race_id=race.id, name=race.name, starts_on=race.starts_on, event_label=label)
+        )
+    return shared
 
 
 def _card(user: User, distance_m: float, my_traits: RunnerTraits) -> DiscoverCard:
@@ -145,10 +177,17 @@ def discover(
     db: DbSession,
     settings: AppSettings,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
+    race_id: uuid.UUID | None = None,
 ) -> list[DiscoverCard]:
     _require_ready(user)
     my_traits = _traits(user.running_profile)
-    cards = [_card(u, d, my_traits) for u, d in _candidates(db, user, settings)]
+    if race_id is not None and db.get(RaceAttendance, (race_id, user.id)) is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Join this race to see who's going.")
+    candidates = _candidates(db, user, settings, race_id=race_id)
+    shared = _shared_races(db, user, [u.id for u, _ in candidates])
+    cards = [_card(u, d, my_traits) for u, d in candidates]
+    for card in cards:
+        card.shared_races = shared.get(card.user_id, [])
     cards.sort(key=lambda c: (-c.compatibility, c.distance_km))
     return cards[:limit]
 

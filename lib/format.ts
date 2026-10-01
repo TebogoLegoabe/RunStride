@@ -50,3 +50,28 @@ export function toIsoWithOffset(day: Date, time: string): string | null {
     `${sign}${pad(offsetMin / 60)}:${pad(offsetMin % 60)}`
   );
 }
+
+// "Sat 3 Oct", or "Sat 3 – Sun 4 Oct" for multi-day races. Dates are YYYY-MM-DD calendar
+// dates, read without a timezone so they never shift by a day.
+export function formatRaceDates(startsOn: string, endsOn: string): string {
+  const parse = (d: string) => {
+    const [y, m, day] = d.split("-").map(Number);
+    return new Date(y, m - 1, day);
+  };
+  const start = parse(startsOn);
+  const fmt = (d: Date, withMonth: boolean) =>
+    d.toLocaleDateString([], { weekday: "short", day: "numeric", ...(withMonth ? { month: "short" } : {}) });
+  if (startsOn === endsOn) return fmt(start, true);
+  const end = parse(endsOn);
+  return `${fmt(start, start.getMonth() !== end.getMonth())} – ${fmt(end, true)}`;
+}
+
+export function formatDistance(km: number): string {
+  return `${Number.isInteger(km) ? km : km.toFixed(1)} km`;
+}
+
+// "Sat 05:30", in the device's local time
+export function formatDayTime(iso: string): string {
+  const d = new Date(iso);
+  return `${d.toLocaleDateString([], { weekday: "short" })} ${formatClock(iso)}`;
+}

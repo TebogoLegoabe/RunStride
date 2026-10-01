@@ -30,6 +30,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="races"
+        options={{
+          title: "Races",
+          tabBarIcon: ({ color, size }) => <Ionicons name="flag" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="matches"
         options={{
           title: "Matches",

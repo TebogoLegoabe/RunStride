@@ -1,26 +1,38 @@
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, FlatList, Image } from "react-native";
 import { useCallback, useEffect, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { ApiError, getMatches, getMe, mediaUrl } from "../../../lib/api";
+import { ApiError, answerChatRequest, getChatRequests, getMatches, getMe, mediaUrl } from "../../../lib/api";
 import { formatWhen } from "../../../lib/format";
-import type { MatchSummary } from "../../../lib/types";
+import type { ChatRequest, MatchSummary, RealtimeEvent } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { colors } from "../../../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const OFFLINE_POLL_MS = 15_000;
+// Events that change this list (race group chat messages don't)
+const MATCH_LIST_EVENTS = new Set<RealtimeEvent["type"]>([
+  "ready",
+  "message",
+  "read",
+  "match_ended",
+  "chat_request",
+  "chat_request_accepted",
+]);
 
 export default function Matches() {
   const router = useRouter();
-  const { token, connected, subscribe } = useChat();
+  const { token, connected, subscribe, refreshUnread } = useChat();
   const [myId, setMyId] = useState<string | null>(null);
   const [matches, setMatches] = useState<MatchSummary[] | null>(null);
+  const [requests, setRequests] = useState<ChatRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      setMatches(await getMatches(token));
+      const [m, r] = await Promise.all([getMatches(token), getChatRequests(token)]);
+      setMatches(m);
+      setRequests(r);
       setError(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
@@ -39,12 +51,81 @@ export default function Matches() {
   );
 
   // Live updates while connected; slow polling as a fallback when not
-  useEffect(() => subscribe((e) => e.type !== "pong" && load()), [subscribe, load]);
+  useEffect(
+    () => subscribe((e) => MATCH_LIST_EVENTS.has(e.type) && load()),
+    [subscribe, load]
+  );
   useEffect(() => {
     if (connected) return;
     const id = setInterval(load, OFFLINE_POLL_MS);
     return () => clearInterval(id);
   }, [connected, load]);
+
+  const answer = async (request: ChatRequest, choice: "accept" | "decline") => {
+    if (!token) return;
+    try {
+      const result = await answerChatRequest(token, request.id, choice);
+      refreshUnread();
+      if (choice === "accept" && result.matchId) {
+        router.push({
+          pathname: "/chat/[matchId]",
+          params: {
+            matchId: result.matchId,
+            userId: request.other.id,
+            name: request.other.displayName,
+            photo: request.other.photo ?? "",
+          },
+        });
+      }
+      load();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+    }
+  };
+
+  const incoming = requests.filter((r) => r.incoming);
+  const outgoing = requests.filter((r) => !r.incoming);
+
+  const requestsHeader =
+    incoming.length + outgoing.length > 0 ? (
+      <View style={styles.requests}>
+        {incoming.length > 0 && <Text style={styles.sectionTitle}>Chat requests</Text>}
+        {incoming.map((r) => (
+          <View key={r.id} style={styles.requestCard}>
+            <View style={styles.requestTop}>
+              {r.other.photo ? (
+                <Image source={{ uri: mediaUrl(r.other.photo) }} style={styles.requestAvatar} />
+              ) : (
+                <View style={[styles.requestAvatar, styles.avatarEmpty]} />
+              )}
+              <View style={styles.rowText}>
+                <Text style={styles.name}>{r.other.displayName}</Text>
+                <Text style={styles.requestVia}>
+                  {r.listingKind
+                    ? `About your entry ${r.listingKind === "offering" ? "for sale" : "request"} · ${r.raceName}`
+                    : `Going to ${r.raceName}`}
+                </Text>
+              </View>
+            </View>
+            {r.note && <Text style={styles.requestNote}>“{r.note}”</Text>}
+            <View style={styles.requestActions}>
+              <Pressable style={styles.declineButton} onPress={() => answer(r, "decline")}>
+                <Text style={styles.declineText}>Decline</Text>
+              </Pressable>
+              <Pressable style={styles.acceptButton} onPress={() => answer(r, "accept")}>
+                <Text style={styles.acceptText}>Accept</Text>
+              </Pressable>
+            </View>
+          </View>
+        ))}
+        {outgoing.length > 0 && (
+          <Text style={styles.waiting}>
+            Waiting for {outgoing.map((r) => r.other.displayName).join(", ")} to accept your request
+            {outgoing.length > 1 ? "s" : ""}.
+          </Text>
+        )}
+      </View>
+    ) : null;
 
   const openChat = (m: MatchSummary) =>
     router.push({
@@ -67,6 +148,7 @@ export default function Matches() {
       <FlatList
         data={matches}
         keyExtractor={(m) => m.id}
+        ListHeaderComponent={requestsHeader}
         contentContainerStyle={matches.length === 0 ? styles.emptyWrap : undefined}
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -83,7 +165,9 @@ export default function Matches() {
           const last = m.lastMessage;
           const preview = last
             ? `${last.senderId === myId ? "You: " : ""}${last.body}`
-            : "New match! Say hi 👋";
+            : m.kind === "race"
+              ? "Connected! Say hi 👋"
+              : "New match! Say hi 👋";
           const unread = m.unreadCount > 0;
           return (
             <Pressable style={styles.row} onPress={() => openChat(m)}>
@@ -99,6 +183,7 @@ export default function Matches() {
                   </Text>
                   <Text style={styles.when}>{formatWhen(last?.createdAt ?? m.matchedAt)}</Text>
                 </View>
+                {m.originRaceName && <Text style={styles.origin}>Met at {m.originRaceName}</Text>}
                 <View style={styles.rowBottom}>
                   <Text
                     style={[styles.preview, !last && styles.previewNew, unread && styles.previewUnread]}
@@ -167,6 +252,27 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: colors.onPrimary, fontSize: 12, fontWeight: "700" },
   emptyWrap: { flexGrow: 1 },
+  origin: { color: colors.pink, fontSize: 12, marginTop: 1 },
+  requests: { paddingHorizontal: 16, paddingBottom: 8, maxWidth: 640, width: "100%", alignSelf: "center" },
+  sectionTitle: { color: colors.textMuted, fontSize: 13, fontWeight: "700", marginBottom: 8 },
+  requestCard: { backgroundColor: colors.surface, borderRadius: 14, padding: 12, marginBottom: 10 },
+  requestTop: { flexDirection: "row", alignItems: "center", gap: 10 },
+  requestAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.border },
+  requestVia: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
+  requestNote: { color: colors.text, fontSize: 14, fontStyle: "italic", marginTop: 8 },
+  requestActions: { flexDirection: "row", gap: 8, marginTop: 10 },
+  declineButton: {
+    flex: 1,
+    borderColor: colors.borderStrong,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 9,
+    alignItems: "center",
+  },
+  declineText: { color: colors.text, fontSize: 14 },
+  acceptButton: { flex: 1, backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 9, alignItems: "center" },
+  acceptText: { color: colors.onPrimary, fontSize: 14, fontWeight: "700" },
+  waiting: { color: colors.textFaint, fontSize: 12, marginBottom: 8 },
   empty: { flex: 1, justifyContent: "center", padding: 24, maxWidth: 420, width: "100%", alignSelf: "center" },
   emptyTitle: { fontSize: 22, fontWeight: "700", color: colors.heading, marginBottom: 8 },
   emptyBody: { fontSize: 15, lineHeight: 22, color: colors.text, marginBottom: 24 },

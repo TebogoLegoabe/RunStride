@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import select
 
 from app.deps import CurrentUser, DbSession
-from app.models import Report, User
+from app.models import Race, Report, User
 from app.moderation import block, capture_evidence, match_between
 from app.schemas import ReportBody, ReportCreated
 from app.security import utcnow
@@ -31,6 +31,9 @@ def block_user(user_id: uuid.UUID, user: CurrentUser, db: DbSession) -> Response
 def create_report(body: ReportBody, user: CurrentUser, db: DbSession) -> ReportCreated:
     reported = _other_user(db, user, body.reported_user_id)
 
+    if body.race_id is not None and db.get(Race, body.race_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Race not found.")
+
     match = match_between(db, user.id, reported.id)
     if body.match_id is not None and (match is None or match.id != body.match_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Match not found.")
@@ -48,10 +51,11 @@ def create_report(body: ReportBody, user: CurrentUser, db: DbSession) -> ReportC
         reporter_id=user.id,
         reported_id=reported.id,
         match_id=match.id if match else None,
+        race_id=body.race_id,
         reason=body.reason,
         details=body.details,
         # Captured before blocking, while the conversation is exactly as the reporter saw it
-        evidence=capture_evidence(db, reported, match),
+        evidence=capture_evidence(db, reported, match, body.race_id),
         created_at=utcnow(),
     )
     db.add(report)

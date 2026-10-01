@@ -23,6 +23,7 @@ export interface DiscoverCard {
   terrains: Terrain[];
   goals: Goal[];
   runTimes: RunTime[];
+  sharedRaces: SharedRace[]; // upcoming races you're both going to
 }
 
 export interface MatchSummary {
@@ -33,6 +34,8 @@ export interface MatchSummary {
   matchedAt: string;
   lastMessage: { body: string; senderId: string; createdAt: string } | null;
   unreadCount: number;
+  kind: "dating" | "race";
+  originRaceName: string | null; // for race chats: where you met
 }
 
 export interface RunDate {
@@ -66,7 +69,11 @@ export type RealtimeEvent =
   | { type: "message"; message: Message }
   | { type: "read"; matchId: string; readAt: string }
   | { type: "match_ended"; matchId: string }
-  | { type: "run_date"; runDate: RunDate };
+  | { type: "run_date"; runDate: RunDate }
+  | { type: "race_message"; message: RaceMessage }
+  | { type: "race_message_removed"; raceId: string; messageId: string }
+  | { type: "chat_request"; requestId: string }
+  | { type: "chat_request_accepted"; requestId: string; matchId: string };
 
 export interface SwipeResult {
   matched: boolean;
@@ -174,4 +181,120 @@ export interface RunSafety {
   share: RunShare | null;
   trustedContacts: TrustedContact[];
   checkIn: "ok" | "problem" | null;
+}
+
+// --- Races ---
+export type SwapWindow = "open" | "upcoming" | "closed" | "none";
+export type AttendanceRole = "running" | "supporting";
+
+export interface SharedRace {
+  raceId: string;
+  name: string;
+  startsOn: string;
+  eventLabel: string | null;
+}
+
+export interface MyAttendance {
+  role: AttendanceRole;
+  raceEventId: string | null;
+  eventLabel: string | null;
+}
+
+export interface RaceSummary {
+  id: string;
+  name: string;
+  startsOn: string; // YYYY-MM-DD, South African date
+  endsOn: string;
+  venue: string;
+  city: string;
+  province: string | null;
+  status: "published" | "pending" | "rejected";
+  attendingCount: number;
+  myAttendance: MyAttendance | null;
+}
+
+export interface RaceEvent {
+  id: string;
+  label: string;
+  distanceKm: number;
+  startsAt: string | null;
+  runnerCount: number;
+}
+
+export interface RaceDetail extends RaceSummary {
+  officialUrl: string | null;
+  substitutionOpensOn: string | null;
+  substitutionClosesOn: string | null;
+  substitutionUrl: string | null;
+  swapWindow: SwapWindow;
+  events: RaceEvent[];
+}
+
+export interface Person {
+  id: string;
+  displayName: string;
+  photo: string | null;
+}
+
+export interface Attendee {
+  userId: string;
+  displayName: string;
+  age: number;
+  photo: string | null;
+  verified: boolean;
+  role: AttendanceRole;
+  eventLabel: string | null;
+  connection: "none" | "requested" | "incoming" | "connected";
+  matchId: string | null;
+  requestId: string | null;
+}
+
+export interface RaceMessage {
+  id: string;
+  raceId: string;
+  sender: Person;
+  body: string;
+  createdAt: string;
+}
+
+export interface Listing {
+  id: string;
+  raceId: string;
+  kind: "offering" | "looking";
+  raceEventId: string | null;
+  eventLabel: string | null;
+  priceRands: number | null;
+  note: string | null;
+  status: "open" | "closed";
+  createdAt: string;
+  user: Person;
+  mine: boolean;
+}
+
+export interface ChatRequest {
+  id: string;
+  status: "pending" | "accepted" | "declined";
+  createdAt: string;
+  note: string | null;
+  raceId: string | null;
+  raceName: string | null;
+  listingKind: "offering" | "looking" | null;
+  other: Person;
+  incoming: boolean;
+  matchId: string | null;
+}
+
+// Admins creating or editing a race
+export interface RaceInput {
+  name: string;
+  startsOn: string;
+  endsOn?: string;
+  venue: string;
+  city: string;
+  province?: string | null;
+  officialUrl?: string | null;
+  substitutionOpensOn?: string | null;
+  substitutionClosesOn?: string | null;
+  substitutionUrl?: string | null;
+  events: { id?: string; label: string; distanceKm: number; startsAt?: string | null }[];
 }

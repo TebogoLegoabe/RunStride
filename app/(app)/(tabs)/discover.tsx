@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, ScrollView, Image, Modal } from "react-native";
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Location from "expo-location";
 import {
   ApiError,
@@ -31,6 +31,8 @@ async function currentPosition() {
 
 export default function Discover() {
   const router = useRouter();
+  // Set when opened from a race's Runners section: only people going to that race
+  const { raceId, raceName } = useLocalSearchParams<{ raceId?: string; raceName?: string }>();
   const [token, setToken] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
   const [unverified, setUnverified] = useState(false);
@@ -43,7 +45,7 @@ export default function Discover() {
 
   const loadFeed = useCallback(async (t: string) => {
     try {
-      const feed = await getDiscoverFeed(t);
+      const feed = await getDiscoverFeed(t, raceId);
       // Keep cards already on screen; add new ones after them
       setCards((current) => {
         const seen = new Set(current.map((c) => c.userId));
@@ -53,7 +55,12 @@ export default function Discover() {
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     }
-  }, []);
+  }, [raceId]);
+
+  // Switching between everyone and one race starts the feed afresh
+  useEffect(() => {
+    setCards([]);
+  }, [raceId]);
 
   useEffect(() => {
     (async () => {
@@ -186,6 +193,16 @@ export default function Discover() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
         {banner}
+        {raceId && (
+          <View style={styles.raceFilter}>
+            <Text style={styles.raceFilterText} numberOfLines={1}>
+              🏁 Runners at {raceName ?? "this race"}
+            </Text>
+            <Pressable onPress={() => router.replace("/discover")}>
+              <Text style={styles.raceFilterClear}>Show everyone</Text>
+            </Pressable>
+          </View>
+        )}
         {error && <Text style={styles.error}>{error}</Text>}
 
         {card ? (
@@ -264,6 +281,21 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
   scroll: { padding: 16, paddingTop: 48, paddingBottom: 40 },
+  raceFilter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    backgroundColor: colors.pinkTint,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+    maxWidth: 420,
+    width: "100%",
+    alignSelf: "center",
+  },
+  raceFilterText: { color: colors.pink, fontWeight: "700", fontSize: 14, flexShrink: 1 },
+  raceFilterClear: { color: colors.textMuted, fontSize: 13, textDecorationLine: "underline" },
   devBanner: {
     marginBottom: 16,
     padding: 14,

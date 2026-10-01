@@ -167,6 +167,7 @@ class DiscoverCard(CamelModel):
     terrains: list[str]
     goals: list[str]
     run_times: list[str]
+    shared_races: list["SharedRace"] = Field(default_factory=list)
 
 
 class MatchSummary(CamelModel):
@@ -177,6 +178,8 @@ class MatchSummary(CamelModel):
     matched_at: datetime
     last_message: "LastMessage | None" = None
     unread_count: int = 0
+    kind: str = "dating"
+    origin_race_name: str | None = None
 
 
 class SwipeResponse(CamelModel):
@@ -226,8 +229,6 @@ class LastMessage(CamelModel):
     created_at: datetime
 
 
-MatchSummary.model_rebuild()
-SwipeResponse.model_rebuild()
 
 
 ReportReason = Literal["fake_profile", "harassment", "inappropriate", "underage", "unsafe_meeting", "spam", "other"]
@@ -237,6 +238,7 @@ ModerationAction = Literal["dismiss", "warn", "suspend", "ban"]
 class ReportBody(CamelModel):
     reported_user_id: uuid.UUID
     match_id: uuid.UUID | None = None
+    race_id: uuid.UUID | None = None
     reason: ReportReason
     details: str | None = Field(default=None, max_length=1000)
 
@@ -385,3 +387,209 @@ class RunSafetyOut(CamelModel):
     share: ShareOut | None
     trusted_contacts: list[TrustedContactOut]
     check_in: str | None
+
+
+# --- Races ---
+
+Province = Literal[
+    "Eastern Cape", "Free State", "Gauteng", "KwaZulu-Natal", "Limpopo",
+    "Mpumalanga", "Northern Cape", "North West", "Western Cape",
+]
+AttendanceRole = Literal["running", "supporting"]
+# Swap board state for a race: open (inside the official window), upcoming, closed,
+# or none (the organiser hasn't published a transfer window, so no swaps)
+SwapWindow = Literal["open", "upcoming", "closed", "none"]
+
+
+def _blank_to_none(v: str | None) -> str | None:
+    return (v or "").strip() or None
+
+
+class RaceEventBody(CamelModel):
+    # Set when editing an existing distance, so people who chose it keep their choice
+    id: uuid.UUID | None = None
+    label: str = Field(min_length=1, max_length=60)
+    distance_km: float = Field(gt=0, le=1000)
+    starts_at: datetime | None = None
+
+
+class RaceEventOut(RaceEventBody):
+    id: uuid.UUID  # type: ignore[assignment]  # always set on the way out
+    runner_count: int = 0
+
+
+class RaceBody(CamelModel):
+    """An admin creating or editing a race."""
+
+    name: str = Field(min_length=2, max_length=120)
+    starts_on: date
+    ends_on: date | None = None  # defaults to starts_on
+    venue: str = Field(min_length=2, max_length=160)
+    city: str = Field(min_length=2, max_length=80)
+    province: Province | None = None
+    official_url: str | None = Field(default=None, max_length=500)
+    substitution_opens_on: date | None = None
+    substitution_closes_on: date | None = None
+    substitution_url: str | None = Field(default=None, max_length=500)
+    events: list[RaceEventBody] = Field(default_factory=list, max_length=20)
+
+    _blanks = field_validator("official_url", "substitution_url")(_blank_to_none)
+
+    @model_validator(mode="after")
+    def dates_in_order(self) -> "RaceBody":
+        if self.ends_on is None:
+            self.ends_on = self.starts_on
+        if self.ends_on < self.starts_on:
+            raise ValueError("The race can't end before it starts.")
+        opens, closes = self.substitution_opens_on, self.substitution_closes_on
+        if (opens is None) != (closes is None):
+            raise ValueError("Give both the first and last day of the substitution window, or neither.")
+        if opens and closes and closes < opens:
+            raise ValueError("The substitution window can't close before it opens.")
+        return self
+
+
+class RaceSuggestionBody(CamelModel):
+    """A user suggesting a race that's missing. An admin reviews it before it's listed."""
+
+    name: str = Field(min_length=2, max_length=120)
+    starts_on: date
+    venue: str = Field(min_length=2, max_length=160)
+    city: str = Field(min_length=2, max_length=80)
+    official_url: str | None = Field(default=None, max_length=500)
+
+    _blanks = field_validator("official_url")(_blank_to_none)
+
+
+class MyAttendance(CamelModel):
+    role: AttendanceRole
+    race_event_id: uuid.UUID | None
+    event_label: str | None
+
+
+class RaceSummary(CamelModel):
+    id: uuid.UUID
+    name: str
+    starts_on: date
+    ends_on: date
+    venue: str
+    city: str
+    province: str | None
+    status: str
+    attending_count: int
+    my_attendance: MyAttendance | None
+
+
+class RaceDetail(RaceSummary):
+    official_url: str | None
+    substitution_opens_on: date | None
+    substitution_closes_on: date | None
+    substitution_url: str | None
+    swap_window: SwapWindow
+    events: list[RaceEventOut]
+
+
+class AttendanceBody(CamelModel):
+    role: AttendanceRole
+    race_event_id: uuid.UUID | None = None
+
+    @model_validator(mode="after")
+    def runners_pick_a_distance(self) -> "AttendanceBody":
+        if self.role == "running" and self.race_event_id is None:
+            raise ValueError("Choose which distance you're running.")
+        return self
+
+
+Connection = Literal["none", "requested", "incoming", "connected"]
+
+
+class Attendee(CamelModel):
+    user_id: uuid.UUID
+    display_name: str
+    age: int
+    photo: str | None
+    verified: bool
+    role: AttendanceRole
+    event_label: str | None
+    # Where you stand with them: nothing yet, you asked, they asked, or already chatting
+    connection: Connection
+    match_id: uuid.UUID | None = None
+    request_id: uuid.UUID | None = None
+
+
+class Sender(CamelModel):
+    id: uuid.UUID
+    display_name: str
+    photo: str | None
+
+
+class RaceMessageOut(CamelModel):
+    id: uuid.UUID
+    race_id: uuid.UUID
+    sender: Sender
+    body: str
+    created_at: datetime
+
+
+class ListingBody(CamelModel):
+    kind: Literal["offering", "looking"]
+    race_event_id: uuid.UUID
+    price_rands: int | None = Field(default=None, ge=0, le=100_000)
+    note: str | None = Field(default=None, max_length=300)
+
+    _blanks = field_validator("note")(_blank_to_none)
+
+    @model_validator(mode="after")
+    def price_only_when_offering(self) -> "ListingBody":
+        if self.kind == "looking":
+            self.price_rands = None
+        return self
+
+
+class ListingOut(CamelModel):
+    id: uuid.UUID
+    race_id: uuid.UUID
+    kind: str
+    race_event_id: uuid.UUID | None
+    event_label: str | None
+    price_rands: int | None
+    note: str | None
+    status: str
+    created_at: datetime
+    user: Sender
+    mine: bool
+
+
+class ChatRequestBody(CamelModel):
+    to_user_id: uuid.UUID
+    race_id: uuid.UUID | None = None
+    listing_id: uuid.UUID | None = None
+    note: str | None = Field(default=None, max_length=300)
+
+    _blanks = field_validator("note")(_blank_to_none)
+
+
+class ChatRequestOut(CamelModel):
+    id: uuid.UUID
+    status: str
+    created_at: datetime
+    note: str | None
+    race_id: uuid.UUID | None
+    race_name: str | None
+    listing_kind: str | None
+    # The other person (sender for incoming requests, recipient for outgoing)
+    other: Sender
+    incoming: bool
+    match_id: uuid.UUID | None
+
+
+class SharedRace(CamelModel):
+    race_id: uuid.UUID
+    name: str
+    starts_on: date
+    event_label: str | None
+
+
+DiscoverCard.model_rebuild()
+MatchSummary.model_rebuild()
+SwipeResponse.model_rebuild()

@@ -7,7 +7,7 @@ from sqlalchemy import and_, exists, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
-from app.models import AccountStatus, Block, Match, Message, Report, User
+from app.models import AccountStatus, Block, Match, Message, RaceMessage, Report, User
 from app.realtime import hub
 from app.security import utcnow
 
@@ -86,7 +86,7 @@ def end_all_matches(db: Session, user: User, ended_by: uuid.UUID) -> None:
         end_match(match, ended_by)
 
 
-def capture_evidence(db: Session, reported: User, match: Match | None) -> dict:
+def capture_evidence(db: Session, reported: User, match: Match | None, race_id: uuid.UUID | None = None) -> dict:
     """A copy of what the reporter could see, so the report stands even if the reported
     person later edits or deletes their profile, photos or account."""
     profile = reported.profile
@@ -106,8 +106,18 @@ def capture_evidence(db: Session, reported: User, match: Match | None) -> dict:
             }
             for m in reversed(rows)
         ]
+    race_messages = []
+    if race_id is not None:
+        rows = db.scalars(
+            select(RaceMessage)
+            .where(RaceMessage.race_id == race_id, RaceMessage.sender_id == reported.id)
+            .order_by(RaceMessage.created_at.desc())
+            .limit(EVIDENCE_MESSAGE_LIMIT)
+        ).all()
+        race_messages = [{"body": m.body, "createdAt": m.created_at.isoformat()} for m in reversed(rows)]
     return {
         "capturedAt": utcnow().isoformat(),
+        "raceMessages": race_messages,
         "profile": {
             "displayName": profile.display_name if profile else None,
             "bio": profile.bio if profile else None,

@@ -168,6 +168,7 @@ class Match(Base):
     __table_args__ = (
         UniqueConstraint("user_a_id", "user_b_id"),
         CheckConstraint("user_a_id < user_b_id", name="ordered_pair"),
+        CheckConstraint("kind IN ('dating', 'race')", name="match_kind_values"),
         Index("ix_matches_user_b_id", "user_b_id"),
     )
 
@@ -175,6 +176,9 @@ class Match(Base):
     user_a_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     user_b_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # dating: both liked each other in Discover. race: a chat request from a race was accepted.
+    kind: Mapped[str] = mapped_column(String(20), default="dating", server_default="dating")
+    origin_race_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("races.id", ondelete="SET NULL"))
     # Set when either person unmatches. The chat closes, but messages are kept for safety reports.
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ended_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
@@ -306,6 +310,7 @@ class Report(Base):
     reporter_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     reported_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     match_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("matches.id", ondelete="SET NULL"))
+    race_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("races.id", ondelete="SET NULL"))
     reason: Mapped[str] = mapped_column(String(30))
     details: Mapped[str | None] = mapped_column(Text)
     # Copy of the reported profile and conversation taken when the report was made
@@ -317,6 +322,134 @@ class Report(Base):
     # dismiss / warn / suspend / ban
     resolution: Mapped[str | None] = mapped_column(String(20))
     resolution_note: Mapped[str | None] = mapped_column(Text)
+
+
+class Race(Base):
+    """A running event. Added by admins, or suggested by users and approved by an admin."""
+
+    __tablename__ = "races"
+    __table_args__ = (
+        Index("ix_races_status_starts_on", "status", "starts_on"),
+        CheckConstraint("status IN ('published', 'pending', 'rejected')", name="race_status_values"),
+        CheckConstraint("ends_on >= starts_on", name="race_dates_in_order"),
+        CheckConstraint(
+            "substitution_closes_on IS NULL OR substitution_opens_on IS NULL "
+            "OR substitution_closes_on >= substitution_opens_on",
+            name="race_substitution_window_in_order",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(120))
+    # Local (South African) dates; multi-day events have different start and end days
+    starts_on: Mapped[date] = mapped_column(Date)
+    ends_on: Mapped[date] = mapped_column(Date)
+    venue: Mapped[str] = mapped_column(String(160))
+    city: Mapped[str] = mapped_column(String(80))
+    province: Mapped[str | None] = mapped_column(String(40))
+    official_url: Mapped[str | None] = mapped_column(Text)
+    # The organiser's official entry transfer window. The swap board only opens inside it.
+    substitution_opens_on: Mapped[date | None] = mapped_column(Date)
+    substitution_closes_on: Mapped[date | None] = mapped_column(Date)
+    substitution_url: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="published", server_default="published")
+    suggested_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    events: Mapped[list["RaceEvent"]] = relationship(
+        order_by="RaceEvent.distance_km.desc()", cascade="all, delete-orphan"
+    )
+
+
+class RaceEvent(Base):
+    """One distance at a race, e.g. the 21.1 km half marathon on Sunday at 06:00."""
+
+    __tablename__ = "race_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    race_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("races.id", ondelete="CASCADE"), index=True)
+    label: Mapped[str] = mapped_column(String(60))
+    distance_km: Mapped[float] = mapped_column(Float)
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class RaceAttendance(Base):
+    """Someone going to a race, as a runner (with a distance) or a supporter."""
+
+    __tablename__ = "race_attendance"
+    __table_args__ = (
+        Index("ix_race_attendance_user_id", "user_id"),
+        CheckConstraint("role IN ('running', 'supporting')", name="attendance_role_values"),
+    )
+
+    race_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("races.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    race_event_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("race_events.id", ondelete="SET NULL"))
+    role: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class RaceMessage(Base):
+    """A message in a race's group chat."""
+
+    __tablename__ = "race_messages"
+    __table_args__ = (Index("ix_race_messages_race_id_created_at", "race_id", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    race_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("races.id", ondelete="CASCADE"))
+    sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Removed by a moderator: hidden from everyone, kept for the record
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    removed_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+
+class ChatRequest(Base):
+    """Asking to chat privately with someone you haven't matched with, e.g. from a race.
+    Nothing happens until they accept; accepting creates a match (kind "race")."""
+
+    __tablename__ = "chat_requests"
+    __table_args__ = (
+        Index("ix_chat_requests_to_user_id_status", "to_user_id", "status"),
+        CheckConstraint("status IN ('pending', 'accepted', 'declined')", name="chat_request_status_values"),
+        CheckConstraint("from_user_id <> to_user_id", name="chat_request_not_self"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    from_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    to_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    race_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("races.id", ondelete="SET NULL"))
+    listing_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("entry_listings.id", ondelete="SET NULL"))
+    note: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="pending", server_default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    match_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("matches.id", ondelete="SET NULL"))
+
+
+class EntryListing(Base):
+    """A post on a race's swap board: offering an entry, or looking for one.
+    Only possible inside the race's official substitution window."""
+
+    __tablename__ = "entry_listings"
+    __table_args__ = (
+        Index("ix_entry_listings_race_id_status", "race_id", "status"),
+        CheckConstraint("kind IN ('offering', 'looking')", name="listing_kind_values"),
+        CheckConstraint("status IN ('open', 'closed')", name="listing_status_values"),
+        CheckConstraint("price_rands IS NULL OR price_rands >= 0", name="listing_price_not_negative"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    race_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("races.id", ondelete="CASCADE"))
+    race_event_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("race_events.id", ondelete="SET NULL"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(20))
+    price_rands: Mapped[int | None] = mapped_column(Integer)
+    note: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="open", server_default="open")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class VerificationInquiry(Base):

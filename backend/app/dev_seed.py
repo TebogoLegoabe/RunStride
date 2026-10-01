@@ -3,6 +3,7 @@
     docker compose exec api python -m app.dev_seed             # 30 runners near the newest real user with a location
     docker compose exec api python -m app.dev_seed --count 50
     docker compose exec api python -m app.dev_seed --match-me   # all compatible with you
+    docker compose exec api python -m app.dev_seed --races      # seed runners join races and chat
     docker compose exec api python -m app.dev_seed --lat -26.20 --lng 28.04
     docker compose exec api python -m app.dev_seed --clear     # remove every seed runner and their photos
 """
@@ -29,12 +30,16 @@ from app.models import (
     Message,
     Profile,
     ProfilePhoto,
+    Race,
+    RaceAttendance,
+    RaceMessage,
     RunDate,
     RunningProfile,
     Swipe,
     User,
     VerificationStatus,
 )
+from app.races import sa_today
 from app.realtime import publish_message
 from app.security import utcnow
 from app.storage import get_photo_storage
@@ -69,6 +74,15 @@ REPLIES = [
     "A parkrun date could be fun, keen?",
     "Sounds good! What pace do you usually run?",
     "That's awesome. I'm always looking for a running buddy.",
+]
+RACE_CHAT = [
+    "Anyone else nervous? First time at this one!",
+    "Pacing 5:30/km for the half if anyone wants to join.",
+    "Where's everyone parking? Heard it fills up early.",
+    "Who's keen for coffee after the finish?",
+    "Weather looks perfect for Sunday 🙌",
+    "Doing the 10 km with my running club, come say hi at the start.",
+    "Tip: get there 45 min early, the toilet queues are long.",
 ]
 COLORS = ["#4ecdc4", "#f59e0b", "#8b5cf6", "#ef4444", "#10b981", "#3b82f6", "#ec4899"]
 
@@ -268,6 +282,35 @@ def dev_auto_accept_run(run_date_id: uuid.UUID, proposer_id: uuid.UUID) -> None:
             run_dates.respond(db, run, match, other, "accept")
 
 
+def seed_race_activity(share: float = 0.6, messages_per_race: int = 5) -> None:
+    """Seed runners join upcoming races (spread over the distances) and chat in them."""
+    with SessionLocal() as db:
+        races = db.scalars(select(Race).where(Race.status == "published", Race.ends_on >= sa_today())).all()
+        runners = db.scalars(select(User).where(User.phone.like(f"{SEED_PHONE_PREFIX}%"))).all()
+        if not races or not runners:
+            raise SystemExit("Need upcoming races and seed runners first (import races, then run dev_seed).")
+        for race in races:
+            going = [r for r in runners if random.random() < share]
+            for runner in going:
+                if db.get(RaceAttendance, (race.id, runner.id)):
+                    continue
+                running = race.events and random.random() < 0.85
+                db.add(
+                    RaceAttendance(
+                        race_id=race.id,
+                        user_id=runner.id,
+                        role="running" if running else "supporting",
+                        race_event_id=random.choice(race.events).id if running else None,
+                    )
+                )
+            for runner in random.sample(going, k=min(messages_per_race, len(going))):
+                db.add(
+                    RaceMessage(race_id=race.id, sender_id=runner.id, body=random.choice(RACE_CHAT), created_at=utcnow())
+                )
+            print(f"{race.name}: {len(going)} seed runners going")
+        db.commit()
+
+
 def main() -> None:
     if not get_settings().is_development:
         raise SystemExit("dev_seed only runs with ENVIRONMENT=development.")
@@ -277,6 +320,9 @@ def main() -> None:
     parser.add_argument("--lng", type=float)
     parser.add_argument("--clear", action="store_true", help="remove all seed runners")
     parser.add_argument(
+        "--races", action="store_true", help="seed runners join upcoming races and post in their chats"
+    )
+    parser.add_argument(
         "--match-me",
         action="store_true",
         help="make every runner a possible match for the most recently active real user",
@@ -285,6 +331,9 @@ def main() -> None:
 
     if args.clear:
         clear()
+        return
+    if args.races:
+        seed_race_activity()
         return
     center = (args.lat, args.lng) if args.lat is not None and args.lng is not None else default_center()
     target = None

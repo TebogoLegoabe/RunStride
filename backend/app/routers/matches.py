@@ -13,7 +13,7 @@ from app.config import Settings
 from app.db import SessionLocal
 from app.deps import AppSettings, CurrentUser, DbSession
 from app.dev_seed import dev_auto_reply
-from app.models import Match, Message, User
+from app.models import Match, Message, Race, User
 from app.moderation import lockout_message
 from app.realtime import hub, publish_message
 from app.schemas import LastMessage, MatchSummary, MessageBody, MessageOut
@@ -33,7 +33,11 @@ def match_summary(db: Session, match: Match, me: User, *, with_chat: bool = Fals
         display_name=other.profile.display_name if other.profile else "RunStride runner",
         photo=photos[0].url if photos else None,
         matched_at=match.created_at,
+        kind=match.kind,
     )
+    if match.origin_race_id is not None:
+        race = db.get(Race, match.origin_race_id)
+        summary.origin_race_name = race.name if race else None
     if with_chat:
         last = db.scalar(
             select(Message)

@@ -77,6 +77,14 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
       </Pressable>
 
       <View style={styles.details}>
+        {card.sharedRaces.map((race) => (
+          <View key={race.raceId} style={styles.raceBadge}>
+            <Text style={styles.raceBadgeText}>
+              🏁 Also at {race.name}
+              {race.eventLabel ? ` · ${race.eventLabel}` : ""}
+            </Text>
+          </View>
+        ))}
         <View style={styles.statsRow}>
           <View style={styles.matchPill}>
             <Text style={styles.matchText}>{card.compatibility}% running match</Text>
@@ -147,6 +155,15 @@ const styles = StyleSheet.create({
   },
   distance: { color: colors.textBright, fontSize: 14, marginTop: 2 },
   details: { padding: 16 },
+  raceBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.pinkTint,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginBottom: 10,
+  },
+  raceBadgeText: { color: colors.pink, fontSize: 13, fontWeight: "700" },
   statsRow: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 12 },
   matchPill: {
     backgroundColor: colors.primaryTint,

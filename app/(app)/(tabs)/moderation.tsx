@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, FlatList } from "react-native";
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, FlatList, ScrollView } from "react-native";
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ApiError, getReports } from "../../../lib/api";
@@ -7,26 +7,29 @@ import { REPORT_REASONS } from "../../../lib/options";
 import type { ReportSummary } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { ChoiceChips } from "../../../components/ChoiceChips";
+import { RaceAdmin } from "../../../components/admin/RaceAdmin";
 import { colors } from "../../../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const VIEWS = [
   { value: "open", label: "Open" },
   { value: "resolved", label: "Resolved" },
+  { value: "races", label: "Races" },
 ] as const;
 
 // Admins only (the tab is hidden for everyone else, and the API refuses non-admins)
 export default function ModerationQueue() {
   const router = useRouter();
   const { token } = useChat();
-  const [view, setView] = useState<("open" | "resolved")[]>(["open"]);
+  const [view, setView] = useState<("open" | "resolved" | "races")[]>(["open"]);
   const [reports, setReports] = useState<ReportSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!token || view[0] === "races") return;
+    const status = view[0];
     try {
-      setReports(await getReports(token, view[0]));
+      setReports(await getReports(token, status));
       setError(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
@@ -55,7 +58,11 @@ export default function ModerationQueue() {
         {error && <Text style={styles.error}>{error}</Text>}
       </View>
 
-      {reports === null ? (
+      {view[0] === "races" ? (
+        <ScrollView>
+          <RaceAdmin />
+        </ScrollView>
+      ) : reports === null ? (
         <ActivityIndicator color={colors.primary} style={styles.spinner} />
       ) : (
         <FlatList

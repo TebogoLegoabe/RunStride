@@ -54,6 +54,21 @@ and set `<that URL>/webhooks/persona` as the webhook URL in Persona.
 The same tunnel URL, set as `PUBLIC_BASE_URL` in `backend/.env`, makes run-sharing
 links (`/s/<token>`) open on any phone, not just ones on your Wi-Fi.
 
+### Races
+Races are added by admins (Moderation tab -> Races), suggested by users and approved
+there, or imported in bulk from a spreadsheet saved as CSV:
+```bash
+docker compose exec api python -m app.race_import data/races.csv
+```
+The column format is described at the top of `backend/app/race_import.py`, and
+`backend/data/races.example.csv` is a working example. Re-importing a file updates
+races with the same name and date rather than duplicating them.
+
+The entry swap board for a race only opens inside its official substitution window
+(`substitution_opens_on` to `substitution_closes_on`). Races without a window never
+allow swaps. For testing, `python -m app.dev_seed --races` makes seed runners join
+upcoming races and chat in them.
+
 ### Photo storage (Cloudflare R2)
 `PHOTO_STORAGE=local` keeps photos in `backend/media/` (development only). For real
 storage, any S3-compatible bucket works; Cloudflare R2 is the default choice (no fees

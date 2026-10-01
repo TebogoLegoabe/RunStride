@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
-import { getMatches } from "../lib/api";
+import { getChatRequests, getMatches } from "../lib/api";
 import { RealtimeClient } from "../lib/realtime";
 import { getToken } from "../lib/session";
 import type { RealtimeEvent } from "../lib/types";
@@ -15,6 +15,15 @@ type ChatContextValue = {
 
 const ChatContext = createContext<ChatContextValue | null>(null);
 
+const BADGE_EVENTS = new Set<RealtimeEvent["type"]>([
+  "ready",
+  "message",
+  "read",
+  "match_ended",
+  "chat_request",
+  "chat_request_accepted",
+]);
+
 // Holds the app's single live connection and the unread count for the tab badge.
 // Wraps the signed-in part of the app.
 export function ChatProvider({ children }: { children: ReactNode }) {
@@ -26,8 +35,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const refreshUnread = useCallback(() => {
     if (!token) return;
-    getMatches(token)
-      .then((matches) => setUnreadTotal(matches.reduce((sum, m) => sum + m.unreadCount, 0)))
+    Promise.all([getMatches(token), getChatRequests(token)])
+      .then(([matches, requests]) =>
+        setUnreadTotal(
+          matches.reduce((sum, m) => sum + m.unreadCount, 0) + requests.filter((r) => r.incoming).length
+        )
+      )
       .catch(() => {}); // the badge can wait for the next event
   }, [token]);
 
@@ -41,7 +54,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const offStatus = c.onStatus(setConnected);
     const offEvents = c.subscribe((event) => {
       listeners.current.forEach((l) => l(event));
-      if (event.type !== "pong") refreshUnread();
+      // Only events that can change the badge; busy race chats shouldn't trigger refetches
+      if (BADGE_EVENTS.has(event.type)) refreshUnread();
     });
     c.start();
     const appState = AppState.addEventListener("change", (s) => {

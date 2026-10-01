@@ -5,7 +5,14 @@
 import type { ReportReason } from "./options";
 import { photoFile } from "./photoFile";
 import type {
+  Attendee,
+  ChatRequest,
   DatingPreferences,
+  Listing,
+  RaceDetail,
+  RaceInput,
+  RaceMessage,
+  RaceSummary,
   DiscoverCard,
   MatchSummary,
   Message,
@@ -161,8 +168,9 @@ export const refreshVerification = (token: string) =>
 export const updateLocation = (token: string, latitude: number, longitude: number) =>
   apiRequest<void>("/me/location", { method: "PUT", body: { latitude, longitude }, token });
 
-export const getDiscoverFeed = (token: string) =>
-  apiRequest<DiscoverCard[]>("/discover", { token });
+// raceId: only people going to that race (you must be going too)
+export const getDiscoverFeed = (token: string, raceId?: string) =>
+  apiRequest<DiscoverCard[]>(`/discover${raceId ? `?race_id=${raceId}` : ""}`, { token });
 
 export const likeRunner = (token: string, userId: string) =>
   apiRequest<SwipeResult>(`/discover/${userId}/like`, { method: "POST", token });
@@ -210,7 +218,7 @@ export const blockUser = (token: string, userId: string) =>
 // Reporting also blocks the person
 export const reportUser = (
   token: string,
-  report: { reportedUserId: string; matchId?: string; reason: ReportReason; details?: string }
+  report: { reportedUserId: string; matchId?: string; raceId?: string; reason: ReportReason; details?: string }
 ) => apiRequest<{ id: string }>("/reports", { method: "POST", body: report, token });
 
 // --- Moderation (admins only) ---
@@ -255,3 +263,96 @@ export const stopSharing = (token: string, shareId: string) =>
 
 export const checkInRun = (token: string, runDateId: string, outcome: "ok" | "problem") =>
   apiRequest<void>(`/run-dates/${runDateId}/check-in`, { method: "POST", body: { outcome }, token });
+
+// --- Races ---
+export type RaceDistance = "5k" | "10k" | "half" | "marathon" | "ultra";
+
+export type RaceFilters = {
+  q?: string;
+  mine?: boolean;
+  province?: string;
+  dateFrom?: string; // YYYY-MM-DD
+  dateTo?: string;
+  distances?: RaceDistance[];
+  offset?: number;
+  limit?: number;
+};
+
+// A page of upcoming races. A page shorter than `limit` is the last one.
+export const getRaces = (token: string, filters: RaceFilters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.q) params.set("q", filters.q);
+  if (filters.mine) params.set("mine", "true");
+  if (filters.province) params.set("province", filters.province);
+  if (filters.dateFrom) params.set("date_from", filters.dateFrom);
+  if (filters.dateTo) params.set("date_to", filters.dateTo);
+  filters.distances?.forEach((d) => params.append("distance", d));
+  if (filters.offset) params.set("offset", String(filters.offset));
+  if (filters.limit) params.set("limit", String(filters.limit));
+  const query = params.toString();
+  return apiRequest<RaceSummary[]>(`/races${query ? `?${query}` : ""}`, { token });
+};
+
+export const getRace = (token: string, raceId: string) => apiRequest<RaceDetail>(`/races/${raceId}`, { token });
+
+export const suggestRace = (
+  token: string,
+  race: { name: string; startsOn: string; venue: string; city: string; officialUrl?: string }
+) => apiRequest<RaceSummary>("/races/suggestions", { method: "POST", body: race, token });
+
+export const setAttendance = (
+  token: string,
+  raceId: string,
+  attendance: { role: "running" | "supporting"; raceEventId?: string }
+) => apiRequest<RaceDetail>(`/races/${raceId}/attendance`, { method: "PUT", body: attendance, token });
+
+export const leaveRace = (token: string, raceId: string) =>
+  apiRequest<RaceDetail>(`/races/${raceId}/attendance`, { method: "DELETE", token });
+
+export const getAttendees = (token: string, raceId: string) =>
+  apiRequest<Attendee[]>(`/races/${raceId}/attendees`, { token });
+
+export const getRaceMessages = (token: string, raceId: string, before?: string) =>
+  apiRequest<RaceMessage[]>(`/races/${raceId}/messages${before ? `?before=${before}` : ""}`, { token });
+
+export const postRaceMessage = (token: string, raceId: string, body: string) =>
+  apiRequest<RaceMessage>(`/races/${raceId}/messages`, { method: "POST", body: { body }, token });
+
+export const getListings = (token: string, raceId: string) =>
+  apiRequest<Listing[]>(`/races/${raceId}/listings`, { token });
+
+export const createListing = (
+  token: string,
+  raceId: string,
+  listing: { kind: "offering" | "looking"; raceEventId: string; priceRands?: number; note?: string }
+) => apiRequest<Listing>(`/races/${raceId}/listings`, { method: "POST", body: listing, token });
+
+export const closeListing = (token: string, listingId: string) =>
+  apiRequest<void>(`/listings/${listingId}/close`, { method: "POST", token });
+
+// --- Chat requests (private chats with people met through a race) ---
+export const sendChatRequest = (
+  token: string,
+  request: { toUserId: string; raceId?: string; listingId?: string; note?: string }
+) => apiRequest<ChatRequest>("/chat-requests", { method: "POST", body: request, token });
+
+export const getChatRequests = (token: string) => apiRequest<ChatRequest[]>("/chat-requests", { token });
+
+export const answerChatRequest = (token: string, requestId: string, answer: "accept" | "decline") =>
+  apiRequest<ChatRequest>(`/chat-requests/${requestId}/${answer}`, { method: "POST", token });
+
+// --- Race admin ---
+export const getAdminRaces = (token: string, status: "pending" | "published" | "rejected" = "pending") =>
+  apiRequest<RaceDetail[]>(`/admin/races?status=${status}`, { token });
+
+export const createRace = (token: string, race: RaceInput) =>
+  apiRequest<RaceDetail>("/admin/races", { method: "POST", body: race, token });
+
+export const updateRace = (token: string, raceId: string, race: RaceInput) =>
+  apiRequest<RaceDetail>(`/admin/races/${raceId}`, { method: "PUT", body: race, token });
+
+export const reviewRace = (token: string, raceId: string, decision: "approve" | "reject") =>
+  apiRequest<RaceDetail>(`/admin/races/${raceId}/${decision}`, { method: "POST", token });
+
+export const removeRaceMessage = (token: string, messageId: string) =>
+  apiRequest<void>(`/admin/race-messages/${messageId}`, { method: "DELETE", token });

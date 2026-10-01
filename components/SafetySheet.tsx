@@ -15,6 +15,8 @@ type Props = {
   person: { id: string; name: string };
   // Set in a chat: attaches the conversation to reports and offers Unmatch
   matchId?: string;
+  // Set for reports from a race chat: attaches their race messages as evidence
+  raceId?: string;
   onClose: () => void;
   // Called once the person has been reported, blocked or unmatched
   onDone: (outcome: SafetyOutcome) => void;
@@ -22,7 +24,7 @@ type Props = {
 
 type Step = "menu" | "report" | "confirm-block" | "confirm-unmatch" | "reported";
 
-export function SafetySheet({ visible, token, person, matchId, onClose, onDone }: Props) {
+export function SafetySheet({ visible, token, person, matchId, raceId, onClose, onDone }: Props) {
   const [step, setStep] = useState<Step>("menu");
   const [reason, setReason] = useState<ReportReason[]>([]);
   const [details, setDetails] = useState("");
@@ -67,6 +69,7 @@ export function SafetySheet({ visible, token, person, matchId, onClose, onDone }
         reportUser(token!, {
           reportedUserId: person.id,
           matchId,
+          raceId,
           reason: reason[0],
           details: details.trim() || undefined,
         }),

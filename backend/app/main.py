@@ -15,10 +15,12 @@ from app.routers import (
     account,
     admin,
     auth,
+    chat_requests,
     discover,
     matches,
     preferences,
     profile,
+    races,
     run_dates,
     run_safety,
     safety,
@@ -79,6 +81,8 @@ app.include_router(profile.router)
 app.include_router(preferences.router)
 app.include_router(discover.router)
 app.include_router(matches.router)
+app.include_router(races.router)
+app.include_router(chat_requests.router)
 app.include_router(run_dates.router)
 app.include_router(run_safety.router)
 app.include_router(share_page.router)

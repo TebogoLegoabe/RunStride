@@ -11,3 +11,4 @@ pillow>=11.0
 httpx>=0.28,<1
 geoalchemy2>=0.15,<1
 boto3>=1.35,<2
+tzdata>=2024.1

@@ -60,7 +60,7 @@ def migrated_db():
 def clean_tables():
     yield
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE users, profiles, profile_photos, otp_codes, verification_inquiries, running_profiles, dating_preferences, swipes, matches, messages, blocks, reports, run_dates, trusted_contacts, run_shares, run_check_ins CASCADE"))
+        conn.execute(text("TRUNCATE users, profiles, profile_photos, otp_codes, verification_inquiries, running_profiles, dating_preferences, swipes, matches, messages, blocks, reports, run_dates, trusted_contacts, run_shares, run_check_ins, races, race_events, race_attendance, race_messages, chat_requests, entry_listings CASCADE"))
 
 
 @pytest.fixture
