@@ -1,16 +1,5 @@
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  ActivityIndicator,
-  ScrollView,
-  Modal,
-  Share,
-  Linking,
-  Platform,
-} from "react-native";
+import { View, Pressable, StyleSheet, ActivityIndicator, ScrollView, Modal, Share, Linking, Platform } from "react-native";
+import { Text, TextInput } from "../../../components/ui/Text";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -31,6 +20,7 @@ import type { RunSafety, RunShare } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { SafetySheet } from "../../../components/SafetySheet";
 import { colors } from "../../../lib/theme";
+import { useTopPadding } from "../../../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const MAX_CONTACTS = 3;
@@ -41,6 +31,7 @@ const LOCATION_MIN_METRES = 20;
 const isLive = (share: RunShare | null) => share?.status === "active" || share?.status === "alert";
 
 export default function RunSafetyScreen() {
+  const topPadding = useTopPadding();
   const router = useRouter();
   const { runDateId } = useLocalSearchParams<{ runDateId: string }>();
   const { token } = useChat();
@@ -201,7 +192,7 @@ export default function RunSafetyScreen() {
   const call = (number: string) => Linking.openURL(`tel:${number}`);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: topPadding }]}>
       <Pressable onPress={() => router.back()} style={styles.back} accessibilityLabel="Back">
         <Ionicons name="chevron-back" size={24} color={colors.textBright} />
         <Text style={styles.backText}>Chat</Text>
@@ -413,7 +404,7 @@ export default function RunSafetyScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
-  content: { padding: 16, paddingTop: 44, paddingBottom: 48, maxWidth: 560, width: "100%", alignSelf: "center" },
+  content: { padding: 16, paddingBottom: 48, maxWidth: 560, width: "100%", alignSelf: "center" },
   back: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   backText: { color: colors.textBright, fontSize: 16 },
   title: { color: colors.heading, fontSize: 24, fontWeight: "700" },

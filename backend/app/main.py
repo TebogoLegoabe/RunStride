@@ -39,6 +39,8 @@ app.add_middleware(
     allow_origins=get_settings().cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Lets the web app read page totals (browsers hide non-standard headers otherwise)
+    expose_headers=["X-Total-Count"],
 )
 
 

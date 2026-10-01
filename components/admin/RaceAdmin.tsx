@@ -1,8 +1,9 @@
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { Text } from "../ui/Text";
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ApiError, getAdminRaces, reviewRace } from "../../lib/api";
-import { formatRaceDates } from "../../lib/format";
+import { formatDistance, formatRaceDates } from "../../lib/format";
 import type { RaceDetail } from "../../lib/types";
 import { useChat } from "../ChatProvider";
 import { ChoiceChips } from "../ChoiceChips";
@@ -79,9 +80,17 @@ export function RaceAdmin() {
             <Text style={styles.date}>{formatRaceDates(race.startsOn, race.endsOn)}</Text>
             <Text style={styles.name}>{race.name}</Text>
             <Text style={styles.meta}>
-              {race.venue}, {race.city} · {race.events.length} distance{race.events.length === 1 ? "" : "s"} ·{" "}
-              {race.attendingCount} going
+              {race.venue}, {race.city} · {race.attendingCount} going
             </Text>
+            {race.events.length ? (
+              <Text style={styles.distances}>
+                {race.events
+                  .map((e) => (e.label === formatDistance(e.distanceKm) ? e.label : `${e.label} (${formatDistance(e.distanceKm)})`))
+                  .join(" · ")}
+              </Text>
+            ) : (
+              <Text style={styles.noDistances}>No distances yet: add them before approving</Text>
+            )}
             {race.officialUrl && <Text style={styles.link}>{race.officialUrl}</Text>}
             <View style={styles.actions}>
               <Pressable style={styles.outline} onPress={() => edit(race.id)}>
@@ -106,6 +115,8 @@ export function RaceAdmin() {
 }
 
 const styles = StyleSheet.create({
+  distances: { color: colors.text, fontSize: 13, marginTop: 4 },
+  noDistances: { color: colors.warningText, fontSize: 13, marginTop: 4 },
   wrap: { paddingHorizontal: 16, maxWidth: 720, width: "100%", alignSelf: "center" },
   addButton: { backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 12, alignItems: "center", marginBottom: 6 },
   addText: { color: colors.onPrimary, fontSize: 15, fontWeight: "700" },

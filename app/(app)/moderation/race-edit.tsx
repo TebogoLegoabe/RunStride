@@ -1,4 +1,5 @@
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
+import { View, Pressable, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
+import { Text, TextInput } from "../../../components/ui/Text";
 import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,6 +9,7 @@ import type { RaceInput } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { ChoiceChips } from "../../../components/ChoiceChips";
 import { colors } from "../../../lib/theme";
+import { useTopPadding } from "../../../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const PROVINCES = [
@@ -38,6 +40,7 @@ function fromLocalInput(value: string): string | null | undefined {
 
 // Admins: add a race, or edit one (including approving a suggestion with full details)
 export default function RaceEdit() {
+  const topPadding = useTopPadding();
   const router = useRouter();
   const { raceId } = useLocalSearchParams<{ raceId?: string }>();
   const { token } = useChat();
@@ -156,7 +159,7 @@ export default function RaceEdit() {
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: topPadding }]} keyboardShouldPersistTaps="handled">
       <Pressable onPress={() => router.back()} style={styles.back} accessibilityLabel="Back">
         <Ionicons name="chevron-back" size={24} color={colors.textBright} />
         <Text style={styles.backText}>Races</Text>
@@ -229,7 +232,7 @@ export default function RaceEdit() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
-  content: { padding: 16, paddingTop: 44, paddingBottom: 60, maxWidth: 640, width: "100%", alignSelf: "center" },
+  content: { padding: 16, paddingBottom: 60, maxWidth: 640, width: "100%", alignSelf: "center" },
   back: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   backText: { color: colors.textBright, fontSize: 16 },
   title: { color: colors.heading, fontSize: 24, fontWeight: "700", marginBottom: 16 },

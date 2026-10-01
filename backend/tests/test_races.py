@@ -101,7 +101,13 @@ def test_suggested_races_wait_for_approval(client, admin, make_runner):
     other = make_runner(gender="man", interested_in=["woman"])
     suggestion = client.post(
         "/races/suggestions",
-        json={"name": "Two Oceans", "startsOn": day(30), "venue": "UCT", "city": "Cape Town"},
+        json={
+            "name": "Two Oceans",
+            "startsOn": day(30),
+            "venue": "UCT",
+            "city": "Cape Town",
+            "events": [{"label": "Ultra", "distanceKm": 56}, {"label": "Half marathon", "distanceKm": 21.1}],
+        },
         headers=runner["headers"],
     ).json()
     assert suggestion["status"] == "pending"
@@ -112,8 +118,25 @@ def test_suggested_races_wait_for_approval(client, admin, make_runner):
 
     pending = client.get("/admin/races", headers=admin["headers"]).json()
     assert [r["id"] for r in pending] == [suggestion["id"]]
+    # The admin sees the suggested distances, longest first like every race
+    assert [(e["label"], e["distanceKm"]) for e in pending[0]["events"]] == [("Ultra", 56), ("Half marathon", 21.1)]
     client.post(f"/admin/races/{suggestion['id']}/approve", headers=admin["headers"]).raise_for_status()
     assert [r["name"] for r in client.get("/races", headers=other["headers"]).json()] == ["Two Oceans"]
+
+
+def test_suggestion_needs_a_distance(client, make_runner):
+    runner = make_runner()
+    race = {"name": "Mandela Marathon", "startsOn": day(20), "venue": "Grand Parade", "city": "Cape Town"}
+
+    assert client.post("/races/suggestions", json=race, headers=runner["headers"]).status_code == 422
+    assert client.post("/races/suggestions", json={**race, "events": []}, headers=runner["headers"]).status_code == 422
+
+    # Picking the same distance twice lists it once
+    twice = [{"label": "Marathon", "distanceKm": 42.2}, {"label": "42.2 km", "distanceKm": 42.2}]
+    created = client.post("/races/suggestions", json={**race, "events": twice}, headers=runner["headers"])
+    assert created.status_code == 201
+    detail = client.get(f"/races/{created.json()['id']}", headers=runner["headers"]).json()
+    assert [e["label"] for e in detail["events"]] == ["Marathon"]
 
 
 def test_attendance(client, make_race, make_runner):
@@ -277,6 +300,8 @@ def test_reports_from_race_chat_keep_the_messages(client, make_race, make_runner
     join(client, thandi, race)
     join(client, sipho, race)
     client.post(f"/races/{race['id']}/messages", json={"body": "Selling fake bibs, DM me"}, headers=sipho["headers"])
+    client.post(f"/races/{race['id']}/messages", json={"body": f"<@{thandi['id']}> answer me"}, headers=sipho["headers"])
+    thandi_name = client.get("/me/profile", headers=thandi["headers"]).json()["displayName"]
 
     report_id = client.post(
         "/reports",
@@ -285,7 +310,8 @@ def test_reports_from_race_chat_keep_the_messages(client, make_race, make_runner
     ).json()["id"]
 
     evidence = client.get(f"/admin/reports/{report_id}", headers=admin["headers"]).json()["evidence"]
-    assert [m["body"] for m in evidence["raceMessages"]] == ["Selling fake bibs, DM me"]
+    # Mentions are kept as the names people saw
+    assert [m["body"] for m in evidence["raceMessages"]] == ["Selling fake bibs, DM me", f"@{thandi_name} answer me"]
 
 
 # --- Entry swap board ---
@@ -554,3 +580,123 @@ def test_paging(client, make_race, make_runner):
     assert first == ["Race 0", "Race 1"]
     assert second == ["Race 2", "Race 3"]
     assert last == ["Race 4"]  # shorter than the limit: no more pages
+
+
+def test_total_count_header_matches_filters(client, make_race, make_runner):
+    for n in range(5):
+        make_race(name=f"Race {n}", starts_in=n + 1)
+    make_race(name="Fun run", events=[{"label": "5 km", "distanceKm": 5}])
+    runner = make_runner()
+
+    res = client.get("/races", params={"limit": 2, "offset": 2}, headers=runner["headers"])
+    assert res.headers["X-Total-Count"] == "6"  # every match, not just this page
+    assert len(res.json()) == 2
+
+    res = client.get("/races", params={"distance": "5k"}, headers=runner["headers"])
+    assert res.headers["X-Total-Count"] == "1"
+
+    res = client.get("/races", params={"q": "nothing like this"}, headers=runner["headers"])
+    assert res.headers["X-Total-Count"] == "0"
+    assert res.json() == []
+
+
+# --- Mentions in race chat ---
+
+
+def post(client, runner, race, body):
+    return client.post(f"/races/{race['id']}/messages", json={"body": body}, headers=runner["headers"])
+
+
+def unread_mentions(client, runner, race):
+    return client.get(f"/races/{race['id']}", headers=runner["headers"]).json()["unreadMentions"]
+
+
+def test_mentions(client, make_race, make_runner):
+    race = make_race()
+    thandi, sipho = make_runner(), make_runner(gender="man", interested_in=["woman"])
+    join(client, thandi, race)
+    join(client, sipho, race)
+
+    res = post(client, sipho, race, f"<@{thandi['id']}> pacing 5:30, want to join?")
+    assert res.status_code == 201
+    msg = res.json()
+    assert [m["id"] for m in msg["mentions"]] == [thandi["id"]]
+    assert msg["mentions"][0]["displayName"]
+
+    # Thandi has an unread mention, on the race and in total; Sipho doesn't
+    assert unread_mentions(client, thandi, race) == 1
+    assert client.get("/me/race-mentions", headers=thandi["headers"]).json() == {"count": 1}
+    assert unread_mentions(client, sipho, race) == 0
+    listed = client.get("/races", params={"mine": True}, headers=thandi["headers"]).json()
+    assert listed[0]["unreadMentions"] == 1
+
+    # Opening the chat clears it
+    seen = client.post(f"/races/{race['id']}/mentions/seen", headers=thandi["headers"])
+    assert seen.status_code == 204
+    assert unread_mentions(client, thandi, race) == 0
+    assert client.get("/me/race-mentions", headers=thandi["headers"]).json() == {"count": 0}
+
+
+def test_mention_rules(client, make_race, make_runner):
+    race = make_race()
+    thandi, sipho = make_runner(), make_runner(gender="man", interested_in=["woman"])
+    outsider = make_runner(gender="man", interested_in=["woman"])
+    join(client, thandi, race)
+    join(client, sipho, race)
+
+    # Only other people going to this race
+    assert post(client, sipho, race, f"hey <@{outsider['id']}>").status_code == 422
+    assert post(client, sipho, race, f"note to self <@{sipho['id']}>").status_code == 422
+    # Mentioning the same person twice is one mention
+    twice = post(client, sipho, race, f"<@{thandi['id']}> hi <@{thandi['id']}>").json()
+    assert [m["id"] for m in twice["mentions"]] == [thandi["id"]]
+
+    # Not someone who blocked you
+    client.post(f"/users/{sipho['id']}/block", headers=thandi["headers"])
+    assert post(client, sipho, race, f"<@{thandi['id']}> still there?").status_code == 422
+
+
+def test_mention_suggestions(client, make_race, make_runner):
+    race = make_race()
+    thandi, sipho = make_runner(), make_runner(gender="man", interested_in=["woman"])
+    lerato = make_runner()
+    outsider = make_runner()
+    for runner in (thandi, sipho, lerato):
+        join(client, thandi if runner is thandi else runner, race)
+
+    def suggestions(runner, q=""):
+        res = client.get(f"/races/{race['id']}/mentionable", params={"q": q}, headers=runner["headers"])
+        res.raise_for_status()
+        return [p["id"] for p in res.json()]
+
+    # Everyone else going, never yourself; whoever posted most recently first
+    post(client, lerato, race, "Anyone driving from Joburg?")
+    assert suggestions(sipho) == [lerato["id"], thandi["id"]]
+    # With what they're doing there, to tell apart people with the same name
+    first = client.get(f"/races/{race['id']}/mentionable", headers=sipho["headers"]).json()[0]
+    assert first["going"] == "Running Half marathon"
+
+    # Narrowed by the start of their name
+    thandi_name = client.get(f"/races/{race['id']}/mentionable", headers=sipho["headers"]).json()[1]["displayName"]
+    assert thandi["id"] in suggestions(sipho, thandi_name[:3])
+
+    # Only for people going
+    res = client.get(f"/races/{race['id']}/mentionable", headers=outsider["headers"])
+    assert res.status_code == 403
+
+
+def test_mentions_are_live(client, make_race, make_runner):
+    race = make_race()
+    thandi, sipho = make_runner(), make_runner(gender="man", interested_in=["woman"])
+    join(client, thandi, race)
+    join(client, sipho, race)
+    token = thandi["headers"]["Authorization"].removeprefix("Bearer ")
+
+    with client.websocket_connect("/ws") as ws:
+        ws.send_json({"type": "auth", "token": token})
+        ws.receive_json()
+        post(client, sipho, race, f"<@{thandi['id']}> see you there")
+        events = [ws.receive_json(), ws.receive_json()]
+
+    assert [e["type"] for e in events] == ["race_message", "race_mention"]
+    assert events[1]["raceId"] == race["id"]

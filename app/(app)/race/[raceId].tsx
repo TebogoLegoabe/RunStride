@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, Linking, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Pressable, StyleSheet, ActivityIndicator, ScrollView, Linking, KeyboardAvoidingView, Platform } from "react-native";
+import { Text } from "../../../components/ui/Text";
 import { useCallback, useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,6 +12,7 @@ import { RaceChat } from "../../../components/race/RaceChat";
 import { RaceRunners } from "../../../components/race/RaceRunners";
 import { RaceSwaps } from "../../../components/race/RaceSwaps";
 import { colors } from "../../../lib/theme";
+import { CONTENT_WIDTH, useBreakpoint, useTopPadding } from "../../../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const SUPPORTING = "supporting";
@@ -22,6 +24,9 @@ const SECTIONS = [
 type Section = (typeof SECTIONS)[number]["value"];
 
 export default function RacePage() {
+  const topPadding = useTopPadding();
+  // Wide screens: race details on the left, chat / runners / swaps on the right
+  const { isWide } = useBreakpoint();
   const router = useRouter();
   const { raceId } = useLocalSearchParams<{ raceId: string }>();
   const { token } = useChat();
@@ -95,11 +100,24 @@ export default function RacePage() {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Pressable onPress={() => router.back()} style={styles.back} accessibilityLabel="Back">
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: topPadding, maxWidth: isWide && going ? CONTENT_WIDTH.wide : CONTENT_WIDTH.normal },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace("/races"))}
+          style={styles.back}
+          accessibilityLabel="Back"
+        >
           <Ionicons name="chevron-back" size={24} color={colors.textBright} />
           <Text style={styles.backText}>Races</Text>
         </Pressable>
+
+        <View style={isWide && going ? styles.columns : undefined}>
+        <View style={isWide && going ? styles.infoColumn : undefined}>
 
         <Text style={styles.date}>{formatRaceDates(race.startsOn, race.endsOn)}</Text>
         <Text style={styles.title}>{race.name}</Text>
@@ -144,15 +162,17 @@ export default function RacePage() {
           </>
         )}
 
+        </View>
+
         {going ? (
-          <>
-            <View style={styles.sectionPicker}>
+          <View style={isWide ? styles.sectionColumn : undefined}>
+            <View style={[styles.sectionPicker, isWide && styles.sectionPickerWide]}>
               <ChoiceChips options={SECTIONS} selected={section} onChange={setSection} single />
             </View>
             {section[0] === "chat" && <RaceChat raceId={race.id} myId={me?.id ?? null} isAdmin={!!me?.isAdmin} />}
             {section[0] === "runners" && <RaceRunners raceId={race.id} raceName={race.name} />}
             {section[0] === "swaps" && <RaceSwaps race={race} />}
-          </>
+          </View>
         ) : (
           race.status === "published" && (
             <Text style={styles.joinHint}>
@@ -162,6 +182,7 @@ export default function RacePage() {
             </Text>
           )
         )}
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -170,7 +191,11 @@ export default function RacePage() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
-  content: { padding: 16, paddingTop: 44, paddingBottom: 48, maxWidth: 640, width: "100%", alignSelf: "center" },
+  content: { padding: 16, paddingBottom: 48, width: "100%", alignSelf: "center" },
+  columns: { flexDirection: "row", alignItems: "flex-start", gap: 32 },
+  infoColumn: { width: 360 },
+  sectionColumn: { flex: 1, minWidth: 0 },
+  sectionPickerWide: { marginTop: 0, borderTopWidth: 0, paddingTop: 0 },
   back: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   backText: { color: colors.textBright, fontSize: 16 },
   date: { color: colors.primary, fontSize: 13, fontWeight: "700", marginBottom: 4 },

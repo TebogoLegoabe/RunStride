@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, FlatList, ScrollView } from "react-native";
+import { View, StyleSheet, Pressable, ActivityIndicator, FlatList, ScrollView } from "react-native";
+import { Text } from "../../../components/ui/Text";
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ApiError, getReports } from "../../../lib/api";
@@ -9,6 +10,7 @@ import { useChat } from "../../../components/ChatProvider";
 import { ChoiceChips } from "../../../components/ChoiceChips";
 import { RaceAdmin } from "../../../components/admin/RaceAdmin";
 import { colors } from "../../../lib/theme";
+import { useTopPadding } from "../../../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const VIEWS = [
@@ -19,6 +21,7 @@ const VIEWS = [
 
 // Admins only (the tab is hidden for everyone else, and the API refuses non-admins)
 export default function ModerationQueue() {
+  const topPadding = useTopPadding();
   const router = useRouter();
   const { token } = useChat();
   const [view, setView] = useState<("open" | "resolved" | "races")[]>(["open"]);
@@ -43,7 +46,7 @@ export default function ModerationQueue() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: topPadding }]}>
       <View style={styles.inner}>
         <Text style={styles.heading}>Moderation</Text>
         <ChoiceChips
@@ -99,7 +102,7 @@ export default function ModerationQueue() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
+  container: { flex: 1, backgroundColor: colors.bg },
   inner: { paddingHorizontal: 16, maxWidth: 720, width: "100%", alignSelf: "center" },
   heading: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 12 },
   error: { color: colors.dangerText, fontSize: 14, marginBottom: 12 },

@@ -1,4 +1,5 @@
-import { View, Text, TextInput, Pressable, StyleSheet, Modal, ActivityIndicator, ScrollView } from "react-native";
+import { View, Pressable, StyleSheet, Modal, ActivityIndicator, ScrollView } from "react-native";
+import { Text, TextInput } from "./ui/Text";
 import { useEffect, useState } from "react";
 import { ApiError, blockUser, reportUser, unmatch } from "../lib/api";
 import { REPORT_REASONS, type ReportReason } from "../lib/options";

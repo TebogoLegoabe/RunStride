@@ -1,10 +1,12 @@
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { Text, TextInput } from "../components/ui/Text";
 import { useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ApiError, getMe, sendOtp, verifyOtp } from "../lib/api";
 import { routeFor } from "../lib/routing";
 import { saveToken } from "../lib/session";
 import { colors } from "../lib/theme";
+import { AuthCard } from "../components/ui/AuthCard";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 
@@ -47,19 +49,19 @@ export default function Verify() {
 
   if (!phone) {
     return (
-      <View style={styles.container}>
+      <AuthCard>
         <Text style={styles.title}>Something went wrong</Text>
         <Pressable style={styles.primaryButton} onPress={() => router.replace("/signup")}>
           <Text style={styles.primaryButtonText}>Start again</Text>
         </Pressable>
-      </View>
+      </AuthCard>
     );
   }
 
   const canSubmit = code.length === 6 && !loading;
 
   return (
-    <View style={styles.container}>
+    <AuthCard>
       <Text style={styles.title}>Enter your code</Text>
       <Text style={styles.subtitle}>Sent to {phone}</Text>
 
@@ -94,12 +96,11 @@ export default function Verify() {
       <Pressable style={styles.linkButton} onPress={handleResend}>
         <Text style={styles.linkText}>Didn't get it? Resend code</Text>
       </Pressable>
-    </View>
+    </AuthCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, padding: 24, justifyContent: "center" },
   title: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 8 },
   subtitle: { fontSize: 14, color: colors.textMuted, marginBottom: 32 },
   input: {

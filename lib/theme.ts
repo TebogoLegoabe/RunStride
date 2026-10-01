@@ -44,3 +44,40 @@ export const colors = {
   scrimStronger: "rgba(46, 4, 68, 0.8)",
   photoBarDim: "rgba(255, 255, 255, 0.35)",
 } as const;
+
+// The logo's gradient: pink at the top of the hexagon, coral at the bottom
+export const gradient = {
+  brand: ["#d63c97", "#f0605a", "#f47c4f"] as const,
+  // Subtle glow for backgrounds behind hero content
+  glow: ["rgba(214, 60, 151, 0.35)", "rgba(46, 4, 68, 0)"] as const,
+};
+
+export const radius = { sm: 10, md: 14, lg: 20, xl: 28, pill: 999 } as const;
+
+export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
+
+// Plus Jakarta Sans, one family per weight (Android needs a separate font file per weight)
+export const fonts = {
+  regular: "PlusJakartaSans_400Regular",
+  medium: "PlusJakartaSans_500Medium",
+  semibold: "PlusJakartaSans_600SemiBold",
+  bold: "PlusJakartaSans_700Bold",
+  extrabold: "PlusJakartaSans_800ExtraBold",
+} as const;
+
+export const shadow = {
+  card: {
+    shadowColor: "#0b0012",
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+  },
+  soft: {
+    shadowColor: "#0b0012",
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+} as const;

@@ -1,22 +1,30 @@
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, ScrollView, Image, Modal } from "react-native";
-import { useCallback, useEffect, useState } from "react";
+import { View, StyleSheet, Pressable, ScrollView, Platform } from "react-native";
+import { Text } from "../../../components/ui/Text";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Location from "expo-location";
 import {
   ApiError,
   getDiscoverFeed,
   getMe,
+  getMyProfile,
   getRunningProfile,
   likeRunner,
-  mediaUrl,
   passRunner,
   updateLocation,
 } from "../../../lib/api";
 import { getToken } from "../../../lib/session";
 import type { DiscoverCard, MatchSummary, RunningProfile } from "../../../lib/types";
-import { RunnerCard } from "../../../components/RunnerCard";
+import { Ionicons } from "@expo/vector-icons";
+import { SwipeDeck, type SwipeDeckHandle } from "../../../components/SwipeDeck";
+import { MatchCelebration } from "../../../components/MatchCelebration";
+import { Button } from "../../../components/ui/Button";
+import { IconButton } from "../../../components/ui/IconButton";
+import { EmptyState } from "../../../components/ui/EmptyState";
+import { Skeleton } from "../../../components/ui/Skeleton";
 import { SafetySheet } from "../../../components/SafetySheet";
 import { colors } from "../../../lib/theme";
+import { useBreakpoint, useTopPadding } from "../../../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 // Fetch more cards when this few are left
@@ -42,6 +50,16 @@ export default function Discover() {
   const [error, setError] = useState<string | null>(null);
   const [match, setMatch] = useState<MatchSummary | null>(null);
   const [safetyOpen, setSafetyOpen] = useState(false);
+  const [myPhoto, setMyPhoto] = useState<string | null>(null);
+  const deck = useRef<SwipeDeckHandle>(null);
+  const { width, height, isPhone, isWide } = useBreakpoint();
+  const topPadding = useTopPadding();
+  // Size the card so its photo and name fit on short laptop screens, leaving room for the
+  // side buttons and navigation
+  const room = width - (isWide ? 232 : 76) - 300;
+  const deckWidth = isPhone ? undefined : Math.max(280, Math.min(440, (height - topPadding - 360) * 0.8, room));
+  // Arrow keys like and pass on computers
+  const keyboard = Platform.OS === "web" && !isPhone;
 
   const loadFeed = useCallback(async (t: string) => {
     try {
@@ -68,7 +86,8 @@ export default function Discover() {
       if (!t) return; // the (app) layout redirects signed-out users
       setToken(t);
       try {
-        const [me, running] = await Promise.all([getMe(t), getRunningProfile(t)]);
+        const [me, running, profile] = await Promise.all([getMe(t), getRunningProfile(t), getMyProfile(t)]);
+        setMyPhoto(profile?.photos[0]?.url ?? null);
         setUnverified(me.verificationStatus !== "verified");
         setMine(running);
         if (!me.hasLocation) {
@@ -112,26 +131,41 @@ export default function Discover() {
     }
   };
 
-  const decide = async (liked: boolean) => {
-    const card = cards[0];
-    if (!token || !card || busy) return;
-    setBusy(true);
+  // Called once a card has flown off. The next card is already showing, so the decision
+  // saves in the background; if it fails, the card comes back to the top.
+  const decide = async (card: DiscoverCard, liked: boolean) => {
+    if (!token) return;
+    const remaining = cards.filter((c) => c.userId !== card.userId);
+    setCards(remaining);
+    if (remaining.length <= REFILL_AT) loadFeed(token);
     try {
       const result = liked ? await likeRunner(token, card.userId) : await passRunner(token, card.userId);
       if (result.matched) setMatch(result.match);
+      setError(null);
     } catch (e) {
       // 404 means they're no longer available (e.g. they changed preferences): just move on
       if (!(e instanceof ApiError && e.status === 404)) {
         setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
-        setBusy(false);
-        return;
+        setCards((current) => [card, ...current.filter((c) => c.userId !== card.userId)]);
       }
     }
-    const remaining = cards.slice(1);
-    setCards(remaining);
-    setBusy(false);
-    if (remaining.length <= REFILL_AT) loadFeed(token);
   };
+
+  // Web: ← to pass, → to like, unless typing or a sheet is open
+  const ready = phase === "ready" && cards.length > 0 && !safetyOpen && !match;
+  useEffect(() => {
+    if (Platform.OS !== "web" || !ready) return;
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "ArrowLeft") deck.current?.swipe(false);
+      else if (e.key === "ArrowRight") deck.current?.swipe(true);
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [ready]);
 
   const openMatchChat = () => {
     if (!match) return;
@@ -154,34 +188,28 @@ export default function Discover() {
 
   if (phase === "loading") {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={colors.primary} />
+      <View style={[styles.container, styles.scroll, { paddingTop: topPadding }]}>
+        <View style={[styles.skeletonCard, deckWidth ? { maxWidth: deckWidth } : null]}>
+          <Skeleton height={undefined} style={styles.skeletonPhoto} />
+          <Skeleton width="40%" height={22} />
+          <Skeleton width="70%" height={14} />
+        </View>
       </View>
     );
   }
 
   if (phase === "needs-location") {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingTop: topPadding }]}>
         {banner}
+        <EmptyState
+          icon="location"
+          title="Find runners near you"
+          body="RunStride uses your location to show people within your distance. Others only ever see roughly how far away you are, never where you are."
+        />
         <View style={styles.message}>
-          <Text style={styles.title}>Find runners near you</Text>
-          <Text style={styles.body}>
-            RunStride uses your location to show people within your distance. Others only ever
-            see roughly how far away you are, never where you are.
-          </Text>
           {error && <Text style={styles.error}>{error}</Text>}
-          <Pressable
-            style={[styles.primaryButton, busy && styles.buttonDisabled]}
-            onPress={enableLocation}
-            disabled={busy}
-          >
-            {busy ? (
-              <ActivityIndicator color={colors.onPrimary} />
-            ) : (
-              <Text style={styles.primaryButtonText}>Enable location</Text>
-            )}
-          </Pressable>
+          <Button title="Enable location" icon="navigate" onPress={enableLocation} loading={busy} />
         </View>
       </View>
     );
@@ -191,12 +219,13 @@ export default function Discover() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: topPadding }]}>
         {banner}
         {raceId && (
           <View style={styles.raceFilter}>
+            <Ionicons name="flag" size={16} color={colors.pink} />
             <Text style={styles.raceFilterText} numberOfLines={1}>
-              🏁 Runners at {raceName ?? "this race"}
+              Runners at {raceName ?? "this race"}
             </Text>
             <Pressable onPress={() => router.replace("/discover")}>
               <Text style={styles.raceFilterClear}>Show everyone</Text>
@@ -207,37 +236,73 @@ export default function Discover() {
 
         {card ? (
           <>
-            <RunnerCard key={card.userId} card={card} mine={mine} onOptions={() => setSafetyOpen(true)} />
-            <View style={styles.actions}>
-              <Pressable
-                style={[styles.actionButton, styles.passButton]}
-                onPress={() => decide(false)}
-                disabled={busy}
-                accessibilityLabel={`Pass on ${card.displayName}`}
-              >
-                <Text style={styles.passIcon}>✕</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.actionButton, styles.likeButton]}
-                onPress={() => decide(true)}
-                disabled={busy}
-                accessibilityLabel={`Like ${card.displayName}`}
-              >
-                <Text style={styles.likeIcon}>♥</Text>
-              </Pressable>
+            {/* Bigger screens: pass and like sit either side of the card, always in view */}
+            <View style={!isPhone && styles.deckRow}>
+              {!isPhone && (
+                <View style={styles.sideAction}>
+                  <IconButton
+                    icon="close"
+                    size={68}
+                    onPress={() => deck.current?.swipe(false)}
+                    accessibilityLabel={`Pass on ${card.displayName}`}
+                  />
+                  {keyboard && <Text style={styles.keyHint}>←</Text>}
+                </View>
+              )}
+              <View style={[styles.deck, deckWidth ? { width: deckWidth, flexShrink: 1 } : null]}>
+                <SwipeDeck
+                  ref={deck}
+                  cards={cards}
+                  mine={mine}
+                  onSwiped={decide}
+                  onOptions={() => setSafetyOpen(true)}
+                />
+              </View>
+              {!isPhone && (
+                <View style={styles.sideAction}>
+                  <IconButton
+                    icon="heart"
+                    size={80}
+                    filled
+                    onPress={() => deck.current?.swipe(true)}
+                    accessibilityLabel={`Like ${card.displayName}`}
+                  />
+                  {keyboard && <Text style={styles.keyHint}>→</Text>}
+                </View>
+              )}
             </View>
+            <Text style={styles.swipeHint}>
+              {keyboard ? "Drag the card, or use the ← and → keys" : "Swipe right to like, left to pass"}
+            </Text>
+            {isPhone && (
+            <View style={styles.actions}>
+              <IconButton
+                icon="close"
+                size={62}
+                onPress={() => deck.current?.swipe(false)}
+                accessibilityLabel={`Pass on ${card.displayName}`}
+              />
+              <IconButton
+                icon="heart"
+                size={74}
+                filled
+                onPress={() => deck.current?.swipe(true)}
+                accessibilityLabel={`Like ${card.displayName}`}
+              />
+            </View>
+            )}
           </>
         ) : (
-          <View style={styles.message}>
-            <Text style={styles.title}>You're all caught up</Text>
-            <Text style={styles.body}>
-              No more runners match your preferences nearby right now. Check back later, or widen
-              your age range or distance.
-            </Text>
-            <Pressable style={styles.secondaryButton} onPress={() => router.push("/dating-preferences")}>
-              <Text style={styles.secondaryButtonText}>Edit preferences</Text>
-            </Pressable>
-          </View>
+          <EmptyState
+            icon="sparkles"
+            title="You're all caught up"
+            body={
+              raceId
+                ? "No more runners at this race match your preferences. Check back as more people join."
+                : "No more runners match your preferences nearby right now. Check back later, or widen your age range or distance."
+            }
+            action={{ title: "Edit preferences", icon: "options-outline", onPress: () => router.push("/dating-preferences") }}
+          />
         )}
       </ScrollView>
 
@@ -255,32 +320,23 @@ export default function Discover() {
         />
       )}
 
-      <Modal visible={match !== null} transparent animationType="fade" onRequestClose={() => setMatch(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modal}>
-            <Text style={styles.matchTitle}>It's a match!</Text>
-            {match?.photo && <Image source={{ uri: mediaUrl(match.photo) }} style={styles.matchPhoto} />}
-            <Text style={styles.body}>
-              You and {match?.displayName} both liked each other. Say hi and plan your first run
-              together.
-            </Text>
-            <Pressable style={styles.primaryButton} onPress={openMatchChat}>
-              <Text style={styles.primaryButtonText}>Send a message</Text>
-            </Pressable>
-            <Pressable style={styles.textButton} onPress={() => setMatch(null)}>
-              <Text style={styles.textButtonText}>Keep discovering</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      <MatchCelebration
+        match={match}
+        myPhoto={myPhoto}
+        onMessage={openMatchChat}
+        onClose={() => setMatch(null)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  centered: { alignItems: "center", justifyContent: "center" },
-  scroll: { padding: 16, paddingTop: 48, paddingBottom: 40 },
+  scroll: { padding: 16, paddingBottom: 40 },
+  deck: { width: "100%", alignSelf: "center" },
+  deckRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 40 },
+  sideAction: { alignItems: "center", gap: 10 },
+  keyHint: { color: colors.textFaint, fontSize: 13, fontWeight: "700" },
   raceFilter: {
     flexDirection: "row",
     alignItems: "center",
@@ -310,55 +366,9 @@ const styles = StyleSheet.create({
   devBannerTitle: { color: colors.warningText, fontWeight: "700", fontSize: 14, marginBottom: 4 },
   devBannerText: { color: colors.warningSoft, fontSize: 13, lineHeight: 19 },
   message: { flex: 1, justifyContent: "center", padding: 24, maxWidth: 420, width: "100%", alignSelf: "center" },
-  title: { fontSize: 24, fontWeight: "700", color: colors.heading, marginBottom: 10 },
-  body: { fontSize: 15, lineHeight: 22, color: colors.text, marginBottom: 24 },
   error: { color: colors.dangerText, fontSize: 14, marginBottom: 16, textAlign: "center" },
+  swipeHint: { color: colors.textFaint, fontSize: 12, textAlign: "center", marginTop: 14 },
+  skeletonCard: { width: "100%", maxWidth: 420, alignSelf: "center", gap: 12 },
+  skeletonPhoto: { aspectRatio: 4 / 5, borderRadius: 20 },
   actions: { flexDirection: "row", justifyContent: "center", gap: 32, marginTop: 20 },
-  actionButton: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-  },
-  passButton: { borderColor: colors.textFaint, backgroundColor: colors.surface },
-  likeButton: { borderColor: colors.pink, backgroundColor: colors.pinkTint },
-  passIcon: { color: colors.text, fontSize: 26 },
-  likeIcon: { color: colors.pink, fontSize: 30 },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: 999,
-    alignItems: "center",
-  },
-  buttonDisabled: { opacity: 0.5 },
-  primaryButtonText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
-  textButton: { paddingVertical: 12, alignItems: "center", marginTop: 4 },
-  textButtonText: { color: colors.textMuted, fontSize: 15 },
-  secondaryButton: {
-    borderColor: colors.primary,
-    borderWidth: 1,
-    paddingVertical: 13,
-    borderRadius: 999,
-    alignItems: "center",
-  },
-  secondaryButtonText: { color: colors.primary, fontSize: 16, fontWeight: "600" },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: colors.backdrop,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  modal: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: 24,
-    width: "100%",
-    maxWidth: 380,
-    alignItems: "stretch",
-  },
-  matchTitle: { fontSize: 30, fontWeight: "800", color: colors.pink, textAlign: "center", marginBottom: 16 },
-  matchPhoto: { width: 120, height: 150, borderRadius: 16, alignSelf: "center", marginBottom: 16 },
 });

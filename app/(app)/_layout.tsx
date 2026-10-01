@@ -1,6 +1,7 @@
 import { Stack, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Pressable, ActivityIndicator, StyleSheet } from "react-native";
+import { Text } from "../../components/ui/Text";
 import { ApiError, getMe } from "../../lib/api";
 import { routeFor } from "../../lib/routing";
 import { clearToken, getToken } from "../../lib/session";

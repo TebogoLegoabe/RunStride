@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, HTTPException, Query, Response, status
 from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.config import Settings
 from app.deps import AppSettings, CurrentUser, DbSession
@@ -15,6 +15,7 @@ from app.models import (
     Block,
     ChatRequest,
     EntryListing,
+    Profile,
     ProfilePhoto,
     Race,
     RaceAttendance,
@@ -24,19 +25,33 @@ from app.models import (
     VerificationStatus,
 )
 from app.moderation import match_between, not_blocked_with
-from app.races import event_label, get_race, my_attendance, require_attending, sa_today, sender, swap_window, visible_to
+from app.races import (
+    MAX_MENTIONS,
+    event_label,
+    get_race,
+    mention_ids,
+    my_attendance,
+    require_attending,
+    sa_today,
+    sender,
+    swap_window,
+    visible_to,
+)
 from app.realtime import hub
 from app.schemas import (
     Attendee,
     AttendanceBody,
     ListingBody,
     ListingOut,
+    MentionCount,
+    Mentionable,
     MessageBody,
     MyAttendance,
     RaceDetail,
     RaceEventOut,
     RaceMessageOut,
     RaceSuggestionBody,
+    Sender,
     RaceSummary,
     age_on,
 )
@@ -90,6 +105,7 @@ def _summary_fields(db: Session, race: Race, me: User) -> dict:
         status=race.status,
         attending_count=_attending_count(db, race.id),
         my_attendance=_my_attendance_out(db, race.id, me),
+        unread_mentions=_unread_mentions(db, me, race.id),
     )
 
 
@@ -143,7 +159,12 @@ def _check_message_limits(db: Session, me: User, settings: Settings) -> None:
 
 def _message_out(db: Session, msg: RaceMessage) -> RaceMessageOut:
     return RaceMessageOut(
-        id=msg.id, race_id=msg.race_id, sender=sender(db, msg.sender_id), body=msg.body, created_at=msg.created_at
+        id=msg.id,
+        race_id=msg.race_id,
+        sender=sender(db, msg.sender_id),
+        body=msg.body,
+        mentions=[sender(db, user_id) for user_id in msg.mentioned_user_ids],
+        created_at=msg.created_at,
     )
 
 
@@ -157,6 +178,30 @@ def _not_blocked_sender(me_id: uuid.UUID):
     )
 
 
+def _unread_mentions(db: Session, me: User, race_id: uuid.UUID | None = None) -> int:
+    """Race chat messages mentioning me since I last opened that chat. Without race_id: across
+    all the upcoming races I'm going to."""
+    stmt = (
+        select(func.count())
+        .select_from(RaceMessage)
+        .join(
+            RaceAttendance,
+            and_(RaceAttendance.race_id == RaceMessage.race_id, RaceAttendance.user_id == me.id),
+        )
+        .where(
+            RaceMessage.mentioned_user_ids.contains([me.id]),
+            RaceMessage.removed_at.is_(None),
+            RaceMessage.created_at > func.coalesce(RaceAttendance.mentions_seen_at, RaceAttendance.created_at),
+            _not_blocked_sender(me.id),
+        )
+    )
+    if race_id is not None:
+        stmt = stmt.where(RaceMessage.race_id == race_id)
+    else:
+        stmt = stmt.join(Race, Race.id == RaceMessage.race_id).where(Race.ends_on >= sa_today())
+    return db.scalar(stmt) or 0
+
+
 # --- Browsing races ---
 
 
@@ -164,6 +209,7 @@ def _not_blocked_sender(me_id: uuid.UUID):
 def list_races(
     user: CurrentUser,
     db: DbSession,
+    response: Response,
     q: Annotated[str | None, Query(max_length=80)] = None,
     province: Annotated[str | None, Query(max_length=40)] = None,
     mine: bool = False,
@@ -178,7 +224,8 @@ def list_races(
     `mine`: only races you've joined. `date_from`/`date_to`: races happening on any day in
     that range. `distance` (repeatable): races with at least one distance in each bucket's
     range, e.g. ?distance=half&distance=marathon for races offering a half or a marathon.
-    A page shorter than `limit` is the last one.
+    A page shorter than `limit` is the last one. The X-Total-Count header holds how many
+    races match in all, for page numbers and "Showing 1-20 of 142".
     """
     stmt = select(Race).where(Race.status == "published", Race.ends_on >= max(sa_today(), date_from or sa_today()))
     if date_to is not None:
@@ -197,6 +244,7 @@ def list_races(
             )
         )
         stmt = stmt.where(exists().where(RaceEvent.race_id == Race.id, in_any_bucket))
+    response.headers["X-Total-Count"] = str(db.scalar(select(func.count()).select_from(stmt.subquery())))
     races = db.scalars(stmt.order_by(Race.starts_on, Race.name, Race.id).offset(offset).limit(limit)).all()
     return [RaceSummary(**_summary_fields(db, r, user)) for r in races]
 
@@ -228,6 +276,13 @@ def suggest_race(body: RaceSuggestionBody, user: CurrentUser, db: DbSession) -> 
         status="pending",
         suggested_by_id=user.id,
     )
+    # The same distance picked twice (e.g. a preset and a custom row) is listed once
+    seen: set[float] = set()
+    for event in body.events:
+        km = round(event.distance_km, 2)
+        if km not in seen:
+            seen.add(km)
+            race.events.append(RaceEvent(label=event.label.strip(), distance_km=km))
     db.add(race)
     db.commit()
     return RaceSummary(**_summary_fields(db, race, user))
@@ -373,7 +428,28 @@ def post_race_message(
     race = get_race(db, race_id, user)
     require_attending(db, race, user)
     _check_message_limits(db, user, settings)
-    msg = RaceMessage(race_id=race.id, sender_id=user.id, body=body.body, created_at=utcnow())
+    mentioned = mention_ids(body.body)
+    if len(mentioned) > MAX_MENTIONS:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, detail=f"You can mention up to {MAX_MENTIONS} people in one message."
+        )
+    if mentioned:
+        # Only other people at this race whom you could see in its chat
+        allowed = set(
+            db.scalars(
+                select(User.id)
+                .join(RaceAttendance, RaceAttendance.user_id == User.id)
+                .where(RaceAttendance.race_id == race.id, User.id.in_(mentioned), User.id != user.id)
+                .where(not_blocked_with(user.id))
+            ).all()
+        )
+        if allowed != set(mentioned):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT, detail="You can only mention people going to this race."
+            )
+    msg = RaceMessage(
+        race_id=race.id, sender_id=user.id, body=body.body, mentioned_user_ids=mentioned, created_at=utcnow()
+    )
     db.add(msg)
     db.commit()
     out = _message_out(db, msg)
@@ -387,7 +463,69 @@ def post_race_message(
     hub.publish_from_thread(
         recipients, {"type": "race_message", "message": out.model_dump(mode="json", by_alias=True)}
     )
+    if mentioned:
+        hub.publish_from_thread(
+            mentioned,
+            {"type": "race_mention", "raceId": str(race.id), "raceName": race.name, "messageId": str(msg.id)},
+        )
     return out
+
+
+@router.get("/races/{race_id}/mentionable", response_model=list[Mentionable])
+def mentionable(
+    race_id: uuid.UUID,
+    user: CurrentUser,
+    db: DbSession,
+    settings: AppSettings,
+    q: Annotated[str, Query(max_length=40)] = "",
+) -> list[Mentionable]:
+    """People going to this race you can @mention, for the chat's suggestions: names starting
+    with `q`, people who've posted most recently first."""
+    race = get_race(db, race_id, user)
+    require_attending(db, race, user)
+    last_posted = (
+        select(RaceMessage.sender_id, func.max(RaceMessage.created_at).label("at"))
+        .where(RaceMessage.race_id == race.id)
+        .group_by(RaceMessage.sender_id)
+        .subquery()
+    )
+    # Aliased: visible_to() has its own subquery on profiles
+    profile = aliased(Profile)
+    stmt = (
+        select(User.id, RaceAttendance.role, RaceAttendance.race_event_id)
+        .join(RaceAttendance, and_(RaceAttendance.user_id == User.id, RaceAttendance.race_id == race.id))
+        .join(profile, profile.user_id == User.id)
+        .outerjoin(last_posted, last_posted.c.sender_id == User.id)
+        .where(*visible_to(user, settings))
+        .order_by(last_posted.c.at.desc().nulls_last(), profile.display_name)
+        .limit(8)
+    )
+    if q.strip():
+        escaped = q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        stmt = stmt.where(profile.display_name.ilike(f"{escaped}%"))
+    labels = {e.id: e.label for e in race.events}
+    return [
+        Mentionable(
+            **sender(db, user_id).model_dump(),
+            going=f"Running {labels.get(event_id, '')}".strip() if role == "running" else "Supporting",
+        )
+        for user_id, role, event_id in db.execute(stmt).all()
+    ]
+
+
+@router.post("/races/{race_id}/mentions/seen", status_code=status.HTTP_204_NO_CONTENT)
+def mentions_seen(race_id: uuid.UUID, user: CurrentUser, db: DbSession) -> None:
+    """Opened the race chat: its mentions are no longer unread."""
+    race = get_race(db, race_id, user)
+    attendance = require_attending(db, race, user)
+    attendance.mentions_seen_at = utcnow()
+    db.commit()
+
+
+@router.get("/me/race-mentions", response_model=MentionCount)
+def my_race_mentions(user: CurrentUser, db: DbSession) -> MentionCount:
+    """Unread mentions across all your upcoming races, for the Races tab badge."""
+    return MentionCount(count=_unread_mentions(db, user))
 
 
 # --- Entry swap board ---

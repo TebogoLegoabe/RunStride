@@ -1,13 +1,5 @@
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  Modal,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
+import { View, Pressable, StyleSheet, Modal, ScrollView, ActivityIndicator } from "react-native";
+import { Text, TextInput } from "./ui/Text";
 import { useEffect, useMemo, useState } from "react";
 import { ApiError, suggestRun } from "../lib/api";
 import { toIsoWithOffset } from "../lib/format";

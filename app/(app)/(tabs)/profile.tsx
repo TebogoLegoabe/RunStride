@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, ScrollView, Image, Modal } from "react-native";
+import { View, StyleSheet, Pressable, ActivityIndicator, ScrollView, Image, Modal } from "react-native";
+import { Text } from "../../../components/ui/Text";
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,12 +8,14 @@ import { clearToken } from "../../../lib/session";
 import type { Me, MyProfile } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { colors } from "../../../lib/theme";
+import { useTopPadding } from "../../../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 
 type Confirm = "sign-out" | "delete" | null;
 
 export default function ProfileTab() {
+  const topPadding = useTopPadding();
   const router = useRouter();
   const { token } = useChat();
   const [me, setMe] = useState<Me | null>(null);
@@ -74,7 +77,7 @@ export default function ProfileTab() {
   const verified = me.verificationStatus === "verified";
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: topPadding }]}>
       <View style={styles.header}>
         {photo ? (
           <Image source={{ uri: mediaUrl(photo) }} style={styles.photo} />
@@ -153,7 +156,7 @@ export default function ProfileTab() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
-  content: { padding: 16, paddingTop: 56, paddingBottom: 48, maxWidth: 560, width: "100%", alignSelf: "center" },
+  content: { padding: 16, paddingBottom: 48, maxWidth: 560, width: "100%", alignSelf: "center" },
   header: { alignItems: "center", marginBottom: 12 },
   photo: { width: 110, height: 110, borderRadius: 55, backgroundColor: colors.surface, marginBottom: 12 },
   photoEmpty: { borderWidth: 1, borderColor: colors.borderStrong },

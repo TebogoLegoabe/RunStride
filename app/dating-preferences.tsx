@@ -1,4 +1,5 @@
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
+import { View, Pressable, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
+import { Text, TextInput } from "../components/ui/Text";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { ApiError, getDatingPreferences, getMe, getMyProfile, saveDatingPreferences } from "../lib/api";
@@ -7,12 +8,14 @@ import { afterSave } from "../lib/routing";
 import { getToken } from "../lib/session";
 import { ChoiceChips } from "../components/ChoiceChips";
 import { colors } from "../lib/theme";
+import { useTopPadding } from "../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const DISTANCE_OPTIONS = DISTANCES_KM.map((km) => ({ value: String(km), label: `${km} km` }));
 const digits = (t: string) => t.replace(/\D/g, "");
 
 export default function DatingPreferencesScreen() {
+  const topPadding = useTopPadding();
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
@@ -100,7 +103,7 @@ export default function DatingPreferencesScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: topPadding }]}>
       <Text style={styles.title}>Who would you like to meet?</Text>
       <Text style={styles.subtitle}>You can change these any time.</Text>
 
@@ -159,7 +162,7 @@ export default function DatingPreferencesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
-  content: { padding: 24, paddingTop: 64, paddingBottom: 48, width: "100%", maxWidth: 560, alignSelf: "center" },
+  content: { padding: 24, paddingBottom: 48, width: "100%", maxWidth: 560, alignSelf: "center" },
   title: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 8 },
   subtitle: { fontSize: 14, color: colors.textMuted, marginBottom: 32 },
   label: { fontSize: 15, fontWeight: "600", color: colors.heading, marginBottom: 10 },

@@ -1,4 +1,5 @@
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Image, Modal } from "react-native";
+import { View, Pressable, StyleSheet, ActivityIndicator, Image, Modal } from "react-native";
+import { Text, TextInput } from "../ui/Text";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { ApiError, answerChatRequest, getAttendees, mediaUrl, sendChatRequest } from "../../lib/api";

@@ -72,6 +72,7 @@ export type RealtimeEvent =
   | { type: "run_date"; runDate: RunDate }
   | { type: "race_message"; message: RaceMessage }
   | { type: "race_message_removed"; raceId: string; messageId: string }
+  | { type: "race_mention"; raceId: string; raceName: string; messageId: string }
   | { type: "chat_request"; requestId: string }
   | { type: "chat_request_accepted"; requestId: string; matchId: string };
 
@@ -211,6 +212,7 @@ export interface RaceSummary {
   status: "published" | "pending" | "rejected";
   attendingCount: number;
   myAttendance: MyAttendance | null;
+  unreadMentions: number; // race chat messages mentioning you since you last opened it
 }
 
 export interface RaceEvent {
@@ -253,7 +255,8 @@ export interface RaceMessage {
   id: string;
   raceId: string;
   sender: Person;
-  body: string;
+  body: string; // mentions appear as <@user-id>: see lib/mentions.ts
+  mentions: Person[];
   createdAt: string;
 }
 

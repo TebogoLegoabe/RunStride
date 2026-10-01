@@ -1,6 +1,8 @@
-import { View, Text, Image, Pressable, StyleSheet } from "react-native";
+import { View, Image, Pressable, StyleSheet } from "react-native";
+import { Text } from "./ui/Text";
 import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { mediaUrl } from "../lib/api";
 import { formatPace, labelFor } from "../lib/format";
 import { GOALS, RUN_TIMES, TERRAINS } from "../lib/options";
@@ -65,22 +67,35 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
             <Ionicons name="ellipsis-horizontal" size={20} color={colors.heading} />
           </Pressable>
         )}
-        <View style={styles.photoFooter}>
+        <LinearGradient
+          colors={["transparent", colors.scrimStronger]}
+          style={styles.photoFooter}
+          pointerEvents="none"
+        >
           <View style={styles.nameRow}>
             <Text style={styles.name}>
               {card.displayName}, {card.age}
             </Text>
-            {card.verified && <Text style={styles.verified}>✓ Verified</Text>}
+            {card.verified && (
+              <View style={styles.verified}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.onPrimary} />
+                <Text style={styles.verifiedText}>Verified</Text>
+              </View>
+            )}
           </View>
-          <Text style={styles.distance}>{card.distanceKm} km away</Text>
-        </View>
+          <View style={styles.distanceRow}>
+            <Ionicons name="location-outline" size={14} color={colors.textBright} />
+            <Text style={styles.distance}>{card.distanceKm} km away</Text>
+          </View>
+        </LinearGradient>
       </Pressable>
 
       <View style={styles.details}>
         {card.sharedRaces.map((race) => (
           <View key={race.raceId} style={styles.raceBadge}>
             <Text style={styles.raceBadgeText}>
-              🏁 Also at {race.name}
+              <Ionicons name="flag" size={13} color={colors.pink} />{" "}
+              Also at {race.name}
               {race.eventLabel ? ` · ${race.eventLabel}` : ""}
             </Text>
           </View>
@@ -89,8 +104,14 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
           <View style={styles.matchPill}>
             <Text style={styles.matchText}>{card.compatibility}% running match</Text>
           </View>
-          <Text style={styles.stat}>{formatPace(card.paceSecondsPerKm)} /km</Text>
-          <Text style={styles.stat}>{card.weeklyKm} km/week</Text>
+          <View style={styles.stat}>
+            <Ionicons name="speedometer-outline" size={15} color={colors.textMuted} />
+            <Text style={styles.statText}>{formatPace(card.paceSecondsPerKm)} /km</Text>
+          </View>
+          <View style={styles.stat}>
+            <Ionicons name="trending-up-outline" size={15} color={colors.textMuted} />
+            <Text style={styles.statText}>{card.weeklyKm} km/week</Text>
+          </View>
         </View>
 
         <View style={styles.tags}>
@@ -138,22 +159,22 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     padding: 16,
-    paddingTop: 40,
-    backgroundColor: colors.scrim,
+    paddingTop: 70,
   },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
   name: { color: colors.heading, fontSize: 26, fontWeight: "700" },
   verified: {
-    color: colors.onPrimary,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     backgroundColor: colors.primary,
-    fontSize: 12,
-    fontWeight: "700",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    overflow: "hidden",
   },
-  distance: { color: colors.textBright, fontSize: 14, marginTop: 2 },
+  verifiedText: { color: colors.onPrimary, fontSize: 12, fontWeight: "700" },
+  distanceRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  distance: { color: colors.textBright, fontSize: 14 },
   details: { padding: 16 },
   raceBadge: {
     alignSelf: "flex-start",
@@ -174,7 +195,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   matchText: { color: colors.primary, fontWeight: "700", fontSize: 13 },
-  stat: { color: colors.text, fontSize: 14 },
+  stat: { flexDirection: "row", alignItems: "center", gap: 5 },
+  statText: { color: colors.text, fontSize: 14 },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 12 },
   tag: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: colors.border },
   tagShared: { backgroundColor: colors.primary },

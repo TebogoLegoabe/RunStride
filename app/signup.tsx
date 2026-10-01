@@ -1,8 +1,10 @@
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { Text, TextInput } from "../components/ui/Text";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { ApiError, sendOtp } from "../lib/api";
 import { colors } from "../lib/theme";
+import { AuthCard } from "../components/ui/AuthCard";
 
 export default function Signup() {
   const router = useRouter();
@@ -26,7 +28,7 @@ export default function Signup() {
   const canSubmit = phone.trim().length > 0 && !loading;
 
   return (
-    <View style={styles.container}>
+    <AuthCard>
       <Text style={styles.title}>Let's get you verified</Text>
       <Text style={styles.subtitle}>
         We'll text you a code to confirm your number.
@@ -56,12 +58,11 @@ export default function Signup() {
           <Text style={styles.primaryButtonText}>Send Code</Text>
         )}
       </Pressable>
-    </View>
+    </AuthCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, padding: 24, justifyContent: "center" },
   title: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 8 },
   subtitle: { fontSize: 14, color: colors.textMuted, marginBottom: 32 },
   input: {

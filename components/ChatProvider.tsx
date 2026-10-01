@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
-import { getChatRequests, getMatches } from "../lib/api";
+import { getChatRequests, getMatches, getRaceMentionCount } from "../lib/api";
 import { RealtimeClient } from "../lib/realtime";
 import { getToken } from "../lib/session";
 import type { RealtimeEvent } from "../lib/types";
@@ -10,6 +10,9 @@ type ChatContextValue = {
   connected: boolean;
   unreadTotal: number;
   refreshUnread: () => void;
+  // Unread @mentions in race chats, for the Races tab badge
+  mentionTotal: number;
+  refreshMentions: () => void;
   subscribe: (listener: (event: RealtimeEvent) => void) => () => void;
 };
 
@@ -30,6 +33,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [unreadTotal, setUnreadTotal] = useState(0);
+  const [mentionTotal, setMentionTotal] = useState(0);
   // Screens' listeners live here, so subscribing works even before the connection exists
   const listeners = useRef(new Set<(event: RealtimeEvent) => void>());
 
@@ -44,6 +48,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       .catch(() => {}); // the badge can wait for the next event
   }, [token]);
 
+  const refreshMentions = useCallback(() => {
+    if (!token) return;
+    getRaceMentionCount(token)
+      .then((r) => setMentionTotal(r.count))
+      .catch(() => {});
+  }, [token]);
+
   useEffect(() => {
     getToken().then(setToken);
   }, []);
@@ -56,6 +67,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       listeners.current.forEach((l) => l(event));
       // Only events that can change the badge; busy race chats shouldn't trigger refetches
       if (BADGE_EVENTS.has(event.type)) refreshUnread();
+      if (event.type === "ready" || event.type === "race_mention") refreshMentions();
     });
     c.start();
     const appState = AppState.addEventListener("change", (s) => {
@@ -67,7 +79,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       appState.remove();
       c.stop();
     };
-  }, [token, refreshUnread]);
+  }, [token, refreshUnread, refreshMentions]);
 
   const subscribe = useCallback((listener: (event: RealtimeEvent) => void) => {
     listeners.current.add(listener);
@@ -77,7 +89,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ChatContext.Provider value={{ token, connected, unreadTotal, refreshUnread, subscribe }}>
+    <ChatContext.Provider
+      value={{ token, connected, unreadTotal, refreshUnread, mentionTotal, refreshMentions, subscribe }}
+    >
       {children}
     </ChatContext.Provider>
   );

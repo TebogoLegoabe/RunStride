@@ -57,10 +57,8 @@ type RequestOptions = {
   token?: string;
 };
 
-export async function apiRequest<T>(
-  path: string,
-  { method = "GET", body, token }: RequestOptions = {}
-): Promise<T> {
+// The raw response, for the few calls that also need its headers. Throws ApiError if not OK.
+async function apiResponse(path: string, { method = "GET", body, token }: RequestOptions = {}): Promise<Response> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers: {
@@ -73,7 +71,11 @@ export async function apiRequest<T>(
   if (!res.ok) {
     throw new ApiError(res.status, await errorMessage(res));
   }
+  return res;
+}
 
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const res = await apiResponse(path, options);
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
@@ -278,8 +280,10 @@ export type RaceFilters = {
   limit?: number;
 };
 
-// A page of upcoming races. A page shorter than `limit` is the last one.
-export const getRaces = (token: string, filters: RaceFilters = {}) => {
+export type RacePage = { races: RaceSummary[]; total: number };
+
+// A page of upcoming races, plus how many match the filters in all
+export const getRaces = async (token: string, filters: RaceFilters = {}): Promise<RacePage> => {
   const params = new URLSearchParams();
   if (filters.q) params.set("q", filters.q);
   if (filters.mine) params.set("mine", "true");
@@ -290,14 +294,28 @@ export const getRaces = (token: string, filters: RaceFilters = {}) => {
   if (filters.offset) params.set("offset", String(filters.offset));
   if (filters.limit) params.set("limit", String(filters.limit));
   const query = params.toString();
-  return apiRequest<RaceSummary[]>(`/races${query ? `?${query}` : ""}`, { token });
+  const res = await apiResponse(`/races${query ? `?${query}` : ""}`, { token });
+  const races = (await res.json()) as RaceSummary[];
+  // Older servers don't send the header: assume one more page while pages come back full
+  const header = Number(res.headers.get("X-Total-Count"));
+  const total = Number.isFinite(header) && res.headers.has("X-Total-Count")
+    ? header
+    : (filters.offset ?? 0) + races.length + (races.length === (filters.limit ?? 20) ? 1 : 0);
+  return { races, total };
 };
 
 export const getRace = (token: string, raceId: string) => apiRequest<RaceDetail>(`/races/${raceId}`, { token });
 
 export const suggestRace = (
   token: string,
-  race: { name: string; startsOn: string; venue: string; city: string; officialUrl?: string }
+  race: {
+    name: string;
+    startsOn: string;
+    venue: string;
+    city: string;
+    officialUrl?: string;
+    events: { label: string; distanceKm: number }[]; // at least one
+  }
 ) => apiRequest<RaceSummary>("/races/suggestions", { method: "POST", body: race, token });
 
 export const setAttendance = (
@@ -317,6 +335,20 @@ export const getRaceMessages = (token: string, raceId: string, before?: string) 
 
 export const postRaceMessage = (token: string, raceId: string, body: string) =>
   apiRequest<RaceMessage>(`/races/${raceId}/messages`, { method: "POST", body: { body }, token });
+
+// People going to the race you can @mention, names starting with `q`
+export const getMentionable = (token: string, raceId: string, q: string) =>
+  apiRequest<(import("./types").Person & { going: string })[]>(
+    `/races/${raceId}/mentionable?q=${encodeURIComponent(q)}`,
+    { token }
+  );
+
+export const markMentionsSeen = (token: string, raceId: string) =>
+  apiRequest<void>(`/races/${raceId}/mentions/seen`, { method: "POST", token });
+
+// Unread mentions across your upcoming races
+export const getRaceMentionCount = (token: string) =>
+  apiRequest<{ count: number }>("/me/race-mentions", { token });
 
 export const getListings = (token: string, raceId: string) =>
   apiRequest<Listing[]>(`/races/${raceId}/listings`, { token });

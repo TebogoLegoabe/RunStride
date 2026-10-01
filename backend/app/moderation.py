@@ -114,7 +114,9 @@ def capture_evidence(db: Session, reported: User, match: Match | None, race_id: 
             .order_by(RaceMessage.created_at.desc())
             .limit(EVIDENCE_MESSAGE_LIMIT)
         ).all()
-        race_messages = [{"body": m.body, "createdAt": m.created_at.isoformat()} for m in reversed(rows)]
+        race_messages = [
+            {"body": _readable_mentions(db, m.body), "createdAt": m.created_at.isoformat()} for m in reversed(rows)
+        ]
     return {
         "capturedAt": utcnow().isoformat(),
         "raceMessages": race_messages,
@@ -125,6 +127,20 @@ def capture_evidence(db: Session, reported: User, match: Match | None, race_id: 
         },
         "messages": messages,
     }
+
+
+def _readable_mentions(db: Session, body: str) -> str:
+    """A race chat message with its <@user-id> mentions written as @Name, as people saw it."""
+    from app.races import MENTION  # app.races imports this module
+
+    def name(match) -> str:
+        try:
+            user = db.get(User, uuid.UUID(match.group(1)))
+        except ValueError:
+            return match.group(0)
+        return f"@{user.profile.display_name}" if user and user.profile else "@someone"
+
+    return MENTION.sub(name, body)
 
 
 def resolve_other_open_reports(db: Session, reported_id: uuid.UUID, admin: User, resolution: str, note: str) -> None:

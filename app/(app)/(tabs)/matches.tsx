@@ -1,10 +1,16 @@
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, FlatList, Image } from "react-native";
+import { View, StyleSheet, Pressable, FlatList, Image } from "react-native";
+import { Text } from "../../../components/ui/Text";
 import { useCallback, useEffect, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ApiError, answerChatRequest, getChatRequests, getMatches, getMe, mediaUrl } from "../../../lib/api";
 import { formatWhen } from "../../../lib/format";
 import type { ChatRequest, MatchSummary, RealtimeEvent } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { EmptyState } from "../../../components/ui/EmptyState";
+import { SkeletonRow } from "../../../components/ui/Skeleton";
+import { ChatView } from "../../../components/ChatView";
+import { hoverable, useBreakpoint, useTopPadding } from "../../../lib/responsive";
 import { colors } from "../../../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
@@ -26,6 +32,10 @@ export default function Matches() {
   const [matches, setMatches] = useState<MatchSummary[] | null>(null);
   const [requests, setRequests] = useState<ChatRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Wide screens show the list and the open conversation side by side
+  const { isWide } = useBreakpoint();
+  const topPadding = useTopPadding();
+  const [open, setOpen] = useState<{ matchId: string; userId: string; name: string; photo: string } | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -66,7 +76,14 @@ export default function Matches() {
     try {
       const result = await answerChatRequest(token, request.id, choice);
       refreshUnread();
-      if (choice === "accept" && result.matchId) {
+      if (choice === "accept" && result.matchId && isWide) {
+        setOpen({
+          matchId: result.matchId,
+          userId: request.other.id,
+          name: request.other.displayName,
+          photo: request.other.photo ?? "",
+        });
+      } else if (choice === "accept" && result.matchId) {
         router.push({
           pathname: "/chat/[matchId]",
           params: {
@@ -127,22 +144,35 @@ export default function Matches() {
       </View>
     ) : null;
 
-  const openChat = (m: MatchSummary) =>
-    router.push({
-      pathname: "/chat/[matchId]",
-      params: { matchId: m.id, userId: m.userId, name: m.displayName, photo: m.photo ?? "" },
-    });
+  const openChat = (m: MatchSummary) => {
+    const params = { matchId: m.id, userId: m.userId, name: m.displayName, photo: m.photo ?? "" };
+    if (isWide) setOpen(params);
+    else router.push({ pathname: "/chat/[matchId]", params });
+  };
+
+  // The open conversation disappears if the match ends or the list no longer has it
+  useEffect(() => {
+    if (open && matches && !matches.some((m) => m.id === open.matchId)) setOpen(null);
+  }, [open, matches]);
 
   if (matches === null) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color={colors.primary} />}
+      <View style={[styles.container, styles.centered, { paddingTop: topPadding }]}>
+        {error ? (
+          <Text style={styles.error}>{error}</Text>
+        ) : (
+          <View style={styles.skeletons}>
+            {Array.from({ length: 6 }, (_, i) => (
+              <SkeletonRow key={i} />
+            ))}
+          </View>
+        )}
       </View>
     );
   }
 
-  return (
-    <View style={styles.container}>
+  const list = (
+    <View style={[styles.container, { paddingTop: topPadding }, isWide && styles.listPane]}>
       <Text style={styles.heading}>Matches</Text>
       {error && <Text style={styles.error}>{error}</Text>}
       <FlatList
@@ -151,17 +181,14 @@ export default function Matches() {
         ListHeaderComponent={requestsHeader}
         contentContainerStyle={matches.length === 0 ? styles.emptyWrap : undefined}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No matches yet</Text>
-            <Text style={styles.emptyBody}>
-              When you and another runner both like each other, you'll be able to chat here.
-            </Text>
-            <Pressable style={styles.secondaryButton} onPress={() => router.navigate("/discover")}>
-              <Text style={styles.secondaryButtonText}>Discover runners</Text>
-            </Pressable>
-          </View>
+          <EmptyState
+            icon="chatbubbles"
+            title="No matches yet"
+            body="When you and another runner like each other, or someone accepts your chat request at a race, you can chat here."
+            action={{ title: "Discover runners", icon: "compass-outline", onPress: () => router.navigate("/discover") }}
+          />
         }
-        renderItem={({ item: m }) => {
+        renderItem={({ item: m, index }) => {
           const last = m.lastMessage;
           const preview = last
             ? `${last.senderId === myId ? "You: " : ""}${last.body}`
@@ -169,8 +196,17 @@ export default function Matches() {
               ? "Connected! Say hi 👋"
               : "New match! Say hi 👋";
           const unread = m.unreadCount > 0;
+          const selected = isWide && open?.matchId === m.id;
           return (
-            <Pressable style={styles.row} onPress={() => openChat(m)}>
+            <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 45).duration(350)}>
+            <Pressable
+              style={hoverable(({ hovered, pressed }) => [
+                styles.row,
+                (hovered || pressed) && styles.rowHover,
+                selected && styles.rowSelected,
+              ])}
+              onPress={() => openChat(m)}
+            >
               {m.photo ? (
                 <Image source={{ uri: mediaUrl(m.photo) }} style={styles.avatar} />
               ) : (
@@ -199,15 +235,38 @@ export default function Matches() {
                 </View>
               </View>
             </Pressable>
+            </Animated.View>
           );
         }}
       />
     </View>
   );
+
+  if (!isWide) return list;
+  return (
+    <View style={styles.split}>
+      {list}
+      <View style={styles.chatPane}>
+        {open ? (
+          <ChatView key={open.matchId} {...open} embedded onClose={() => setOpen(null)} />
+        ) : (
+          <EmptyState
+            icon="chatbubble-ellipses"
+            title="Pick a conversation"
+            body={matches.length ? "Choose a match on the left to start chatting." : "Your conversations will show up here."}
+          />
+        )}
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  split: { flex: 1, flexDirection: "row", backgroundColor: colors.bg },
+  listPane: { flexGrow: 0, flexShrink: 0, flexBasis: 380, width: 380, borderRightWidth: 1, borderRightColor: colors.surface },
+  chatPane: { flex: 1, justifyContent: "center" },
+  skeletons: { width: "100%", maxWidth: 640, paddingHorizontal: 16 },
   centered: { alignItems: "center", justifyContent: "center" },
   heading: {
     fontSize: 26,
@@ -229,7 +288,10 @@ const styles = StyleSheet.create({
     maxWidth: 640,
     width: "100%",
     alignSelf: "center",
+    borderRadius: 14,
   },
+  rowHover: { backgroundColor: colors.surface },
+  rowSelected: { backgroundColor: colors.surface },
   avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.border },
   avatarEmpty: { borderWidth: 1, borderColor: colors.borderStrong },
   rowText: { flex: 1, minWidth: 0 },
@@ -274,14 +336,4 @@ const styles = StyleSheet.create({
   acceptText: { color: colors.onPrimary, fontSize: 14, fontWeight: "700" },
   waiting: { color: colors.textFaint, fontSize: 12, marginBottom: 8 },
   empty: { flex: 1, justifyContent: "center", padding: 24, maxWidth: 420, width: "100%", alignSelf: "center" },
-  emptyTitle: { fontSize: 22, fontWeight: "700", color: colors.heading, marginBottom: 8 },
-  emptyBody: { fontSize: 15, lineHeight: 22, color: colors.text, marginBottom: 24 },
-  secondaryButton: {
-    borderColor: colors.primary,
-    borderWidth: 1,
-    paddingVertical: 13,
-    borderRadius: 999,
-    alignItems: "center",
-  },
-  secondaryButtonText: { color: colors.primary, fontSize: 16, fontWeight: "600" },
 });

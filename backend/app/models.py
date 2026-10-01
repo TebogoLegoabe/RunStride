@@ -3,7 +3,7 @@ import uuid
 from datetime import date, datetime
 
 from geoalchemy2 import Geography
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY, JSONB
 from sqlalchemy import (
     ARRAY,
     Boolean,
@@ -19,6 +19,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    Uuid,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -387,6 +388,8 @@ class RaceAttendance(Base):
     race_event_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("race_events.id", ondelete="SET NULL"))
     role: Mapped[str] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # When they last opened the race chat: mentions after this are unread
+    mentions_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class RaceMessage(Base):
@@ -398,7 +401,11 @@ class RaceMessage(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     race_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("races.id", ondelete="CASCADE"))
     sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    # Mentions are written into the body as <@user-id>; these are the people mentioned
     body: Mapped[str] = mapped_column(Text)
+    mentioned_user_ids: Mapped[list[uuid.UUID]] = mapped_column(
+        PG_ARRAY(Uuid), default=list, server_default="{}"  # Postgres's array: has "contains" (@>)
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     # Removed by a moderator: hidden from everyone, kept for the record
     removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

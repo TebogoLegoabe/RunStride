@@ -1,5 +1,6 @@
 """Rules shared by the race endpoints: dates, swap windows, and who you can see at a race."""
 
+import re
 import uuid
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
@@ -46,6 +47,24 @@ def get_race(db: Session, race_id: uuid.UUID, me: User) -> Race:
 
 def my_attendance(db: Session, race_id: uuid.UUID, user_id: uuid.UUID) -> RaceAttendance | None:
     return db.get(RaceAttendance, (race_id, user_id))
+
+
+# A mention inside a race chat message: <@3f2b...>
+MENTION = re.compile(r"<@([0-9a-fA-F-]{36})>")
+MAX_MENTIONS = 10
+
+
+def mention_ids(body: str) -> list[uuid.UUID]:
+    """The people a message mentions, each once, in the order they appear."""
+    found: list[uuid.UUID] = []
+    for match in MENTION.finditer(body):
+        try:
+            user_id = uuid.UUID(match.group(1))
+        except ValueError:
+            continue  # looks like a mention but isn't one: leave it as text
+        if user_id not in found:
+            found.append(user_id)
+    return found
 
 
 def require_attending(db: Session, race: Race, me: User) -> RaceAttendance:

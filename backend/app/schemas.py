@@ -449,6 +449,11 @@ class RaceBody(CamelModel):
         return self
 
 
+class SuggestedDistance(CamelModel):
+    label: str = Field(min_length=1, max_length=60)
+    distance_km: float = Field(gt=0, le=1000)
+
+
 class RaceSuggestionBody(CamelModel):
     """A user suggesting a race that's missing. An admin reviews it before it's listed."""
 
@@ -457,6 +462,8 @@ class RaceSuggestionBody(CamelModel):
     venue: str = Field(min_length=2, max_length=160)
     city: str = Field(min_length=2, max_length=80)
     official_url: str | None = Field(default=None, max_length=500)
+    # At least one, so runners can say which distance they're doing once it's approved
+    events: list[SuggestedDistance] = Field(min_length=1, max_length=10)
 
     _blanks = field_validator("official_url")(_blank_to_none)
 
@@ -478,6 +485,8 @@ class RaceSummary(CamelModel):
     status: str
     attending_count: int
     my_attendance: MyAttendance | None
+    # Race chat messages mentioning you since you last opened the chat
+    unread_mentions: int = 0
 
 
 class RaceDetail(RaceSummary):
@@ -527,8 +536,19 @@ class RaceMessageOut(CamelModel):
     id: uuid.UUID
     race_id: uuid.UUID
     sender: Sender
+    # Mentions appear in the body as <@user-id>; show them with these names
     body: str
+    mentions: list[Sender] = []
     created_at: datetime
+
+
+class Mentionable(Sender):
+    # "Running 30 km trail" or "Supporting": tells apart two people with the same name
+    going: str
+
+
+class MentionCount(CamelModel):
+    count: int
 
 
 class ListingBody(CamelModel):

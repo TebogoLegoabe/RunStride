@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, AppState } from "react-native";
+import { View, Pressable, StyleSheet, ActivityIndicator, AppState } from "react-native";
+import { Text } from "../components/ui/Text";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
