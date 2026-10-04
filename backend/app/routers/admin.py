@@ -5,12 +5,15 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 
+from app.config import get_settings
 from app.deps import AdminUser, DbSession
+from app.membership import end_plus, grant_plus, plus_status
+from app.phone import InvalidPhoneNumber, normalize_phone
 from app.models import AccountStatus, Race, RaceAttendance, RaceEvent, RaceMessage, Report, User
 from app.moderation import end_all_matches, resolve_other_open_reports
 from app.realtime import hub
 from app.routers.races import race_detail
-from app.schemas import RaceBody, RaceDetail, ReportDetail, ReportedPerson, ReportPerson, ReportSummary, ResolveBody
+from app.schemas import GrantPlusBody, PlusOut, RaceBody, RaceDetail, ReportDetail, ReportedPerson, ReportPerson, ReportSummary, ResolveBody
 from app.security import utcnow
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -207,3 +210,37 @@ def admin_remove_race_message(message_id: uuid.UUID, admin: AdminUser, db: DbSes
             {"type": "race_message_removed", "raceId": str(message.race_id), "messageId": str(message.id)},
         )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- Plus for beta testers and support ---
+
+
+def _user_by_phone(db: DbSession, phone: str) -> User:
+    try:
+        normalized = normalize_phone(phone, get_settings().default_phone_region)
+    except InvalidPhoneNumber:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="That isn't a valid phone number.")
+    user = db.scalar(select(User).where(User.phone == normalized))
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No account with that phone number.")
+    return user
+
+
+@router.post("/plus", response_model=PlusOut)
+def give_plus(body: GrantPlusBody, admin: AdminUser, db: DbSession) -> PlusOut:
+    user = _user_by_phone(db, body.phone)
+    grant_plus(db, user, source="admin", duration=timedelta(days=body.days) if body.days else None)
+    db.commit()
+    active, until, source = plus_status(db, user)
+    return PlusOut(active=active, expires_at=until, source=source)
+
+
+@router.delete("/plus/{phone}", response_model=PlusOut)
+def take_plus(phone: str, admin: AdminUser, db: DbSession) -> PlusOut:
+    """Ends Plus given by admins. Plus someone bought in a store is left alone."""
+    user = _user_by_phone(db, phone)
+    end_plus(db, user, source="admin")
+    db.commit()
+    active, until, source = plus_status(db, user)
+    return PlusOut(active=active, expires_at=until, source=source)
+

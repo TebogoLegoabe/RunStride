@@ -91,6 +91,27 @@ and run `docker compose up -d`. Sign-in codes are limited to South African numbe
 10 per network address per hour, and 2000 per day overall (see `backend/app/config.py`)
 to stop bots running up the SMS bill.
 
+### RunStride Plus and race passes
+What's free and what needs Plus is defined in `backend/app/membership.py` and enforced by the
+API (HTTP 402 opens the Plus screen in the app). Display prices live in `lib/plans.ts` and are
+placeholders until the store prices are set.
+
+- **Development:** `TEST_PURCHASES=true` (the default, forced off outside development) lets the
+  Plus screen grant Plus or a race pass straight away, with no store and no charge.
+- **Beta testers:** give Plus by phone number:
+  `docker compose exec api python -m app.admin_cli plus 0821234567 --days 90`
+  (`unplus` takes it away; Plus bought in a store is left alone).
+- **Real purchases** go through Apple and Google, via RevenueCat. They need a development
+  build (Expo Go can't make store purchases). To switch them on:
+  1. Create the products `plus_weekly`, `plus_monthly` (auto-renewing subscriptions) and
+     `race_pass` (consumable) in App Store Connect and Google Play, with the same IDs in RevenueCat.
+  2. In the app, add `react-native-purchases`, configure it with RevenueCat's API keys and the
+     signed-in user's RunStride ID as the app user ID, and call it from `lib/purchases.ts`.
+  3. In RevenueCat -> Integrations -> Webhooks, point it at `https://<api domain>/webhooks/revenuecat`
+     and set an Authorization header value; put the same value in `backend/.env` as
+     `REVENUECAT_WEBHOOK_AUTH`. Purchases, renewals, cancellations, refunds and expiries then
+     update membership automatically.
+
 ### App
 ```bash
 npm install

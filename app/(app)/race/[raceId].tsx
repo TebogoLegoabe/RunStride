@@ -12,6 +12,8 @@ import { RaceChat } from "../../../components/race/RaceChat";
 import { RaceRunners } from "../../../components/race/RaceRunners";
 import { RaceSwaps } from "../../../components/race/RaceSwaps";
 import { colors } from "../../../lib/theme";
+import { useMembership } from "../../../components/MembershipProvider";
+import { openPlus } from "../../../lib/upsell";
 import { CONTENT_WIDTH, useBreakpoint, useTopPadding } from "../../../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
@@ -28,11 +30,15 @@ export default function RacePage() {
   // Wide screens: race details on the left, chat / runners / swaps on the right
   const { isWide } = useBreakpoint();
   const router = useRouter();
-  const { raceId } = useLocalSearchParams<{ raceId: string }>();
+  // section: open on a given tab, e.g. "swaps" from a swap alert
+  const { raceId, section: startSection } = useLocalSearchParams<{ raceId: string; section?: Section }>();
   const { token } = useChat();
+  const { membership, hasRaceAccess } = useMembership();
   const [race, setRace] = useState<RaceDetail | null>(null);
   const [me, setMe] = useState<{ id: string; isAdmin: boolean } | null>(null);
-  const [section, setSection] = useState<Section[]>(["chat"]);
+  const [section, setSection] = useState<Section[]>([
+    SECTIONS.some((s) => s.value === startSection) ? startSection! : "chat",
+  ]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -167,10 +173,36 @@ export default function RacePage() {
         {going ? (
           <View style={isWide ? styles.sectionColumn : undefined}>
             <View style={[styles.sectionPicker, isWide && styles.sectionPickerWide]}>
-              <ChoiceChips options={SECTIONS} selected={section} onChange={setSection} single />
+              <ChoiceChips
+                options={SECTIONS.map((s) =>
+                  s.value === "swaps" && race.unreadSwapMatches > 0 && section[0] !== "swaps"
+                    ? { ...s, label: `${s.label} (${race.unreadSwapMatches} new)` }
+                    : s
+                )}
+                selected={section}
+                onChange={setSection}
+                single
+              />
+              {membership && !membership.plus.active && (
+                <Pressable
+                  style={styles.passRow}
+                  onPress={() => openPlus(router, { raceId: race.id, raceName: race.name })}
+                >
+                  <Ionicons
+                    name={hasRaceAccess(race.id) ? "checkmark-circle" : "flash-outline"}
+                    size={15}
+                    color={hasRaceAccess(race.id) ? colors.success : colors.primary}
+                  />
+                  <Text style={[styles.passText, hasRaceAccess(race.id) && styles.passTextOn]}>
+                    {hasRaceAccess(race.id)
+                      ? "Race pass active: everyone going, unlimited requests, swap alerts"
+                      : "Get the most out of this race with a race pass"}
+                  </Text>
+                </Pressable>
+              )}
             </View>
             {section[0] === "chat" && <RaceChat raceId={race.id} myId={me?.id ?? null} isAdmin={!!me?.isAdmin} />}
-            {section[0] === "runners" && <RaceRunners raceId={race.id} raceName={race.name} />}
+            {section[0] === "runners" && <RaceRunners raceId={race.id} raceName={race.name} events={race.events} />}
             {section[0] === "swaps" && <RaceSwaps race={race} />}
           </View>
         ) : (
@@ -195,6 +227,9 @@ const styles = StyleSheet.create({
   columns: { flexDirection: "row", alignItems: "flex-start", gap: 32 },
   infoColumn: { width: 360 },
   sectionColumn: { flex: 1, minWidth: 0 },
+  passRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2, marginBottom: 10 },
+  passText: { color: colors.primary, fontSize: 13, fontWeight: "600", flexShrink: 1 },
+  passTextOn: { color: colors.textMuted, fontWeight: "400" },
   sectionPickerWide: { marginTop: 0, borderTopWidth: 0, paddingTop: 0 },
   back: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   backText: { color: colors.textBright, fontSize: 16 },

@@ -14,6 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.deps import CurrentUser, DbSession
+from app.membership import FREE_CHAT_REQUESTS_PER_RACE, UpgradeRequired, has_race_access
 from app.models import ChatRequest, EntryListing, Match, Race, User
 from app.moderation import lockout_message, match_between
 from app.races import blocked_either_way, my_attendance, sender
@@ -88,6 +89,15 @@ def send_request(body: ChatRequestBody, user: CurrentUser, db: DbSession) -> Cha
     if my_attendance(db, race_id, user.id) is None or my_attendance(db, race_id, other.id) is None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="You both need to be going to this race.")
 
+    # Taken mode is for races and swaps only: no new chats except about a swap post
+    if body.listing_id is None and "taken" in (user.dating_mode, other.dating_mode):
+        if user.dating_mode == "taken":
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                detail="You're in Taken mode. Switch dating back on in your profile to chat with runners.",
+            )
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This runner isn't available.")
+
     match = match_between(db, user.id, other.id)
     if match is not None:
         detail = "You're already chatting." if match.ended_at is None else "You can't chat with this runner."
@@ -123,6 +133,23 @@ def send_request(body: ChatRequestBody, user: CurrentUser, db: DbSession) -> Cha
     )
     if declined_recently:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="This runner isn't available to chat.")
+
+    # Free: one chat request per race (swap post conversations are always free)
+    if body.listing_id is None and not has_race_access(db, user, race_id):
+        sent_here = db.scalar(
+            select(func.count())
+            .select_from(ChatRequest)
+            .where(
+                ChatRequest.from_user_id == user.id,
+                ChatRequest.race_id == race_id,
+                ChatRequest.listing_id.is_(None),
+            )
+        )
+        if sent_here >= FREE_CHAT_REQUESTS_PER_RACE:
+            raise UpgradeRequired(
+                "You've used your free chat request at this race. "
+                "Get Plus or a race pass to say hi to as many runners as you like."
+            )
 
     now = utcnow()
     sent_today = db.scalar(

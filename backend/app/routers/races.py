@@ -21,10 +21,17 @@ from app.models import (
     RaceAttendance,
     RaceEvent,
     RaceMessage,
+    RunningProfile,
     User,
     VerificationStatus,
 )
 from app.moderation import match_between, not_blocked_with
+from app.membership import (
+    FREE_RUNNERS_VISIBLE,
+    UpgradeRequired,
+    has_race_access,
+    race_access_condition,
+)
 from app.races import (
     MAX_MENTIONS,
     event_label,
@@ -49,9 +56,10 @@ from app.schemas import (
     MyAttendance,
     RaceDetail,
     RaceEventOut,
+    RaceAlerts,
     RaceMessageOut,
+    RaceRunnersOut,
     RaceSuggestionBody,
-    Sender,
     RaceSummary,
     age_on,
 )
@@ -63,6 +71,8 @@ router = APIRouter(tags=["races"])
 RACE_MESSAGES_PER_MINUTE = 10
 NEW_ACCOUNT_RACE_MESSAGES_PER_HOUR = 20
 MAX_SUGGESTIONS_PER_DAY = 5
+# "Similar pace" filter: within this many seconds per km of yours
+SIMILAR_PACE_SECONDS = 30
 MAX_OPEN_LISTINGS_PER_RACE = 2
 RACE_CHAT_PAGE = 50
 
@@ -106,6 +116,7 @@ def _summary_fields(db: Session, race: Race, me: User) -> dict:
         attending_count=_attending_count(db, race.id),
         my_attendance=_my_attendance_out(db, race.id, me),
         unread_mentions=_unread_mentions(db, me, race.id),
+        unread_swap_matches=_unread_swap_matches(db, me, race.id),
     )
 
 
@@ -200,6 +211,50 @@ def _unread_mentions(db: Session, me: User, race_id: uuid.UUID | None = None) ->
     else:
         stmt = stmt.join(Race, Race.id == RaceMessage.race_id).where(Race.ends_on >= sa_today())
     return db.scalar(stmt) or 0
+
+
+def _swap_matches(db: Session, me: User, race_id: uuid.UUID, *, unread_only: bool):
+    """Statement selecting other people's open posts at this race that answer one of mine
+    (offering vs looking, same distance)."""
+    mine = aliased(EntryListing)
+    stmt = (
+        select(func.count(func.distinct(EntryListing.id)))
+        .select_from(EntryListing)
+        .join(
+            mine,
+            and_(
+                mine.race_id == EntryListing.race_id,
+                mine.race_event_id == EntryListing.race_event_id,
+                mine.kind != EntryListing.kind,
+                mine.user_id == me.id,
+                mine.status == "open",
+            ),
+        )
+        .join(User, User.id == EntryListing.user_id)
+        .where(
+            EntryListing.race_id == race_id,
+            EntryListing.status == "open",
+            EntryListing.user_id != me.id,
+            not_blocked_with(me.id),
+        )
+    )
+    if unread_only:
+        seen = select(RaceAttendance.swaps_seen_at).where(
+            RaceAttendance.race_id == race_id, RaceAttendance.user_id == me.id
+        ).scalar_subquery()
+        stmt = stmt.where(
+            EntryListing.created_at > mine.created_at,
+            EntryListing.created_at > func.coalesce(seen, mine.created_at),
+        )
+    return stmt
+
+
+def _unread_swap_matches(db: Session, me: User, race_id: uuid.UUID) -> int:
+    """New posts answering mine since I last opened the swap board. Alerts are a Plus /
+    race pass feature, so it's 0 without one."""
+    if not has_race_access(db, me, race_id):
+        return 0
+    return db.scalar(_swap_matches(db, me, race_id, unread_only=True)) or 0
 
 
 # --- Browsing races ---
@@ -330,26 +385,50 @@ def leave_race(race_id: uuid.UUID, user: CurrentUser, db: DbSession) -> RaceDeta
     return race_detail(db, race, user)
 
 
-@router.get("/races/{race_id}/attendees", response_model=list[Attendee])
+@router.get("/races/{race_id}/attendees", response_model=RaceRunnersOut)
 def list_attendees(
     race_id: uuid.UUID,
     user: CurrentUser,
     db: DbSession,
     settings: AppSettings,
     race_event_id: uuid.UUID | None = None,
-) -> list[Attendee]:
-    """Who else is going. Only visible once you've joined the race yourself."""
+    age_min: Annotated[int | None, Query(ge=18, le=99)] = None,
+    age_max: Annotated[int | None, Query(ge=18, le=99)] = None,
+    similar_pace: bool = False,
+) -> RaceRunnersOut:
+    """Who else is going. Only visible once you've joined the race yourself.
+
+    Without Plus or a race pass you see the first few and how many more there are; the
+    filters (distance, age, similar pace) need Plus or a race pass too."""
     race = get_race(db, race_id, user)
     require_attending(db, race, user)
+    full_access = has_race_access(db, user, race.id)
+    filtered = race_event_id is not None or age_min is not None or age_max is not None or similar_pace
+    if filtered and not full_access:
+        raise UpgradeRequired("Filtering runners comes with Plus or a race pass for this race.")
+
+    profile = aliased(Profile)
     stmt = (
         select(User, RaceAttendance)
         .join(RaceAttendance, RaceAttendance.user_id == User.id)
-        .where(RaceAttendance.race_id == race.id, *visible_to(user, settings))
+        .join(profile, profile.user_id == User.id)
+        # Taken: going, but not looking to meet anyone
+        .where(RaceAttendance.race_id == race.id, User.dating_mode == "looking", *visible_to(user, settings))
         .order_by(RaceAttendance.created_at.desc())
         .limit(300)
     )
     if race_event_id is not None:
         stmt = stmt.where(RaceAttendance.race_event_id == race_event_id)
+    their_age = func.extract("year", func.age(func.current_date(), profile.birth_date))
+    if age_min is not None:
+        stmt = stmt.where(their_age >= age_min)
+    if age_max is not None:
+        stmt = stmt.where(their_age <= age_max)
+    if similar_pace and user.running_profile is not None:
+        my_pace = user.running_profile.pace_seconds_per_km
+        stmt = stmt.join(RunningProfile, RunningProfile.user_id == User.id).where(
+            func.abs(RunningProfile.pace_seconds_per_km - my_pace) <= SIMILAR_PACE_SECONDS
+        )
     rows = db.execute(stmt).all()
 
     pending = db.scalars(
@@ -393,7 +472,12 @@ def list_attendees(
                 request_id=request.id if request else None,
             )
         )
-    return attendees
+    if full_access:
+        return RaceRunnersOut(runners=attendees, hidden_count=0, full_access=True)
+    # Free: people you're already talking to, then the first few; the rest are a count
+    attendees.sort(key=lambda a: a.connection == "none")
+    shown = attendees[: max(FREE_RUNNERS_VISIBLE, sum(a.connection != "none" for a in attendees))]
+    return RaceRunnersOut(runners=shown, hidden_count=len(attendees) - len(shown), full_access=False)
 
 
 # --- Race group chat ---
@@ -531,8 +615,23 @@ def my_race_mentions(user: CurrentUser, db: DbSession) -> MentionCount:
 # --- Entry swap board ---
 
 
+def _interested_count(db: Session, listing: EntryListing) -> int:
+    return db.scalar(
+        select(func.count())
+        .select_from(EntryListing)
+        .where(
+            EntryListing.race_id == listing.race_id,
+            EntryListing.race_event_id == listing.race_event_id,
+            EntryListing.kind != listing.kind,
+            EntryListing.status == "open",
+            EntryListing.user_id != listing.user_id,
+        )
+    )
+
+
 def _listing_out(db: Session, listing: EntryListing, me: User, labels: dict) -> ListingOut:
     return ListingOut(
+        interested_count=_interested_count(db, listing),
         id=listing.id,
         race_id=listing.race_id,
         kind=listing.kind,
@@ -558,7 +657,8 @@ def list_listings(race_id: uuid.UUID, user: CurrentUser, db: DbSession, settings
         select(EntryListing)
         .join(User, User.id == EntryListing.user_id)
         .where(EntryListing.race_id == race.id, EntryListing.status == "open", *visible_to(user, settings))
-        .order_by(EntryListing.created_at.desc())
+        # Posts by Plus members and race pass holders come first, then newest
+        .order_by(race_access_condition(EntryListing.user_id, EntryListing.race_id).desc(), EntryListing.created_at.desc())
     ).all()
     mine = db.scalars(
         select(EntryListing).where(
@@ -603,7 +703,61 @@ def create_listing(race_id: uuid.UUID, body: ListingBody, user: CurrentUser, db:
     )
     db.add(listing)
     db.commit()
-    return _listing_out(db, listing, user, {e.id: e.label for e in race.events})
+    labels = {e.id: e.label for e in race.events}
+
+    # Alert people whose open post this answers, if they have alerts (Plus or a race pass)
+    answers = db.scalars(
+        select(EntryListing.user_id)
+        .join(User, User.id == EntryListing.user_id)
+        .where(
+            EntryListing.race_id == race.id,
+            EntryListing.race_event_id == listing.race_event_id,
+            EntryListing.kind != listing.kind,
+            EntryListing.status == "open",
+            EntryListing.user_id != user.id,
+            not_blocked_with(user.id),
+            race_access_condition(EntryListing.user_id, EntryListing.race_id),
+        )
+        .distinct()
+    ).all()
+    if answers:
+        hub.publish_from_thread(
+            list(answers),
+            {
+                "type": "swap_match",
+                "raceId": str(race.id),
+                "raceName": race.name,
+                "listingId": str(listing.id),
+                "kind": listing.kind,
+                "eventLabel": labels.get(listing.race_event_id),
+            },
+        )
+    return _listing_out(db, listing, user, labels)
+
+
+@router.post("/races/{race_id}/swaps/seen", status_code=status.HTTP_204_NO_CONTENT)
+def swaps_seen(race_id: uuid.UUID, user: CurrentUser, db: DbSession) -> Response:
+    """Opened the swap board: its alerts are no longer unread."""
+    race = get_race(db, race_id, user)
+    attendance = require_attending(db, race, user)
+    attendance.swaps_seen_at = utcnow()
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/me/race-alerts", response_model=RaceAlerts)
+def my_race_alerts(user: CurrentUser, db: DbSession) -> RaceAlerts:
+    """Unread mentions and swap alerts across your upcoming races, for the Races tab badge."""
+    with_posts = db.scalars(
+        select(EntryListing.race_id)
+        .join(Race, Race.id == EntryListing.race_id)
+        .where(EntryListing.user_id == user.id, EntryListing.status == "open", Race.ends_on >= sa_today())
+        .distinct()
+    ).all()
+    return RaceAlerts(
+        mentions=_unread_mentions(db, user),
+        swap_matches=sum(_unread_swap_matches(db, user, race_id) for race_id in with_posts),
+    )
 
 
 @router.post("/listings/{listing_id}/close", status_code=status.HTTP_204_NO_CONTENT)

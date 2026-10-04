@@ -34,7 +34,8 @@ const icon =
   );
 
 export default function TabsLayout() {
-  const { token, unreadTotal, mentionTotal } = useChat();
+  const { token, unreadTotal, raceAlerts } = useChat();
+  const raceAlertTotal = raceAlerts.mentions + raceAlerts.swapMatches;
   const [isAdmin, setIsAdmin] = useState(false);
   const { isTablet, isDesktop, isWide } = useBreakpoint();
   const insets = useSafeAreaInsets();
@@ -71,8 +72,8 @@ export default function TabsLayout() {
         options={{
           title: "Races",
           tabBarIcon: icon("flag"),
-          // Someone @mentioned you in a race chat
-          tabBarBadge: mentionTotal > 0 ? `@${mentionTotal}` : undefined,
+          // Someone @mentioned you in a race chat, or an entry you want came up
+          tabBarBadge: raceAlertTotal > 0 ? raceAlertTotal : undefined,
           tabBarBadgeStyle: { backgroundColor: colors.pink, color: colors.heading, fontFamily: fonts.bold, fontSize: 11 },
         }}
       />

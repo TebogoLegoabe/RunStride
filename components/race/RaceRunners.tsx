@@ -2,33 +2,57 @@ import { View, Pressable, StyleSheet, ActivityIndicator, Image, Modal } from "re
 import { Text, TextInput } from "../ui/Text";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { ApiError, answerChatRequest, getAttendees, mediaUrl, sendChatRequest } from "../../lib/api";
-import type { Attendee } from "../../lib/types";
+import type { Attendee, RaceEvent, RaceRunners as Runners } from "../../lib/types";
 import { useChat } from "../ChatProvider";
-import { colors } from "../../lib/theme";
+import { useMembership } from "../MembershipProvider";
+import { ChoiceChips } from "../ChoiceChips";
+import { Button } from "../ui/Button";
+import { RACE_PASS } from "../../lib/plans";
+import { isUpgradeError, openPlus } from "../../lib/upsell";
+import { colors, fonts, radius } from "../../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 
-type Props = { raceId: string; raceName: string };
+type Props = { raceId: string; raceName: string; events: RaceEvent[] };
 
-export function RaceRunners({ raceId, raceName }: Props) {
+const ALL = "all";
+
+export function RaceRunners({ raceId, raceName, events }: Props) {
   const router = useRouter();
   const { token, subscribe } = useChat();
-  const [people, setPeople] = useState<Attendee[] | null>(null);
+  const { hasRaceAccess } = useMembership();
+  const access = hasRaceAccess(raceId);
+  const [list, setList] = useState<Runners | null>(null);
+  const [distance, setDistance] = useState<string[]>([ALL]);
+  const [similarPace, setSimilarPace] = useState(false);
   const [asking, setAsking] = useState<Attendee | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const upgrade = useCallback(
+    (reason: string) => openPlus(router, { reason, raceId, raceName }),
+    [router, raceId, raceName]
+  );
+
+  // Reloads when access changes too, e.g. coming back from buying a race pass
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      setPeople(await getAttendees(token, raceId));
+      setList(
+        await getAttendees(
+          token,
+          raceId,
+          access ? { raceEventId: distance[0] === ALL ? undefined : distance[0], similarPace } : {}
+        )
+      );
       setError(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     }
-  }, [token, raceId]);
+  }, [token, raceId, access, distance, similarPace]);
 
   useEffect(() => {
     load();
@@ -61,10 +85,21 @@ export function RaceRunners({ raceId, raceName }: Props) {
       if (request.status === "accepted" && request.matchId) openChat(asking, request.matchId);
       else load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+      if (isUpgradeError(e)) {
+        setAsking(null);
+        upgrade(e.message);
+      } else {
+        setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+      }
     } finally {
       setBusy(false);
     }
+  };
+
+  // Filters are part of full access: without it they open the Plus screen
+  const filter = (apply: () => void) => {
+    if (access) apply();
+    else upgrade("Filtering runners by distance and pace comes with Plus or a race pass for this race.");
   };
 
   const accept = async (person: Attendee) => {
@@ -77,20 +112,58 @@ export function RaceRunners({ raceId, raceName }: Props) {
     }
   };
 
-  if (people === null) {
+  if (list === null) {
     return error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color={colors.primary} />;
   }
+  const people = list.runners;
+  const distanceOptions = [{ value: ALL, label: "All distances" }, ...events.map((e) => ({ value: e.id, label: e.label }))];
 
   return (
     <View>
       <Pressable
         style={styles.discoverButton}
-        onPress={() => router.push({ pathname: "/discover", params: { raceId, raceName } })}
+        onPress={() =>
+          access
+            ? router.push({ pathname: "/discover", params: { raceId, raceName } })
+            : upgrade("Swiping only runners at this race comes with Plus or a race pass.")
+        }
       >
-        <Text style={styles.discoverText}>See who you match with at this race →</Text>
+        {!access && <Ionicons name="lock-closed" size={14} color={colors.pink} />}
+        <Text style={styles.discoverText}>Swipe only runners at this race →</Text>
       </Pressable>
+
+      {events.length > 0 && (
+        <View style={styles.filters}>
+          <ChoiceChips
+            options={distanceOptions}
+            selected={distance}
+            onChange={(v) => filter(() => setDistance(v.length ? v : [ALL]))}
+            single
+          />
+          <Pressable
+            style={[styles.paceToggle, similarPace && styles.paceToggleOn]}
+            onPress={() => filter(() => setSimilarPace((on) => !on))}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: similarPace }}
+          >
+            <Ionicons
+              name={access ? "speedometer-outline" : "lock-closed"}
+              size={14}
+              color={similarPace ? colors.primary : colors.textMuted}
+            />
+            <Text style={[styles.paceText, similarPace && styles.paceTextOn]}>Similar pace to mine</Text>
+          </Pressable>
+        </View>
+      )}
+
       {error && <Text style={styles.error}>{error}</Text>}
-      {people.length === 0 && <Text style={styles.empty}>Nobody else has joined yet. Check back closer to race day.</Text>}
+      {people.length === 0 && list.hiddenCount === 0 && (
+        <Text style={styles.empty}>
+          {distance[0] !== ALL || similarPace
+            ? "Nobody matches these filters yet."
+            : "Nobody else has joined yet. Check back closer to race day."}
+        </Text>
+      )}
 
       {people.map((p) => (
         <View key={p.userId} style={styles.row}>
@@ -123,6 +196,38 @@ export function RaceRunners({ raceId, raceName }: Props) {
         </View>
       ))}
 
+      {list.hiddenCount > 0 && (
+        <View style={styles.locked}>
+          <View style={styles.ghosts}>
+            {Array.from({ length: Math.min(list.hiddenCount, 5) }, (_, i) => (
+              <View key={i} style={[styles.ghost, { marginLeft: i === 0 ? 0 : -12, opacity: 1 - i * 0.12 }]}>
+                <Ionicons name="person" size={18} color={colors.textFaint} />
+              </View>
+            ))}
+          </View>
+          <Text style={styles.lockedTitle}>
+            {list.hiddenCount} more {list.hiddenCount === 1 ? "runner" : "runners"} going
+          </Text>
+          <Text style={styles.lockedBody}>
+            See everyone, filter by distance and pace, and say hi to as many as you like.
+          </Text>
+          <View style={styles.lockedActions}>
+            <Button
+              title="Get Plus"
+              icon="flash"
+              small
+              onPress={() => upgrade(`${list.hiddenCount} more runners are going to ${raceName}.`)}
+            />
+            <Button
+              title={`Race pass · ${RACE_PASS.price}`}
+              variant="secondary"
+              small
+              onPress={() => upgrade(`${list.hiddenCount} more runners are going to ${raceName}.`)}
+            />
+          </View>
+        </View>
+      )}
+
       <Modal visible={asking !== null} transparent animationType="fade" onRequestClose={() => setAsking(null)}>
         <View style={styles.backdrop}>
           <View style={styles.modal}>
@@ -154,7 +259,55 @@ export function RaceRunners({ raceId, raceName }: Props) {
 }
 
 const styles = StyleSheet.create({
-  discoverButton: { backgroundColor: colors.pinkTint, borderRadius: 12, padding: 12, marginBottom: 12 },
+  discoverButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: colors.pinkTint,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  filters: { marginBottom: 6 },
+  paceToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginBottom: 8,
+  },
+  paceToggleOn: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
+  paceText: { color: colors.textMuted, fontSize: 13 },
+  paceTextOn: { color: colors.primary, fontFamily: fonts.bold },
+  locked: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 18,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  ghosts: { flexDirection: "row", marginBottom: 10 },
+  ghost: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.border,
+    borderWidth: 2,
+    borderColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lockedTitle: { color: colors.heading, fontSize: 17, fontFamily: fonts.bold },
+  lockedBody: { color: colors.textMuted, fontSize: 13, textAlign: "center", marginTop: 4, marginBottom: 14 },
+  lockedActions: { flexDirection: "row", gap: 10, flexWrap: "wrap", justifyContent: "center" },
   discoverText: { color: colors.pink, fontSize: 14, fontWeight: "700", textAlign: "center" },
   empty: { color: colors.textMuted, fontSize: 14, textAlign: "center", marginVertical: 20 },
   error: { color: colors.dangerText, fontSize: 13, textAlign: "center", marginVertical: 8 },

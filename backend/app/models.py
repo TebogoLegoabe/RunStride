@@ -66,6 +66,8 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     account_status: Mapped[str] = mapped_column(String(20), default="active", server_default="active")
     suspended_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # "looking", or "taken": seeing someone, so hidden from dating but still using races and swaps
+    dating_mode: Mapped[str] = mapped_column(String(20), default="looking", server_default="looking")
 
     profile: Mapped["Profile | None"] = relationship(back_populates="user", cascade="all, delete-orphan")
     running_profile: Mapped["RunningProfile | None"] = relationship(cascade="all, delete-orphan")
@@ -390,6 +392,8 @@ class RaceAttendance(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # When they last opened the race chat: mentions after this are unread
     mentions_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # When they last opened the swap board: matching posts after this are unread alerts
+    swaps_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class RaceMessage(Base):
@@ -494,3 +498,44 @@ class OtpCode(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     # Set when the code is used, or when a newer code replaces it
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Entitlement(Base):
+    """Something a user has paid for (or been given): RunStride Plus for a while, or a race pass.
+
+    A race pass bought in the app store arrives without a race (race_id empty): it's a credit the
+    user then spends on a race of their choice."""
+
+    __tablename__ = "entitlements"
+    __table_args__ = (
+        Index("ix_entitlements_user_id_kind", "user_id", "kind"),
+        CheckConstraint("kind IN ('plus', 'race_pass')", name="entitlement_kind_values"),
+        CheckConstraint("source IN ('store', 'admin', 'dev')", name="entitlement_source_values"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(20))
+    race_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("races.id", ondelete="SET NULL"))
+    # store: bought through Apple/Google; admin: given (e.g. beta testers); dev: test purchase
+    source: Mapped[str] = mapped_column(String(20))
+    product_id: Mapped[str | None] = mapped_column(String(100))
+    # The store's transaction ID, so a purchase is only ever recorded once
+    store_ref: Mapped[str | None] = mapped_column(String(200), unique=True)
+    # Empty: doesn't expire (e.g. Plus given by an admin until removed)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Race passes: when the credit was spent on a race
+    redeemed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BillingEvent(Base):
+    """A purchase notification from the app stores (via RevenueCat), kept once per event ID."""
+
+    __tablename__ = "billing_events"
+
+    id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    type: Mapped[str] = mapped_column(String(50))
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    payload: Mapped[dict] = mapped_column(JSONB)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

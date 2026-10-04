@@ -11,8 +11,11 @@ import {
   getRunningProfile,
   likeRunner,
   passRunner,
+  setDatingMode,
   updateLocation,
 } from "../../../lib/api";
+import { useMembership } from "../../../components/MembershipProvider";
+import { isUpgradeError, openPlus } from "../../../lib/upsell";
 import { getToken } from "../../../lib/session";
 import type { DiscoverCard, MatchSummary, RunningProfile } from "../../../lib/types";
 import { Ionicons } from "@expo/vector-icons";
@@ -52,6 +55,10 @@ export default function Discover() {
   const [safetyOpen, setSafetyOpen] = useState(false);
   const [myPhoto, setMyPhoto] = useState<string | null>(null);
   const deck = useRef<SwipeDeckHandle>(null);
+  const { membership, update: updateMembership, hasRaceAccess } = useMembership();
+  // Swiping only one race's runners needs Plus or a race pass: why it's locked
+  const [raceLocked, setRaceLocked] = useState<string | null>(null);
+  const [switching, setSwitching] = useState(false);
   const { width, height, isPhone, isWide } = useBreakpoint();
   const topPadding = useTopPadding();
   // Size the card so its photo and name fit on short laptop screens, leaving room for the
@@ -70,10 +77,32 @@ export default function Discover() {
         return [...current, ...feed.filter((c) => !seen.has(c.userId))];
       });
       setError(null);
+      setRaceLocked(null);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+      if (isUpgradeError(e)) setRaceLocked(e.message);
+      else setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     }
   }, [raceId]);
+
+  // Bought a race pass or Plus while the race filter was locked: load it now
+  const raceAccess = raceId ? hasRaceAccess(raceId) : false;
+  useEffect(() => {
+    if (raceLocked && raceAccess && token) loadFeed(token);
+  }, [raceLocked, raceAccess, token, loadFeed]);
+
+  const datingOn = async () => {
+    if (!token) return;
+    setSwitching(true);
+    try {
+      updateMembership(await setDatingMode(token, "looking"));
+      setError(null);
+      await loadFeed(token);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+    } finally {
+      setSwitching(false);
+    }
+  };
 
   // Switching between everyone and one race starts the feed afresh
   useEffect(() => {
@@ -143,6 +172,12 @@ export default function Discover() {
       if (result.matched) setMatch(result.match);
       setError(null);
     } catch (e) {
+      // Out of free likes for today: the card comes back, and the Plus screen says why
+      if (isUpgradeError(e)) {
+        setCards((current) => [card, ...current.filter((c) => c.userId !== card.userId)]);
+        openPlus(router, { reason: e.message });
+        return;
+      }
       // 404 means they're no longer available (e.g. they changed preferences): just move on
       if (!(e instanceof ApiError && e.status === 404)) {
         setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
@@ -194,6 +229,40 @@ export default function Discover() {
           <Skeleton width="40%" height={22} />
           <Skeleton width="70%" height={14} />
         </View>
+      </View>
+    );
+  }
+
+  if (membership?.datingMode === "taken") {
+    return (
+      <View style={[styles.container, { paddingTop: topPadding }]}>
+        <EmptyState
+          icon="heart-circle"
+          title="Dating is switched off"
+          body="You're in Taken mode: nobody sees you in Discover, and you don't see anyone. Your races, chats and swaps carry on as normal."
+          action={{ title: switching ? "Switching on…" : "Switch dating back on", icon: "heart-outline", onPress: datingOn }}
+        />
+        {error && <Text style={styles.error}>{error}</Text>}
+      </View>
+    );
+  }
+
+  if (raceId && raceLocked) {
+    return (
+      <View style={[styles.container, { paddingTop: topPadding }]}>
+        <EmptyState
+          icon="lock-closed"
+          title={`Runners at ${raceName ?? "this race"}`}
+          body={raceLocked}
+          action={{
+            title: "See Plus and race passes",
+            icon: "flash",
+            onPress: () => openPlus(router, { raceId, raceName, reason: raceLocked }),
+          }}
+        />
+        <Pressable onPress={() => router.replace("/discover")} style={styles.showEveryone}>
+          <Text style={styles.raceFilterClear}>Show everyone instead</Text>
+        </Pressable>
       </View>
     );
   }
@@ -351,6 +420,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   raceFilterText: { color: colors.pink, fontWeight: "700", fontSize: 14, flexShrink: 1 },
+  showEveryone: { alignSelf: "center", padding: 12 },
   raceFilterClear: { color: colors.textMuted, fontSize: 13, textDecorationLine: "underline" },
   devBanner: {
     marginBottom: 16,

@@ -15,6 +15,7 @@ from app.routers import (
     account,
     admin,
     auth,
+    billing,
     chat_requests,
     discover,
     matches,
@@ -91,6 +92,7 @@ app.include_router(share_page.router)
 app.include_router(safety.router)
 app.include_router(admin.router)
 app.include_router(verification.router)
+app.include_router(billing.router)
 
 media_dir = Path(get_settings().media_dir)
 media_dir.mkdir(parents=True, exist_ok=True)

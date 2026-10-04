@@ -2,9 +2,10 @@ import { View, StyleSheet, Pressable, FlatList, Image } from "react-native";
 import { Text } from "../../../components/ui/Text";
 import { useCallback, useEffect, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { ApiError, answerChatRequest, getChatRequests, getMatches, getMe, mediaUrl } from "../../../lib/api";
+import { ApiError, answerChatRequest, getChatRequests, getLikesYou, getMatches, getMe, mediaUrl } from "../../../lib/api";
+import { LikesYouCard } from "../../../components/LikesYouCard";
 import { formatWhen } from "../../../lib/format";
-import type { ChatRequest, MatchSummary, RealtimeEvent } from "../../../lib/types";
+import type { ChatRequest, LikesYou, MatchSummary, RealtimeEvent } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { EmptyState } from "../../../components/ui/EmptyState";
@@ -31,6 +32,7 @@ export default function Matches() {
   const [myId, setMyId] = useState<string | null>(null);
   const [matches, setMatches] = useState<MatchSummary[] | null>(null);
   const [requests, setRequests] = useState<ChatRequest[]>([]);
+  const [likes, setLikes] = useState<LikesYou | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Wide screens show the list and the open conversation side by side
   const { isWide } = useBreakpoint();
@@ -40,9 +42,14 @@ export default function Matches() {
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      const [m, r] = await Promise.all([getMatches(token), getChatRequests(token)]);
+      const [m, r, l] = await Promise.all([
+        getMatches(token),
+        getChatRequests(token),
+        getLikesYou(token).catch(() => null), // a nice extra; never block the list on it
+      ]);
       setMatches(m);
       setRequests(r);
+      setLikes(l);
       setError(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
@@ -103,9 +110,11 @@ export default function Matches() {
   const incoming = requests.filter((r) => r.incoming);
   const outgoing = requests.filter((r) => !r.incoming);
 
-  const requestsHeader =
-    incoming.length + outgoing.length > 0 ? (
-      <View style={styles.requests}>
+  const requestsHeader = (
+    <View style={styles.requests}>
+      {likes && <LikesYouCard likes={likes} />}
+      {incoming.length + outgoing.length > 0 && (
+      <View>
         {incoming.length > 0 && <Text style={styles.sectionTitle}>Chat requests</Text>}
         {incoming.map((r) => (
           <View key={r.id} style={styles.requestCard}>
@@ -142,7 +151,9 @@ export default function Matches() {
           </Text>
         )}
       </View>
-    ) : null;
+      )}
+    </View>
+  );
 
   const openChat = (m: MatchSummary) => {
     const params = { matchId: m.id, userId: m.userId, name: m.displayName, photo: m.photo ?? "" };

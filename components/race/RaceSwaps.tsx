@@ -2,7 +2,10 @@ import { View, Pressable, StyleSheet, ActivityIndicator, Linking } from "react-n
 import { Text, TextInput } from "../ui/Text";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
-import { ApiError, closeListing, createListing, getListings, sendChatRequest } from "../../lib/api";
+import { Ionicons } from "@expo/vector-icons";
+import { ApiError, closeListing, createListing, getListings, markSwapsSeen, sendChatRequest } from "../../lib/api";
+import { useMembership } from "../MembershipProvider";
+import { openPlus } from "../../lib/upsell";
 import { formatRaceDates } from "../../lib/format";
 import type { Listing, RaceDetail } from "../../lib/types";
 import { useChat } from "../ChatProvider";
@@ -19,7 +22,9 @@ type Props = { race: RaceDetail };
 
 export function RaceSwaps({ race }: Props) {
   const router = useRouter();
-  const { token } = useChat();
+  const { token, subscribe, refreshRaceAlerts } = useChat();
+  const { hasRaceAccess } = useMembership();
+  const alerts = hasRaceAccess(race.id);
   const [listings, setListings] = useState<Listing[] | null>(null);
   const [kind, setKind] = useState<("offering" | "looking")[]>(["offering"]);
   const [eventId, setEventId] = useState<string[]>(race.events[0] ? [race.events[0].id] : []);
@@ -41,9 +46,28 @@ export function RaceSwaps({ race }: Props) {
     }
   }, [token, race.id, open]);
 
+  // Looking at the board clears its swap alerts
+  const seen = useCallback(() => {
+    if (!token || !open) return;
+    markSwapsSeen(token, race.id)
+      .then(refreshRaceAlerts)
+      .catch(() => {});
+  }, [token, race.id, open, refreshRaceAlerts]);
+
   useEffect(() => {
-    load();
-  }, [load]);
+    load().then(seen);
+  }, [load, seen]);
+
+  // A post answering yours while you're here
+  useEffect(
+    () =>
+      subscribe((e) => {
+        if (e.type === "swap_match" && e.raceId === race.id) load().then(seen);
+      }),
+    [subscribe, race.id, load, seen]
+  );
+
+  const myOpenPosts = listings?.filter((l) => l.mine) ?? [];
 
   const act = async (fn: () => Promise<void>) => {
     if (!token) return;
@@ -128,6 +152,32 @@ export function RaceSwaps({ race }: Props) {
           {error && <Text style={styles.error}>{error}</Text>}
           {notice && <Text style={styles.notice}>{notice}</Text>}
 
+          {myOpenPosts.length > 0 &&
+            (alerts ? (
+              <View style={styles.alertOn}>
+                <Ionicons name="notifications" size={16} color={colors.success} />
+                <Text style={styles.alertText}>
+                  Swap alerts are on: we'll tell you the moment someone answers your post.
+                </Text>
+              </View>
+            ) : (
+              <Pressable
+                style={styles.alertOff}
+                onPress={() =>
+                  openPlus(router, {
+                    reason: "Get an alert the moment an entry you need, or a buyer for yours, comes up.",
+                    raceId: race.id,
+                    raceName: race.name,
+                  })
+                }
+              >
+                <Ionicons name="notifications-off-outline" size={16} color={colors.primary} />
+                <Text style={styles.alertText}>
+                  Don't miss it. <Text style={styles.alertLink}>Turn on swap alerts</Text> with Plus or a race pass.
+                </Text>
+              </Pressable>
+            ))}
+
           <Text style={styles.section}>Post on the board</Text>
           <ChoiceChips options={KINDS} selected={kind} onChange={setKind} single />
           <ChoiceChips
@@ -175,6 +225,13 @@ export function RaceSwaps({ race }: Props) {
                   {l.priceRands !== null ? ` · R${l.priceRands}` : ""}
                 </Text>
                 {l.note && <Text style={styles.note}>{l.note}</Text>}
+                {l.interestedCount > 0 && (
+                  <Text style={styles.interest}>
+                    {l.kind === "offering"
+                      ? `${l.interestedCount} ${l.interestedCount === 1 ? "person needs" : "people need"} this entry`
+                      : `${l.interestedCount} ${l.interestedCount === 1 ? "entry" : "entries"} on offer for this distance`}
+                  </Text>
+                )}
                 {l.mine ? (
                   <Pressable onPress={() => closePost(l)}>
                     <Text style={styles.closeText}>Close post</Text>
@@ -214,6 +271,19 @@ const styles = StyleSheet.create({
   looking: { color: colors.pink },
   who: { color: colors.heading, fontSize: 15, fontWeight: "600" },
   note: { color: colors.text, fontSize: 14, marginTop: 4 },
+  interest: { color: colors.pink, fontSize: 12, fontWeight: "700", marginTop: 6 },
+  alertOn: { flexDirection: "row", gap: 8, alignItems: "center", marginBottom: 12 },
+  alertOff: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    backgroundColor: colors.primaryTint,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  alertText: { color: colors.text, fontSize: 13, flex: 1, lineHeight: 18 },
+  alertLink: { color: colors.primary, fontWeight: "700" },
   outline: {
     alignSelf: "flex-start",
     borderColor: colors.primary,

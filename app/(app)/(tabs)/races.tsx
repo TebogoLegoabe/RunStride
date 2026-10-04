@@ -185,7 +185,10 @@ export default function Races() {
   );
 
   // Someone mentioned you: update that race's badge
-  useEffect(() => subscribe((e) => e.type === "race_mention" && refreshRef.current()), [subscribe]);
+  useEffect(
+    () => subscribe((e) => (e.type === "race_mention" || e.type === "swap_match") && refreshRef.current()),
+    [subscribe]
+  );
 
   const goToPage = async (p: number) => {
     setPage(p);
@@ -395,7 +398,14 @@ export default function Races() {
                     <Ionicons name="calendar-outline" size={12} color={colors.heading} />
                     <Text style={styles.dateText}>{formatRaceDates(race.startsOn, race.endsOn)}</Text>
                   </LinearGradient>
-                  {race.unreadMentions > 0 ? (
+                  {race.unreadSwapMatches > 0 ? (
+                    <View style={styles.mentionBadge}>
+                      <Ionicons name="swap-horizontal" size={12} color={colors.heading} />
+                      <Text style={styles.mentionText}>
+                        {race.unreadSwapMatches} swap {race.unreadSwapMatches === 1 ? "match" : "matches"}
+                      </Text>
+                    </View>
+                  ) : race.unreadMentions > 0 ? (
                     <View style={styles.mentionBadge}>
                       <Ionicons name="at" size={12} color={colors.heading} />
                       <Text style={styles.mentionText}>

@@ -168,6 +168,8 @@ class DiscoverCard(CamelModel):
     goals: list[str]
     run_times: list[str]
     shared_races: list["SharedRace"] = Field(default_factory=list)
+    # They've already liked you. Only shown to Plus members.
+    likes_you: bool = False
 
 
 class MatchSummary(CamelModel):
@@ -487,6 +489,8 @@ class RaceSummary(CamelModel):
     my_attendance: MyAttendance | None
     # Race chat messages mentioning you since you last opened the chat
     unread_mentions: int = 0
+    # Swap board posts matching yours since you last looked (Plus or race pass only)
+    unread_swap_matches: int = 0
 
 
 class RaceDetail(RaceSummary):
@@ -551,6 +555,13 @@ class MentionCount(CamelModel):
     count: int
 
 
+class RaceAlerts(CamelModel):
+    """Unread race activity for the Races tab badge."""
+
+    mentions: int
+    swap_matches: int
+
+
 class ListingBody(CamelModel):
     kind: Literal["offering", "looking"]
     race_event_id: uuid.UUID
@@ -578,6 +589,8 @@ class ListingOut(CamelModel):
     created_at: datetime
     user: Sender
     mine: bool
+    # Open posts the other way for the same distance, e.g. people looking for the entry offered
+    interested_count: int = 0
 
 
 class ChatRequestBody(CamelModel):
@@ -613,3 +626,67 @@ class SharedRace(CamelModel):
 DiscoverCard.model_rebuild()
 MatchSummary.model_rebuild()
 SwipeResponse.model_rebuild()
+
+
+# --- Membership ---
+
+
+class PlusOut(CamelModel):
+    active: bool
+    expires_at: datetime | None  # empty while active: doesn't expire
+    source: str | None  # store, admin (e.g. beta testers) or dev
+
+
+class RacePassOut(CamelModel):
+    race_id: uuid.UUID
+    race_name: str
+    expires_at: datetime
+
+
+class MembershipLimits(CamelModel):
+    """The free tier's limits (Plus has none)."""
+
+    daily_likes: int
+    likes_used_today: int
+    runners_visible_per_race: int
+    chat_requests_per_race: int
+
+
+class MembershipOut(CamelModel):
+    plus: PlusOut
+    dating_mode: Literal["looking", "taken"]
+    race_pass_credits: int  # bought but not yet used on a race
+    race_passes: list[RacePassOut]
+    limits: MembershipLimits
+    # Development: purchases are granted straight away, with no store and no charge
+    test_purchases: bool
+
+
+class DatingModeBody(CamelModel):
+    mode: Literal["looking", "taken"]
+
+
+class TestPurchaseBody(CamelModel):
+    product_id: Literal["plus_weekly", "plus_monthly", "race_pass"]
+    race_id: uuid.UUID | None = None  # race passes: use it on this race straight away
+
+
+class GrantPlusBody(CamelModel):
+    """An admin giving someone Plus, e.g. a beta tester. No days: until it's taken away."""
+
+    phone: str
+    days: int | None = Field(default=None, ge=1, le=3650)
+
+
+class LikesYouOut(CamelModel):
+    count: int
+    # Only with Plus
+    people: list[Sender]
+
+
+class RaceRunnersOut(CamelModel):
+    runners: list[Attendee]
+    # Going, but not shown without Plus or a race pass
+    hidden_count: int
+    full_access: bool
+

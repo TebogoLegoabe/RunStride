@@ -5,8 +5,13 @@
 import type { ReportReason } from "./options";
 import { photoFile } from "./photoFile";
 import type {
-  Attendee,
   ChatRequest,
+  DatingMode,
+  LikesYou,
+  Membership,
+  ProductId,
+  RaceRunners,
+  RunnerFilters,
   DatingPreferences,
   Listing,
   RaceDetail,
@@ -327,8 +332,16 @@ export const setAttendance = (
 export const leaveRace = (token: string, raceId: string) =>
   apiRequest<RaceDetail>(`/races/${raceId}/attendance`, { method: "DELETE", token });
 
-export const getAttendees = (token: string, raceId: string) =>
-  apiRequest<Attendee[]>(`/races/${raceId}/attendees`, { token });
+// Who's going. Without Plus or a race pass: the first few, and how many more. Filters need access.
+export const getAttendees = (token: string, raceId: string, filters: RunnerFilters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.raceEventId) params.set("race_event_id", filters.raceEventId);
+  if (filters.ageMin) params.set("age_min", String(filters.ageMin));
+  if (filters.ageMax) params.set("age_max", String(filters.ageMax));
+  if (filters.similarPace) params.set("similar_pace", "true");
+  const query = params.toString();
+  return apiRequest<RaceRunners>(`/races/${raceId}/attendees${query ? `?${query}` : ""}`, { token });
+};
 
 export const getRaceMessages = (token: string, raceId: string, before?: string) =>
   apiRequest<RaceMessage[]>(`/races/${raceId}/messages${before ? `?before=${before}` : ""}`, { token });
@@ -346,9 +359,29 @@ export const getMentionable = (token: string, raceId: string, q: string) =>
 export const markMentionsSeen = (token: string, raceId: string) =>
   apiRequest<void>(`/races/${raceId}/mentions/seen`, { method: "POST", token });
 
-// Unread mentions across your upcoming races
-export const getRaceMentionCount = (token: string) =>
-  apiRequest<{ count: number }>("/me/race-mentions", { token });
+// Unread mentions and swap alerts across your upcoming races
+export const getRaceAlerts = (token: string) =>
+  apiRequest<{ mentions: number; swapMatches: number }>("/me/race-alerts", { token });
+
+export const markSwapsSeen = (token: string, raceId: string) =>
+  apiRequest<void>(`/races/${raceId}/swaps/seen`, { method: "POST", token });
+
+// --- Membership ---
+
+export const getMembership = (token: string) => apiRequest<Membership>("/me/membership", { token });
+
+export const setDatingMode = (token: string, mode: DatingMode) =>
+  apiRequest<Membership>("/me/dating-mode", { method: "PUT", body: { mode }, token });
+
+// Development only: grants a product with no store and no charge
+export const testPurchase = (token: string, productId: ProductId, raceId?: string) =>
+  apiRequest<Membership>("/billing/test-purchase", { method: "POST", body: { productId, raceId }, token });
+
+// Spend a bought race pass on a race
+export const spendRacePass = (token: string, raceId: string) =>
+  apiRequest<Membership>(`/races/${raceId}/race-pass`, { method: "POST", token });
+
+export const getLikesYou = (token: string) => apiRequest<LikesYou>("/me/likes", { token });
 
 export const getListings = (token: string, raceId: string) =>
   apiRequest<Listing[]>(`/races/${raceId}/listings`, { token });

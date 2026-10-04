@@ -24,6 +24,7 @@ export interface DiscoverCard {
   goals: Goal[];
   runTimes: RunTime[];
   sharedRaces: SharedRace[]; // upcoming races you're both going to
+  likesYou: boolean; // they've already liked you (only shown with Plus)
 }
 
 export interface MatchSummary {
@@ -73,6 +74,14 @@ export type RealtimeEvent =
   | { type: "race_message"; message: RaceMessage }
   | { type: "race_message_removed"; raceId: string; messageId: string }
   | { type: "race_mention"; raceId: string; raceName: string; messageId: string }
+  | {
+      type: "swap_match";
+      raceId: string;
+      raceName: string;
+      listingId: string;
+      kind: "offering" | "looking"; // the new post's kind
+      eventLabel: string | null;
+    }
   | { type: "chat_request"; requestId: string }
   | { type: "chat_request_accepted"; requestId: string; matchId: string };
 
@@ -213,6 +222,7 @@ export interface RaceSummary {
   attendingCount: number;
   myAttendance: MyAttendance | null;
   unreadMentions: number; // race chat messages mentioning you since you last opened it
+  unreadSwapMatches: number; // swap posts answering yours since you last looked (Plus / race pass)
 }
 
 export interface RaceEvent {
@@ -272,6 +282,7 @@ export interface Listing {
   createdAt: string;
   user: Person;
   mine: boolean;
+  interestedCount: number; // open posts the other way for the same distance
 }
 
 export interface ChatRequest {
@@ -300,4 +311,36 @@ export interface RaceInput {
   substitutionClosesOn?: string | null;
   substitutionUrl?: string | null;
   events: { id?: string; label: string; distanceKm: number; startsAt?: string | null }[];
+}
+
+// --- Membership ---
+
+export type DatingMode = "looking" | "taken";
+export type ProductId = "plus_weekly" | "plus_monthly" | "race_pass";
+
+export interface Membership {
+  plus: { active: boolean; expiresAt: string | null; source: "store" | "admin" | "dev" | null };
+  datingMode: DatingMode;
+  racePassCredits: number; // bought, not yet used on a race
+  racePasses: { raceId: string; raceName: string; expiresAt: string }[];
+  limits: { dailyLikes: number; likesUsedToday: number; runnersVisiblePerRace: number; chatRequestsPerRace: number };
+  testPurchases: boolean; // development: purchases are granted with no store and no charge
+}
+
+export interface RaceRunners {
+  runners: Attendee[];
+  hiddenCount: number; // going, but only shown with Plus or a race pass
+  fullAccess: boolean;
+}
+
+export interface RunnerFilters {
+  raceEventId?: string;
+  ageMin?: number;
+  ageMax?: number;
+  similarPace?: boolean;
+}
+
+export interface LikesYou {
+  count: number;
+  people: Person[]; // only with Plus
 }

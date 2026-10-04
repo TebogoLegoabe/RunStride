@@ -71,6 +71,12 @@ class Settings(BaseSettings):
     # address the request came in on. Set to the public HTTPS domain in production.
     public_base_url: str = ""
 
+    # Payments. Store purchases arrive from RevenueCat's webhook, which sends this exact value
+    # as its Authorization header (set the same value in RevenueCat's dashboard).
+    revenuecat_webhook_auth: str = ""
+    # Development only: buy Plus and race passes in the app without a store or a charge
+    test_purchases: bool = True
+
     # Expo web dev server origins
     cors_origins: list[str] = ["http://localhost:8081", "http://localhost:19006"]
 
@@ -83,6 +89,9 @@ class Settings(BaseSettings):
             raise ValueError("SECRET_KEY must be set outside development")
         if not self.is_development and not self.require_id_verification:
             raise ValueError("REQUIRE_ID_VERIFICATION can only be turned off in development")
+        if not self.is_development and self.test_purchases:
+            # Free Plus for anyone who asks: never outside development
+            self.test_purchases = False
 
 
 @lru_cache

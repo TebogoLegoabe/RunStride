@@ -82,6 +82,12 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
                 <Text style={styles.verifiedText}>Verified</Text>
               </View>
             )}
+            {card.likesYou && (
+              <View style={styles.likesYou}>
+                <Ionicons name="heart" size={13} color={colors.heading} />
+                <Text style={styles.likesYouText}>Likes you</Text>
+              </View>
+            )}
           </View>
           <View style={styles.distanceRow}>
             <Ionicons name="location-outline" size={14} color={colors.textBright} />
@@ -173,6 +179,17 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   verifiedText: { color: colors.onPrimary, fontSize: 12, fontWeight: "700" },
+  // Only Plus members see who already likes them
+  likesYou: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.pink,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  likesYouText: { color: colors.heading, fontSize: 12, fontWeight: "700" },
   distanceRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
   distance: { color: colors.textBright, fontSize: 14 },
   details: { padding: 16 },

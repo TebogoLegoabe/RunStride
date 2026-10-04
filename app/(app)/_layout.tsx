@@ -6,6 +6,8 @@ import { ApiError, getMe } from "../../lib/api";
 import { routeFor } from "../../lib/routing";
 import { clearToken, getToken } from "../../lib/session";
 import { ChatProvider } from "../../components/ChatProvider";
+import { MembershipProvider } from "../../components/MembershipProvider";
+import { SwapAlertBanner } from "../../components/SwapAlertBanner";
 import { colors } from "../../lib/theme";
 
 // Layout for signed-in screens. Only users who finished onboarding get in; everyone
@@ -67,7 +69,10 @@ export default function AppLayout() {
   }
   return (
     <ChatProvider>
-      <Stack screenOptions={{ headerShown: false }} />
+      <MembershipProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+        <SwapAlertBanner />
+      </MembershipProvider>
     </ChatProvider>
   );
 }

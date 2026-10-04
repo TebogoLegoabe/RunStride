@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, aliased, selectinload
 from app.config import Settings
 from app.deps import AppSettings, CurrentUser, DbSession
 from app.matching import RunnerTraits, compatibility
+from app.membership import UpgradeRequired, check_like_allowed, has_plus, has_race_access, plus_condition
 from app.models import (
     DatingPreferences,
     Race,
@@ -27,7 +28,8 @@ from app.models import (
 from app.moderation import is_usable, not_blocked_with, open_reporter_count
 from app.routers.matches import match_summary
 from app.races import sa_today
-from app.schemas import DiscoverCard, LocationBody, SharedRace, SwipeResponse, age_on
+from app.schemas import DiscoverCard, LikesYouOut, LocationBody, Sender, SharedRace, SwipeResponse, age_on
+from app.races import sender
 from app.security import utcnow
 
 router = APIRouter(tags=["discover"])
@@ -48,7 +50,12 @@ def _traits(running: RunningProfile) -> RunnerTraits:
     )
 
 
+TAKEN_MODE = "You're in Taken mode, so dating is switched off. Switch it back on in your profile."
+
+
 def _require_ready(user: User) -> None:
+    if user.dating_mode == "taken":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=TAKEN_MODE)
     if not (user.profile_complete and user.running_profile and user.dating_preferences):
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Finish setting up your profile first.")
     if user.location is None:
@@ -80,6 +87,8 @@ def _candidates(
         .where(
             User.id != me.id,
             User.location.is_not(None),
+            # Seeing someone: not in anyone's feed
+            User.dating_mode == "looking",
             exists().where(ProfilePhoto.user_id == User.id),
             # Gender, both ways
             DatingPreferences.gender.in_(prefs.interested_in),
@@ -183,17 +192,57 @@ def discover(
     my_traits = _traits(user.running_profile)
     if race_id is not None and db.get(RaceAttendance, (race_id, user.id)) is None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Join this race to see who's going.")
+    if race_id is not None and not has_race_access(db, user, race_id):
+        raise UpgradeRequired("Swiping only runners at a race comes with Plus or a race pass for that race.")
     candidates = _candidates(db, user, settings, race_id=race_id)
-    shared = _shared_races(db, user, [u.id for u, _ in candidates])
+    ids = [u.id for u, _ in candidates]
+    shared = _shared_races(db, user, ids)
     cards = [_card(u, d, my_traits) for u, d in candidates]
+
+    # Plus: people who already liked you come first, marked as such
+    likers: set[uuid.UUID] = set()
+    if ids and has_plus(db, user):
+        likers = set(
+            db.scalars(
+                select(Swipe.swiper_id).where(
+                    Swipe.target_id == user.id, Swipe.liked.is_(True), Swipe.swiper_id.in_(ids)
+                )
+            ).all()
+        )
+    # Plus members going to the same races as you are shown to you first
+    boosted = set(db.scalars(select(User.id).where(User.id.in_(ids), plus_condition(User.id))).all()) if ids else set()
+
     for card in cards:
         card.shared_races = shared.get(card.user_id, [])
-    cards.sort(key=lambda c: (-c.compatibility, c.distance_km))
+        card.likes_you = card.user_id in likers
+    cards.sort(
+        key=lambda c: (
+            not c.likes_you,
+            not (c.user_id in boosted and c.shared_races),
+            -c.compatibility,
+            c.distance_km,
+        )
+    )
     return cards[:limit]
+
+
+@router.get("/me/likes", response_model=LikesYouOut)
+def likes_you(user: CurrentUser, db: DbSession, settings: AppSettings) -> LikesYouOut:
+    """How many people have liked you and are waiting for your answer. Plus also shows who."""
+    ready = user.profile_complete and user.running_profile and user.dating_preferences and user.location
+    if user.dating_mode == "taken" or not ready:
+        return LikesYouOut(count=0, people=[])
+    likers = set(db.scalars(select(Swipe.swiper_id).where(Swipe.target_id == user.id, Swipe.liked.is_(True))).all())
+    # Only people you could still see and haven't answered yet
+    waiting = [u for u, _ in _candidates(db, user, settings) if u.id in likers]
+    people: list[Sender] = [sender(db, u.id) for u in waiting] if has_plus(db, user) else []
+    return LikesYouOut(count=len(waiting), people=people)
 
 
 def _swipe(db: Session, me: User, settings: Settings, target_id: uuid.UUID, liked: bool) -> SwipeResponse:
     _require_ready(me)
+    if liked:
+        check_like_allowed(db, me)
     # You can only like/pass people you're allowed to see
     if not _candidates(db, me, settings, only=target_id, exclude_swiped=False):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This runner is no longer available.")

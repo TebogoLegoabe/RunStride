@@ -35,6 +35,7 @@ export const colors = {
   warningText: "#fbbf24",
   warningSoft: "#fde68a",
   warningTint: "rgba(245, 158, 11, 0.14)",
+  success: "#34d399",
 
   // Overlays
   backdrop: "rgba(20, 1, 30, 0.8)", // behind modals

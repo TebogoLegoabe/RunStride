@@ -54,6 +54,14 @@ def event_id(race: dict, label: str) -> str:
     return next(e["id"] for e in race["events"] if e["label"] == label)
 
 
+def buy(client, runner, product="plus_monthly", race=None):
+    """A test purchase: what an app store purchase grants, without the store."""
+    body = {"productId": product, **({"raceId": race["id"]} if race else {})}
+    res = client.post("/billing/test-purchase", json=body, headers=runner["headers"])
+    res.raise_for_status()
+    return res.json()
+
+
 def join(client, runner, race, label="Half marathon"):
     res = client.put(
         f"/races/{race['id']}/attendance",
@@ -211,7 +219,7 @@ def test_attendees_only_visible_to_attendees(client, make_race, make_runner):
     assert client.get(f"/races/{race['id']}/attendees", headers=thandi["headers"]).status_code == 403
 
     join(client, thandi, race)
-    attendees = client.get(f"/races/{race['id']}/attendees", headers=thandi["headers"]).json()
+    attendees = client.get(f"/races/{race['id']}/attendees", headers=thandi["headers"]).json()["runners"]
     assert [(a["userId"], a["eventLabel"], a["connection"]) for a in attendees] == [
         (sipho["id"], "Marathon", "none")
     ]
@@ -226,7 +234,7 @@ def test_blocked_people_hidden_from_race_spaces(client, make_race, make_runner):
 
     client.post(f"/users/{sipho['id']}/block", headers=thandi["headers"])
 
-    assert client.get(f"/races/{race['id']}/attendees", headers=thandi["headers"]).json() == []
+    assert client.get(f"/races/{race['id']}/attendees", headers=thandi["headers"]).json()["runners"] == []
     assert client.get(f"/races/{race['id']}/messages", headers=thandi["headers"]).json() == []
 
 
@@ -417,7 +425,7 @@ def test_accepted_request_becomes_a_race_chat(client, make_race, make_runner):
     assert incoming["incoming"] is True
     assert incoming["note"] == "Want to run the half together?"
     assert incoming["raceName"] == "Blouberg Marathon"
-    attendee = client.get(f"/races/{race['id']}/attendees", headers=thandi["headers"]).json()[0]
+    attendee = client.get(f"/races/{race['id']}/attendees", headers=thandi["headers"]).json()["runners"][0]
     assert attendee["connection"] == "incoming"
 
     accepted = client.post(f"/chat-requests/{incoming['id']}/accept", headers=thandi["headers"]).json()
@@ -513,6 +521,9 @@ def test_discover_shows_shared_races_and_can_filter(client, make_race, make_runn
     ]
     assert cards[not_at_race["id"]]["sharedRaces"] == []
 
+    # Swiping only runners at a race needs Plus or a race pass
+    assert client.get("/discover", params={"race_id": race["id"]}, headers=thandi["headers"]).status_code == 402
+    buy(client, thandi, "race_pass", race)
     filtered = client.get("/discover", params={"race_id": race["id"]}, headers=thandi["headers"]).json()
     assert [c["userId"] for c in filtered] == [at_race["id"]]
 

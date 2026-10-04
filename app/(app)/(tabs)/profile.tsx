@@ -1,9 +1,12 @@
-import { View, StyleSheet, Pressable, ActivityIndicator, ScrollView, Image, Modal } from "react-native";
+import { View, StyleSheet, Pressable, ActivityIndicator, ScrollView, Image, Modal, Switch } from "react-native";
 import { Text } from "../../../components/ui/Text";
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ApiError, deleteAccount, getMe, getMyProfile, mediaUrl } from "../../../lib/api";
+import { ApiError, deleteAccount, getMe, getMyProfile, mediaUrl, setDatingMode } from "../../../lib/api";
+import { useMembership } from "../../../components/MembershipProvider";
+import { formatRaceDates } from "../../../lib/format";
+import { openPlus } from "../../../lib/upsell";
 import { clearToken } from "../../../lib/session";
 import type { Me, MyProfile } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
@@ -11,6 +14,9 @@ import { colors } from "../../../lib/theme";
 import { useTopPadding } from "../../../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
+
+// "Mon 3 Nov" from an ISO timestamp
+const day = (iso: string) => formatRaceDates(iso.slice(0, 10), iso.slice(0, 10));
 
 type Confirm = "sign-out" | "delete" | null;
 
@@ -23,6 +29,21 @@ export default function ProfileTab() {
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { membership, update: updateMembership } = useMembership();
+  const [switching, setSwitching] = useState(false);
+
+  const setTaken = async (taken: boolean) => {
+    if (!token) return;
+    setSwitching(true);
+    setError(null);
+    try {
+      updateMembership(await setDatingMode(token, taken ? "taken" : "looking"));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+    } finally {
+      setSwitching(false);
+    }
+  };
 
   // Reload when coming back from an edit screen
   useFocusEffect(
@@ -93,6 +114,68 @@ export default function ProfileTab() {
       </View>
 
       {error && <Text style={styles.error}>{error}</Text>}
+
+      {membership && (
+        <>
+          <Text style={styles.section}>Membership</Text>
+          <View style={styles.group}>
+            <Pressable style={styles.row} onPress={() => openPlus(router)}>
+              <Ionicons name="flash" size={20} color={colors.primary} />
+              <View style={styles.rowStack}>
+                <Text style={styles.rowTitle}>RunStride Plus</Text>
+                <Text style={styles.rowSub}>
+                  {membership.plus.active
+                    ? membership.plus.expiresAt
+                      ? `Active until ${day(membership.plus.expiresAt)}`
+                      : membership.plus.source === "admin"
+                        ? "Active, given by RunStride"
+                        : "Active"
+                    : "Everyone at your races, unlimited likes and swap alerts"}
+                </Text>
+              </View>
+              <Text style={membership.plus.active ? styles.statusOn : styles.statusCta}>
+                {membership.plus.active ? "Active" : "Get Plus"}
+              </Text>
+            </Pressable>
+            {(membership.racePasses.length > 0 || membership.racePassCredits > 0) && (
+              <View style={styles.row}>
+                <Ionicons name="ticket-outline" size={20} color={colors.primary} />
+                <View style={styles.rowStack}>
+                  <Text style={styles.rowTitle}>Race passes</Text>
+                  {membership.racePasses.map((pass) => (
+                    <Text key={pass.raceId} style={styles.rowSub}>
+                      {pass.raceName}
+                    </Text>
+                  ))}
+                  {membership.racePassCredits > 0 && (
+                    <Text style={styles.rowSub}>
+                      {membership.racePassCredits} unused: use one from any race page
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
+            <View style={styles.row}>
+              <Ionicons name="heart-circle-outline" size={20} color={colors.pink} />
+              <View style={styles.rowStack}>
+                <Text style={styles.rowTitle}>Seeing someone</Text>
+                <Text style={styles.rowSub}>
+                  Turns dating off: you're hidden from Discover and race runner lists. Races, chats and swaps carry
+                  on.
+                </Text>
+              </View>
+              <Switch
+                value={membership.datingMode === "taken"}
+                onValueChange={setTaken}
+                disabled={switching}
+                trackColor={{ false: colors.border, true: colors.pink }}
+                thumbColor={colors.heading}
+                accessibilityLabel="Seeing someone: turn dating off"
+              />
+            </View>
+          </View>
+        </>
+      )}
 
       <Text style={styles.section}>Your profile</Text>
       <View style={styles.group}>
@@ -184,6 +267,11 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   rowText: { flex: 1, color: colors.textBright, fontSize: 16 },
+  rowStack: { flex: 1, gap: 2 },
+  rowTitle: { color: colors.textBright, fontSize: 16 },
+  rowSub: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
+  statusOn: { color: colors.success, fontSize: 13, fontWeight: "700" },
+  statusCta: { color: colors.primary, fontSize: 13, fontWeight: "700" },
   dangerText: { color: colors.dangerText },
   footnote: { color: colors.textFaint, fontSize: 12, textAlign: "center", marginTop: 20 },
   error: { color: colors.dangerText, fontSize: 14, marginTop: 12, textAlign: "center" },

@@ -36,7 +36,7 @@ function merge(current: RaceMessage[], incoming: RaceMessage[]): RaceMessage[] {
 const mentionsMe = (m: RaceMessage, myId: string | null) => !!myId && m.mentions.some((p) => p.id === myId);
 
 export function RaceChat({ raceId, myId, isAdmin }: Props) {
-  const { token, connected, subscribe, refreshMentions } = useChat();
+  const { token, connected, subscribe, refreshRaceAlerts } = useChat();
   const [messages, setMessages] = useState<RaceMessage[] | null>(null);
   const [hasOlder, setHasOlder] = useState(false);
   const [draft, setDraft] = useState("");
@@ -54,9 +54,9 @@ export function RaceChat({ raceId, myId, isAdmin }: Props) {
   const seen = useCallback(() => {
     if (!token) return;
     markMentionsSeen(token, raceId)
-      .then(refreshMentions)
+      .then(refreshRaceAlerts)
       .catch(() => {});
-  }, [token, raceId, refreshMentions]);
+  }, [token, raceId, refreshRaceAlerts]);
 
   const load = useCallback(async () => {
     if (!token) return;
