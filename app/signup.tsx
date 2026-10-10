@@ -1,10 +1,12 @@
-import { Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { Pressable, StyleSheet, ActivityIndicator, View } from "react-native";
 import { Text, TextInput } from "../components/ui/Text";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { ApiError, sendOtp } from "../lib/api";
 import { colors } from "../lib/theme";
 import { AuthCard } from "../components/ui/AuthCard";
+import { GoogleButton, googleAvailable } from "../components/GoogleButton";
+import { finishGoogleSignIn } from "../lib/googleSignIn";
 
 export default function Signup() {
   const router = useRouter();
@@ -26,6 +28,17 @@ export default function Signup() {
   };
 
   const canSubmit = phone.trim().length > 0 && !loading;
+
+  const withGoogle = async (idToken: string) => {
+    setError(null);
+    setLoading(true);
+    try {
+      await finishGoogleSignIn(router, idToken);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Couldn't reach RunStride. Check your connection.");
+      setLoading(false);
+    }
+  };
 
   return (
     <AuthCard>
@@ -58,11 +71,25 @@ export default function Signup() {
           <Text style={styles.primaryButtonText}>Send Code</Text>
         )}
       </Pressable>
+
+      {googleAvailable() && (
+        <>
+          <View style={styles.orRow}>
+            <View style={styles.orLine} />
+            <Text style={styles.orText}>or</Text>
+            <View style={styles.orLine} />
+          </View>
+          <GoogleButton busy={loading} onIdToken={withGoogle} onError={setError} />
+        </>
+      )}
     </AuthCard>
   );
 }
 
 const styles = StyleSheet.create({
+  orRow: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 18 },
+  orLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  orText: { color: colors.textFaint, fontSize: 13 },
   title: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 8 },
   subtitle: { fontSize: 14, color: colors.textMuted, marginBottom: 32 },
   input: {

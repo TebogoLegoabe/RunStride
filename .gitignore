@@ -16,3 +16,6 @@ __pycache__/
 
 # Uploaded photos (local dev storage)
 backend/media/
+
+# Cloudflare wrangler local state
+.wrangler/

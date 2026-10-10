@@ -77,6 +77,16 @@ class Settings(BaseSettings):
     # Development only: buy Plus and race passes in the app without a store or a charge
     test_purchases: bool = True
 
+    # Push notifications: "console" (development: printed to the logs) or "expo" (Expo's push
+    # service, which delivers to Apple and Google). EXPO_ACCESS_TOKEN is optional (only needed
+    # if "enhanced push security" is turned on in the Expo account).
+    push_provider: str = "console"
+    expo_access_token: str = ""
+
+    # Google sign-in: the OAuth client IDs (web, iOS, Android) that ID tokens may be issued to.
+    # Empty: Google sign-in is switched off.
+    google_client_ids: list[str] = []
+
     # Expo web dev server origins
     cors_origins: list[str] = ["http://localhost:8081", "http://localhost:19006"]
 

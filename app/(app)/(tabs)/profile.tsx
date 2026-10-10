@@ -3,7 +3,18 @@ import { Text } from "../../../components/ui/Text";
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ApiError, deleteAccount, getMe, getMyProfile, mediaUrl, setDatingMode } from "../../../lib/api";
+import {
+  ApiError,
+  connectGoogle,
+  deleteAccount,
+  disconnectGoogle,
+  getMe,
+  getMyProfile,
+  mediaUrl,
+  setDatingMode,
+} from "../../../lib/api";
+import { unregisterPush } from "../../../lib/push";
+import { GoogleButton, googleAvailable } from "../../../components/GoogleButton";
 import { useMembership } from "../../../components/MembershipProvider";
 import { formatRaceDates } from "../../../lib/format";
 import { openPlus } from "../../../lib/upsell";
@@ -32,6 +43,26 @@ export default function ProfileTab() {
   const { membership, update: updateMembership } = useMembership();
   const [switching, setSwitching] = useState(false);
 
+  const linkGoogle = async (idToken: string) => {
+    if (!token) return;
+    setError(null);
+    try {
+      setMe(await connectGoogle(token, idToken));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+    }
+  };
+
+  const unlinkGoogle = async () => {
+    if (!token) return;
+    setError(null);
+    try {
+      setMe(await disconnectGoogle(token));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+    }
+  };
+
   const setTaken = async (taken: boolean) => {
     if (!token) return;
     setSwitching(true);
@@ -59,6 +90,8 @@ export default function ProfileTab() {
   );
 
   const signOut = async () => {
+    // This phone stops getting this account's notifications
+    if (token) await unregisterPush(token);
     await clearToken();
     // Leaving the signed-in area also closes the live chat connection
     router.replace("/");
@@ -186,6 +219,28 @@ export default function ProfileTab() {
 
       <Text style={styles.section}>Account</Text>
       <View style={styles.group}>
+        {row("notifications-outline", "Notifications", "/notifications")}
+        {me.hasGoogle ? (
+          <View style={styles.row}>
+            <Ionicons name="logo-google" size={20} color={colors.primary} />
+            <View style={styles.rowStack}>
+              <Text style={styles.rowTitle}>Google connected</Text>
+              {me.email && <Text style={styles.rowSub}>{me.email}</Text>}
+            </View>
+            {me.phone && (
+              <Pressable onPress={unlinkGoogle} hitSlop={8}>
+                <Text style={styles.statusCta}>Disconnect</Text>
+              </Pressable>
+            )}
+          </View>
+        ) : (
+          googleAvailable() && (
+            <View style={[styles.row, styles.googleRow]}>
+              <Text style={styles.rowSub}>Connect Google to sign in with it as well as your number.</Text>
+              <GoogleButton title="Connect Google" onIdToken={linkGoogle} onError={setError} />
+            </View>
+          )
+        )}
         <Pressable style={styles.row} onPress={() => setConfirm("sign-out")}>
           <Ionicons name="log-out-outline" size={20} color={colors.textMuted} />
           <Text style={styles.rowText}>Sign out</Text>
@@ -195,7 +250,7 @@ export default function ProfileTab() {
           <Text style={[styles.rowText, styles.dangerText]}>Delete account</Text>
         </Pressable>
       </View>
-      <Text style={styles.footnote}>Signed in as {me.phone}</Text>
+      <Text style={styles.footnote}>Signed in as {me.phone ?? me.email ?? "a Google account"}</Text>
 
       <Modal visible={confirm !== null} transparent animationType="fade" onRequestClose={() => setConfirm(null)}>
         <View style={styles.backdrop}>
@@ -204,7 +259,8 @@ export default function ProfileTab() {
               <>
                 <Text style={styles.modalTitle}>Sign out?</Text>
                 <Text style={styles.modalBody}>
-                  Your matches and chats will be here when you sign back in with {me.phone}.
+                  Your matches and chats will be here when you sign back in with{" "}
+                  {me.phone ?? "Google"}.
                 </Text>
                 <Pressable style={styles.primaryButton} onPress={signOut}>
                   <Text style={styles.primaryText}>Sign out</Text>
@@ -268,6 +324,7 @@ const styles = StyleSheet.create({
   },
   rowText: { flex: 1, color: colors.textBright, fontSize: 16 },
   rowStack: { flex: 1, gap: 2 },
+  googleRow: { flexDirection: "column", alignItems: "stretch", gap: 10 },
   rowTitle: { color: colors.textBright, fontSize: 16 },
   rowSub: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
   statusOn: { color: colors.success, fontSize: 13, fontWeight: "700" },

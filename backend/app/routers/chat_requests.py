@@ -19,6 +19,7 @@ from app.models import ChatRequest, EntryListing, Match, Race, User
 from app.moderation import lockout_message, match_between
 from app.races import blocked_either_way, my_attendance, sender
 from app.realtime import hub
+from app import push
 from app.schemas import ChatRequestBody, ChatRequestOut
 from app.security import utcnow
 
@@ -69,6 +70,14 @@ def _accept(db: Session, request: ChatRequest) -> Match:
 def _notify_accepted(request: ChatRequest, match: Match) -> None:
     event = {"type": "chat_request_accepted", "requestId": str(request.id), "matchId": str(match.id)}
     hub.publish_from_thread([request.from_user_id, request.to_user_id], event)
+    push.notify(
+        [request.from_user_id],
+        "matches",
+        "{name} said yes",
+        "Your chat request was accepted. Say hi!",
+        f"/chat/{match.id}?userId={request.to_user_id}&name={{name}}",
+        about=request.to_user_id,
+    )
 
 
 @router.post("/chat-requests", response_model=ChatRequestOut, status_code=status.HTTP_201_CREATED)
@@ -174,6 +183,15 @@ def send_request(body: ChatRequestBody, user: CurrentUser, db: DbSession) -> Cha
     db.add(request)
     db.commit()
     hub.publish_from_thread([other.id], {"type": "chat_request", "requestId": str(request.id)})
+    race = db.get(Race, race_id)
+    push.notify(
+        [other.id],
+        "matches",
+        "{name} wants to chat",
+        f"About your swap post at {race.name}" if body.listing_id else f"You're both going to {race.name}",
+        "/matches",
+        about=user.id,
+    )
     return _out(db, request, user)
 
 

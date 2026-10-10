@@ -55,6 +55,20 @@ hub = Hub()
 
 
 def publish_message(message: Message, recipients: Iterable[uuid.UUID]) -> MessageOut:
+    recipients = list(recipients)
     out = MessageOut.model_validate(message, from_attributes=True)
     hub.publish_from_thread(recipients, {"type": "message", "message": out.model_dump(mode="json", by_alias=True)})
+
+    # Push to the other person (never the sender). Message text stays off the lock screen.
+    from app import push  # imported here: app.push uses the database, this module mustn't need it
+
+    body = {"text": "Sent you a message", "run_date": "Suggested a run together"}.get(message.kind, message.body)
+    push.notify(
+        [r for r in recipients if r != message.sender_id],
+        "messages",
+        "{name}",
+        body,
+        f"/chat/{message.match_id}?userId={message.sender_id}&name={{name}}",
+        about=message.sender_id,
+    )
     return out

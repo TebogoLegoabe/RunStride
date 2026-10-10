@@ -257,7 +257,7 @@ def dev_auto_reply(match_id: uuid.UUID, sender_id: uuid.UUID) -> None:
         if match is None or match.ended_at is not None:
             return
         other = db.get(User, match.other_user_id(sender_id))
-        if other is None or not other.phone.startswith(SEED_PHONE_PREFIX):
+        if other is None or not (other.phone or "").startswith(SEED_PHONE_PREFIX):
             return
         time.sleep(2)  # feels like someone typing
         reply = Message(match_id=match.id, sender_id=other.id, body=random.choice(REPLIES), created_at=utcnow())
@@ -274,7 +274,7 @@ def dev_auto_accept_run(run_date_id: uuid.UUID, proposer_id: uuid.UUID) -> None:
         if match is None or match.ended_at is not None:
             return
         other = db.get(User, match.other_user_id(proposer_id))
-        if other is None or not other.phone.startswith(SEED_PHONE_PREFIX):
+        if other is None or not (other.phone or "").startswith(SEED_PHONE_PREFIX):
             return
         time.sleep(2)
         db.refresh(run)

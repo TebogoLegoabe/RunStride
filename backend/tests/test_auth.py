@@ -47,6 +47,8 @@ def test_verify_creates_user_and_returns_token(client, sms, db):
     assert me.json() == {
         "id": str(user.id),
         "phone": PHONE_E164,
+        "email": None,
+        "hasGoogle": False,
         "verificationStatus": "unverified",
         "verificationRequired": True,
         "profileComplete": False,

@@ -44,8 +44,11 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    # Stored in E.164 format, e.g. +27821234567
-    phone: Mapped[str] = mapped_column(String(20), unique=True)
+    # Stored in E.164 format, e.g. +27821234567. Empty for accounts that sign in with Google only.
+    phone: Mapped[str | None] = mapped_column(String(20), unique=True)
+    # Google sign-in: Google's permanent ID for the person, and their (Google-verified) email
+    google_sub: Mapped[str | None] = mapped_column(String(255), unique=True)
+    email: Mapped[str | None] = mapped_column(String(320))
     verification_status: Mapped[VerificationStatus] = mapped_column(
         Enum(
             VerificationStatus,
@@ -68,6 +71,8 @@ class User(Base):
     suspended_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # "looking", or "taken": seeing someone, so hidden from dating but still using races and swaps
     dating_mode: Mapped[str] = mapped_column(String(20), default="looking", server_default="looking")
+    # Which push notifications they want (see app/push.py); empty means the defaults
+    notification_prefs: Mapped[dict | None] = mapped_column(JSONB)
 
     profile: Mapped["Profile | None"] = relationship(back_populates="user", cascade="all, delete-orphan")
     running_profile: Mapped["RunningProfile | None"] = relationship(cascade="all, delete-orphan")
@@ -416,6 +421,21 @@ class RaceMessage(Base):
     removed_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 
 
+class EntryWant(Base):
+    """An entry alert: someone going to a race wants an entry for this distance. When someone
+    offers one on the swap board, they're alerted. Can be set before the transfer window opens."""
+
+    __tablename__ = "entry_wants"
+    __table_args__ = (Index("ix_entry_wants_race_event_id", "race_event_id"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    race_event_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("race_events.id", ondelete="CASCADE"), primary_key=True
+    )
+    race_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("races.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ChatRequest(Base):
     """Asking to chat privately with someone you haven't matched with, e.g. from a race.
     Nothing happens until they accept; accepting creates a match (kind "race")."""
@@ -539,3 +559,17 @@ class BillingEvent(Base):
     user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     payload: Mapped[dict] = mapped_column(JSONB)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PushToken(Base):
+    """A phone that can receive push notifications for a user (an Expo push token)."""
+
+    __tablename__ = "push_tokens"
+    __table_args__ = (Index("ix_push_tokens_user_id", "user_id"),)
+
+    token: Mapped[str] = mapped_column(String(200), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    platform: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+

@@ -92,7 +92,9 @@ export interface SwipeResult {
 
 export interface Me {
   id: string;
-  phone: string;
+  phone: string | null; // empty for accounts that sign in with Google only
+  email: string | null;
+  hasGoogle: boolean;
   verificationStatus: VerificationStatus;
   verificationRequired: boolean; // false only in development while ID verification is off
   profileComplete: boolean;
@@ -343,4 +345,14 @@ export interface RunnerFilters {
 export interface LikesYou {
   count: number;
   people: Person[]; // only with Plus
+}
+
+// --- Notifications ---
+
+export interface NotificationSettings {
+  enabled: boolean; // off: nothing on the phone; new things show only while the app is open
+  messages: boolean;
+  matches: boolean;
+  races: boolean;
+  swaps: boolean;
 }

@@ -10,7 +10,15 @@ from app.deps import AppSettings, DbSession
 from app.models import OtpCode, User
 from app.moderation import lockout_message
 from app.phone import InvalidPhoneNumber, normalize_phone, region_of
-from app.schemas import OtpSendRequest, OtpSendResponse, OtpVerifyRequest, OtpVerifyResponse
+from app.google_auth import GoogleIdentity, GoogleVerifier, InvalidGoogleToken, get_google_verifier
+from app.schemas import (
+    GoogleAuthBody,
+    GoogleAuthResponse,
+    OtpSendRequest,
+    OtpSendResponse,
+    OtpVerifyRequest,
+    OtpVerifyResponse,
+)
 from app.security import create_access_token, generate_otp, hash_otp, otp_matches, utcnow
 from app.sms import SmsError, SmsSender, get_sms_sender
 
@@ -157,3 +165,49 @@ def verify_otp(body: OtpVerifyRequest, db: DbSession, settings: AppSettings) -> 
         user_id=user.id,
         profile_complete=user.profile_complete,
     )
+
+
+# --- Google ---
+
+
+def verified_google_identity(body: GoogleAuthBody, settings: Settings, verifier: GoogleVerifier) -> GoogleIdentity:
+    if not settings.google_client_ids:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail="Google sign-in isn't available yet.")
+    try:
+        identity = verifier.verify(body.id_token, settings.google_client_ids)
+    except InvalidGoogleToken:
+        logger.info("Rejected a Google ID token", exc_info=True)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Google sign-in didn't work. Please try again.")
+    if not identity.email_verified:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED, detail="Please verify your Google account's email address first."
+        )
+    return identity
+
+
+@router.post("/google", response_model=GoogleAuthResponse)
+def google_sign_in(
+    body: GoogleAuthBody,
+    db: DbSession,
+    settings: AppSettings,
+    verifier: Annotated[GoogleVerifier, Depends(get_google_verifier)],
+) -> GoogleAuthResponse:
+    """Sign in (or sign up) with Google. Accounts made this way have no phone number."""
+    identity = verified_google_identity(body, settings, verifier)
+    user = db.scalar(select(User).where(User.google_sub == identity.sub))
+    locked = lockout_message(user) if user else None
+    if locked:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=locked)
+    if user is None:
+        user = User(google_sub=identity.sub)
+        db.add(user)
+    user.email = identity.email
+    user.last_login_at = utcnow()
+    db.commit()
+    return GoogleAuthResponse(
+        token=create_access_token(user.id),
+        user_id=user.id,
+        profile_complete=user.profile_complete,
+        suggested_name=identity.given_name if user.profile is None else None,
+    )
+

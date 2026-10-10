@@ -1,5 +1,5 @@
 import { View, StyleSheet, Image } from "react-native";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import Animated, {
   Easing,
@@ -16,6 +16,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { Text } from "../components/ui/Text";
 import { Button } from "../components/ui/Button";
+import { GoogleButton, googleAvailable } from "../components/GoogleButton";
+import { finishGoogleSignIn } from "../lib/googleSignIn";
 import { ApiError, getMe } from "../lib/api";
 import { routeFor } from "../lib/routing";
 import { clearToken, getToken } from "../lib/session";
@@ -32,6 +34,19 @@ export default function Welcome() {
   const logoScale = useSharedValue(0.8);
   const logoOpacity = useSharedValue(0);
   const float = useSharedValue(0);
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const withGoogle = async (idToken: string) => {
+    setGoogleBusy(true);
+    setError(null);
+    try {
+      await finishGoogleSignIn(router, idToken);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Couldn't reach RunStride. Check your connection.");
+      setGoogleBusy(false);
+    }
+  };
 
   // Already signed in: skip straight to wherever onboarding left off
   useEffect(() => {
@@ -102,7 +117,15 @@ export default function Welcome() {
 
       <Animated.View entering={FadeInDown.delay(950).duration(500)} style={styles.bottom}>
         <Button title="Get started" icon="arrow-forward" onPress={() => router.push("/signup")} />
-        <Text style={styles.legal}>Sign up or log in with your phone number.</Text>
+        {googleAvailable() && (
+          <View style={styles.google}>
+            <GoogleButton busy={googleBusy} onIdToken={withGoogle} onError={setError} />
+          </View>
+        )}
+        {error && <Text style={styles.error}>{error}</Text>}
+        <Text style={styles.legal}>
+          Sign up or log in with your phone number{googleAvailable() ? " or Google" : ""}.
+        </Text>
       </Animated.View>
     </View>
   );
@@ -129,5 +152,7 @@ const styles = StyleSheet.create({
   featureTitle: { color: colors.heading, fontSize: 15, fontWeight: "700" },
   featureBody: { color: colors.textMuted, fontSize: 13, marginTop: 1 },
   bottom: { width: "100%", maxWidth: 420, alignSelf: "center", paddingBottom: 12 },
+  google: { marginTop: 12 },
+  error: { color: colors.dangerText, fontSize: 13, textAlign: "center", marginTop: 10 },
   legal: { color: colors.textFaint, fontSize: 12, textAlign: "center", marginTop: 12 },
 });

@@ -318,3 +318,61 @@ def test_store_race_pass_and_unknown_users(client, store, make_runner):
     assert me(client, runner)["racePassCredits"] == 1
     # Purchases for someone we don't know are acknowledged (so the store stops retrying) and ignored
     assert send(client, rc_event("$RCAnonymousID:abc", "INITIAL_PURCHASE", "plus_monthly")).status_code == 200
+
+
+# --- Entry alerts ---
+
+
+def wants(client, runner, race, *labels):
+    ids = [e["id"] for e in race["events"] if e["label"] in labels]
+    return client.put(f"/races/{race['id']}/wants", json={"raceEventIds": ids}, headers=runner["headers"])
+
+
+def test_entry_alerts_can_be_set_before_the_window_opens(client, make_race, make_runner):
+    upcoming = make_race(starts_in=30, window=(5, 20))
+    no_transfers = make_race(name="Two Oceans")
+    runner = make_runner()
+    join(client, runner, upcoming)
+    join(client, runner, no_transfers)
+
+    res = wants(client, runner, upcoming, "Half marathon", "Marathon")
+    assert res.status_code == 200
+    assert len(res.json()["raceEventIds"]) == 2 and res.json()["alerts"] is False
+    # Changing them replaces the list
+    assert len(wants(client, runner, upcoming, "Marathon").json()["raceEventIds"]) == 1
+    # A race without an official transfer window has nothing to alert about
+    assert wants(client, runner, no_transfers, "Marathon").status_code == 409
+    other_race_event = no_transfers["events"][0]["id"]
+    bad = client.put(f"/races/{upcoming['id']}/wants", json={"raceEventIds": [other_race_event]}, headers=runner["headers"])
+    assert bad.status_code == 422
+
+
+def test_entry_alert_fires_when_an_entry_is_offered(client, make_race, make_runner):
+    race = make_race(window=(-1, 5))
+    thandi = make_runner()  # wants a half marathon entry, has Plus
+    nomsa = make_runner()  # wants one too, free
+    sipho = make_runner(gender="man", interested_in=["woman"])  # selling
+    for runner in (thandi, nomsa, sipho):
+        join(client, runner, race)
+    buy(client, thandi)
+    assert wants(client, thandi, race, "Half marathon").json()["alerts"] is True
+    wants(client, nomsa, race, "Half marathon")
+    token = thandi["headers"]["Authorization"].removeprefix("Bearer ")
+
+    with client.websocket_connect("/ws") as ws:
+        ws.send_json({"type": "auth", "token": token})
+        ws.receive_json()
+        offer = post_listing(client, sipho, race, "offering")
+        event = ws.receive_json()
+
+    assert event["type"] == "swap_match" and event["listingId"] == offer["id"]
+    # Both people wanting it count as interest, even though neither posted
+    assert offer["interestedCount"] == 2
+    assert client.get("/me/race-alerts", headers=thandi["headers"]).json()["swapMatches"] == 1
+    assert client.get(f"/races/{race['id']}", headers=nomsa["headers"]).json()["unreadSwapMatches"] == 0
+
+    client.post(f"/races/{race['id']}/swaps/seen", headers=thandi["headers"])
+    assert client.get("/me/race-alerts", headers=thandi["headers"]).json()["swapMatches"] == 0
+    # Other distances don't trigger it
+    post_listing(client, sipho, race, "offering", "Marathon")
+    assert client.get("/me/race-alerts", headers=thandi["headers"]).json()["swapMatches"] == 0

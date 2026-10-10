@@ -5,6 +5,7 @@
 import type { ReportReason } from "./options";
 import { photoFile } from "./photoFile";
 import type {
+  NotificationSettings,
   ChatRequest,
   DatingMode,
   LikesYou,
@@ -101,6 +102,33 @@ export const verifyOtp = (phone: string, code: string) =>
     method: "POST",
     body: { phone, code },
   });
+
+// --- Google sign-in ---
+export const googleSignIn = (idToken: string) =>
+  apiRequest<{ token: string; userId: string; profileComplete: boolean; suggestedName: string | null }>(
+    "/auth/google",
+    { method: "POST", body: { idToken } }
+  );
+
+// Connect Google to the signed-in account, so either can be used to sign in
+export const connectGoogle = (token: string, idToken: string) =>
+  apiRequest<import("./types").Me>("/me/google", { method: "POST", body: { idToken }, token });
+
+export const disconnectGoogle = (token: string) =>
+  apiRequest<import("./types").Me>("/me/google", { method: "DELETE", token });
+
+// --- Push notifications ---
+export const registerPushToken = (token: string, pushToken: string, platform: "ios" | "android") =>
+  apiRequest<void>("/me/push-tokens", { method: "PUT", body: { token: pushToken, platform }, token });
+
+export const removePushToken = (token: string, pushToken: string) =>
+  apiRequest<void>(`/me/push-tokens?token=${encodeURIComponent(pushToken)}`, { method: "DELETE", token });
+
+export const getNotificationSettings = (token: string) =>
+  apiRequest<NotificationSettings>("/me/notification-settings", { token });
+
+export const setNotificationSettings = (token: string, settings: NotificationSettings) =>
+  apiRequest<NotificationSettings>("/me/notification-settings", { method: "PUT", body: settings, token });
 
 export const getMe = (token: string) =>
   apiRequest<import("./types").Me>("/me", { token });
@@ -362,6 +390,17 @@ export const markMentionsSeen = (token: string, raceId: string) =>
 // Unread mentions and swap alerts across your upcoming races
 export const getRaceAlerts = (token: string) =>
   apiRequest<{ mentions: number; swapMatches: number }>("/me/race-alerts", { token });
+
+// Entry alerts: the distances you want an entry for at this race
+export const getEntryWants = (token: string, raceId: string) =>
+  apiRequest<{ raceEventIds: string[]; alerts: boolean }>(`/races/${raceId}/wants`, { token });
+
+export const setEntryWants = (token: string, raceId: string, raceEventIds: string[]) =>
+  apiRequest<{ raceEventIds: string[]; alerts: boolean }>(`/races/${raceId}/wants`, {
+    method: "PUT",
+    body: { raceEventIds },
+    token,
+  });
 
 export const markSwapsSeen = (token: string, raceId: string) =>
   apiRequest<void>(`/races/${raceId}/swaps/seen`, { method: "POST", token });

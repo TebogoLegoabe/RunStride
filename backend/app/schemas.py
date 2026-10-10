@@ -37,7 +37,9 @@ class OtpVerifyResponse(CamelModel):
 
 class MeResponse(CamelModel):
     id: uuid.UUID
-    phone: str
+    phone: str | None  # empty for Google-only accounts
+    email: str | None
+    has_google: bool
     verification_status: VerificationStatus
     # False only in development while ID verification is switched off
     verification_required: bool
@@ -555,6 +557,18 @@ class MentionCount(CamelModel):
     count: int
 
 
+class EntryWantsBody(CamelModel):
+    """The distances you want an entry for at this race (replaces what was there)."""
+
+    race_event_ids: list[uuid.UUID] = Field(max_length=20)
+
+
+class EntryWantsOut(CamelModel):
+    race_event_ids: list[uuid.UUID]
+    # Alerts are sent with Plus or a race pass; without, your wants still show sellers the demand
+    alerts: bool
+
+
 class RaceAlerts(CamelModel):
     """Unread race activity for the Races tab badge."""
 
@@ -689,4 +703,35 @@ class RaceRunnersOut(CamelModel):
     # Going, but not shown without Plus or a race pass
     hidden_count: int
     full_access: bool
+
+
+# --- Push notifications ---
+
+
+class NotificationSettings(CamelModel):
+    enabled: bool = True  # off: no push at all; you see things only while the app is open
+    messages: bool = True  # chat messages and run plans
+    matches: bool = True  # new matches and chat requests
+    races: bool = True  # @mentions in race chats
+    swaps: bool = True  # entry alerts
+
+
+class PushTokenBody(CamelModel):
+    token: str = Field(min_length=10, max_length=200)
+    platform: Literal["ios", "android"]
+
+
+# --- Google sign-in ---
+
+
+class GoogleAuthBody(CamelModel):
+    id_token: str = Field(min_length=20, max_length=4096)
+
+
+class GoogleAuthResponse(CamelModel):
+    token: str
+    user_id: uuid.UUID
+    profile_complete: bool
+    # From the Google account, to fill in the profile form for new accounts
+    suggested_name: str | None = None
 

@@ -19,6 +19,7 @@ from app.routers import (
     chat_requests,
     discover,
     matches,
+    notifications,
     preferences,
     profile,
     races,
@@ -93,6 +94,7 @@ app.include_router(safety.router)
 app.include_router(admin.router)
 app.include_router(verification.router)
 app.include_router(billing.router)
+app.include_router(notifications.router)
 
 media_dir = Path(get_settings().media_dir)
 media_dir.mkdir(parents=True, exist_ok=True)

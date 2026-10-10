@@ -1,4 +1,4 @@
-import { View, StyleSheet, Pressable, ScrollView, Platform } from "react-native";
+import { View, StyleSheet, Pressable, Platform } from "react-native";
 import { Text } from "../../../components/ui/Text";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -46,7 +46,6 @@ export default function Discover() {
   const { raceId, raceName } = useLocalSearchParams<{ raceId?: string; raceName?: string }>();
   const [token, setToken] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
-  const [unverified, setUnverified] = useState(false);
   const [mine, setMine] = useState<RunningProfile | null>(null);
   const [cards, setCards] = useState<DiscoverCard[]>([]);
   const [busy, setBusy] = useState(false);
@@ -59,12 +58,14 @@ export default function Discover() {
   // Swiping only one race's runners needs Plus or a race pass: why it's locked
   const [raceLocked, setRaceLocked] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
-  const { width, height, isPhone, isWide } = useBreakpoint();
+  const { height, isPhone } = useBreakpoint();
   const topPadding = useTopPadding();
-  // Size the card so its photo and name fit on short laptop screens, leaving room for the
-  // side buttons and navigation
-  const room = width - (isWide ? 232 : 76) - 300;
-  const deckWidth = isPhone ? undefined : Math.max(280, Math.min(440, (height - topPadding - 360) * 0.8, room));
+  // The space between the header and the buttons: the card fills it, so nothing scrolls.
+  // On bigger screens the card keeps a portrait shape instead of stretching wide.
+  const [area, setArea] = useState<{ width: number; height: number } | null>(null);
+  const cardWidth = area ? (isPhone ? area.width : Math.min(area.width, area.height * 0.7, 460)) : 0;
+  // Short phones (e.g. iPhone SE) skip the hint line to give the card the room
+  const showHint = !isPhone || height >= 700;
   // Arrow keys like and pass on computers
   const keyboard = Platform.OS === "web" && !isPhone;
 
@@ -117,7 +118,6 @@ export default function Discover() {
       try {
         const [me, running, profile] = await Promise.all([getMe(t), getRunningProfile(t), getMyProfile(t)]);
         setMyPhoto(profile?.photos[0]?.url ?? null);
-        setUnverified(me.verificationStatus !== "verified");
         setMine(running);
         if (!me.hasLocation) {
           setPhase("needs-location");
@@ -211,24 +211,11 @@ export default function Discover() {
     });
   };
 
-  const banner = unverified && (
-    <View style={styles.devBanner}>
-      <Text style={styles.devBannerTitle}>ID verification: in development</Text>
-      <Text style={styles.devBannerText}>
-        You're in without verifying for now. Before launch, everyone will verify their ID and a
-        selfie before they can match.
-      </Text>
-    </View>
-  );
-
   if (phase === "loading") {
     return (
-      <View style={[styles.container, styles.scroll, { paddingTop: topPadding }]}>
-        <View style={[styles.skeletonCard, deckWidth ? { maxWidth: deckWidth } : null]}>
-          <Skeleton height={undefined} style={styles.skeletonPhoto} />
-          <Skeleton width="40%" height={22} />
-          <Skeleton width="70%" height={14} />
-        </View>
+      <View style={[styles.container, styles.screen, { paddingTop: topPadding }]}>
+        <Skeleton height={undefined} style={styles.skeletonCard} />
+        {isPhone && <View style={styles.actionsSpace} />}
       </View>
     );
   }
@@ -270,7 +257,6 @@ export default function Discover() {
   if (phase === "needs-location") {
     return (
       <View style={[styles.container, { paddingTop: topPadding }]}>
-        {banner}
         <EmptyState
           icon="location"
           title="Find runners near you"
@@ -287,81 +273,89 @@ export default function Discover() {
   const card = cards[0];
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: topPadding }]}>
-        {banner}
-        {raceId && (
-          <View style={styles.raceFilter}>
-            <Ionicons name="flag" size={16} color={colors.pink} />
-            <Text style={styles.raceFilterText} numberOfLines={1}>
-              Runners at {raceName ?? "this race"}
-            </Text>
-            <Pressable onPress={() => router.replace("/discover")}>
-              <Text style={styles.raceFilterClear}>Show everyone</Text>
-            </Pressable>
-          </View>
-        )}
-        {error && <Text style={styles.error}>{error}</Text>}
+    <View style={[styles.container, styles.screen, { paddingTop: topPadding }]}>
+      {raceId && (
+        <View style={styles.raceFilter}>
+          <Ionicons name="flag" size={16} color={colors.pink} />
+          <Text style={styles.raceFilterText} numberOfLines={1}>
+            Runners at {raceName ?? "this race"}
+          </Text>
+          <Pressable onPress={() => router.replace("/discover")}>
+            <Text style={styles.raceFilterClear}>Show everyone</Text>
+          </Pressable>
+        </View>
+      )}
+      {error && <Text style={styles.error}>{error}</Text>}
 
-        {card ? (
-          <>
-            {/* Bigger screens: pass and like sit either side of the card, always in view */}
-            <View style={!isPhone && styles.deckRow}>
-              {!isPhone && (
-                <View style={styles.sideAction}>
-                  <IconButton
-                    icon="close"
-                    size={68}
-                    onPress={() => deck.current?.swipe(false)}
-                    accessibilityLabel={`Pass on ${card.displayName}`}
-                  />
-                  {keyboard && <Text style={styles.keyHint}>←</Text>}
-                </View>
-              )}
-              <View style={[styles.deck, deckWidth ? { width: deckWidth, flexShrink: 1 } : null]}>
-                <SwipeDeck
-                  ref={deck}
-                  cards={cards}
-                  mine={mine}
-                  onSwiped={decide}
-                  onOptions={() => setSafetyOpen(true)}
+      {card ? (
+        <>
+          {/* Bigger screens: pass and like sit either side of the card */}
+          <View style={styles.deckRow}>
+            {!isPhone && (
+              <View style={styles.sideAction}>
+                <IconButton
+                  icon="close"
+                  size={68}
+                  onPress={() => deck.current?.swipe(false)}
+                  accessibilityLabel={`Pass on ${card.displayName}`}
                 />
+                {keyboard && <Text style={styles.keyHint}>←</Text>}
               </View>
-              {!isPhone && (
-                <View style={styles.sideAction}>
-                  <IconButton
-                    icon="heart"
-                    size={80}
-                    filled
-                    onPress={() => deck.current?.swipe(true)}
-                    accessibilityLabel={`Like ${card.displayName}`}
+            )}
+            <View
+              style={styles.deckArea}
+              onLayout={(e) => setArea({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+            >
+              {area && (
+                <View style={[styles.deck, { width: cardWidth }]}>
+                  <SwipeDeck
+                    ref={deck}
+                    cards={cards}
+                    mine={mine}
+                    onSwiped={decide}
+                    onOptions={() => setSafetyOpen(true)}
                   />
-                  {keyboard && <Text style={styles.keyHint}>→</Text>}
                 </View>
               )}
             </View>
+            {!isPhone && (
+              <View style={styles.sideAction}>
+                <IconButton
+                  icon="heart"
+                  size={80}
+                  filled
+                  onPress={() => deck.current?.swipe(true)}
+                  accessibilityLabel={`Like ${card.displayName}`}
+                />
+                {keyboard && <Text style={styles.keyHint}>→</Text>}
+              </View>
+            )}
+          </View>
+          {showHint && (
             <Text style={styles.swipeHint}>
               {keyboard ? "Drag the card, or use the ← and → keys" : "Swipe right to like, left to pass"}
             </Text>
-            {isPhone && (
+          )}
+          {isPhone && (
             <View style={styles.actions}>
               <IconButton
                 icon="close"
-                size={62}
+                size={58}
                 onPress={() => deck.current?.swipe(false)}
                 accessibilityLabel={`Pass on ${card.displayName}`}
               />
               <IconButton
                 icon="heart"
-                size={74}
+                size={68}
                 filled
                 onPress={() => deck.current?.swipe(true)}
                 accessibilityLabel={`Like ${card.displayName}`}
               />
             </View>
-            )}
-          </>
-        ) : (
+          )}
+        </>
+      ) : (
+        <View style={styles.empty}>
           <EmptyState
             icon="sparkles"
             title="You're all caught up"
@@ -372,8 +366,8 @@ export default function Discover() {
             }
             action={{ title: "Edit preferences", icon: "options-outline", onPress: () => router.push("/dating-preferences") }}
           />
-        )}
-      </ScrollView>
+        </View>
+      )}
 
       {card && (
         <SafetySheet
@@ -401,9 +395,12 @@ export default function Discover() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: 16, paddingBottom: 40 },
-  deck: { width: "100%", alignSelf: "center" },
-  deckRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 40 },
+  // One screen, no scrolling: header, then the card taking whatever height is left, then buttons
+  screen: { paddingHorizontal: 12, paddingBottom: 12 },
+  deckRow: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 32 },
+  deckArea: { flex: 1, height: "100%", maxWidth: 560, alignItems: "center" },
+  deck: { flex: 1 },
+  empty: { flex: 1, justifyContent: "center" },
   sideAction: { alignItems: "center", gap: 10 },
   keyHint: { color: colors.textFaint, fontSize: 13, fontWeight: "700" },
   raceFilter: {
@@ -414,31 +411,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.pinkTint,
     borderRadius: 12,
     padding: 12,
-    marginBottom: 14,
-    maxWidth: 420,
+    marginBottom: 10,
+    maxWidth: 460,
     width: "100%",
     alignSelf: "center",
   },
   raceFilterText: { color: colors.pink, fontWeight: "700", fontSize: 14, flexShrink: 1 },
   showEveryone: { alignSelf: "center", padding: 12 },
   raceFilterClear: { color: colors.textMuted, fontSize: 13, textDecorationLine: "underline" },
-  devBanner: {
-    marginBottom: 16,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.warning,
-    backgroundColor: colors.warningTint,
-    alignSelf: "center",
-    maxWidth: 420,
-    width: "100%",
-  },
-  devBannerTitle: { color: colors.warningText, fontWeight: "700", fontSize: 14, marginBottom: 4 },
-  devBannerText: { color: colors.warningSoft, fontSize: 13, lineHeight: 19 },
   message: { flex: 1, justifyContent: "center", padding: 24, maxWidth: 420, width: "100%", alignSelf: "center" },
   error: { color: colors.dangerText, fontSize: 14, marginBottom: 16, textAlign: "center" },
-  swipeHint: { color: colors.textFaint, fontSize: 12, textAlign: "center", marginTop: 14 },
-  skeletonCard: { width: "100%", maxWidth: 420, alignSelf: "center", gap: 12 },
-  skeletonPhoto: { aspectRatio: 4 / 5, borderRadius: 20 },
-  actions: { flexDirection: "row", justifyContent: "center", gap: 32, marginTop: 20 },
+  swipeHint: { color: colors.textFaint, fontSize: 12, textAlign: "center", marginTop: 8 },
+  skeletonCard: { flex: 1, width: "100%", maxWidth: 460, alignSelf: "center", borderRadius: 22 },
+  actions: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 32, marginTop: 10 },
+  actionsSpace: { height: 78 },
 });

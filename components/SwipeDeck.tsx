@@ -160,10 +160,10 @@ export const SwipeDeck = forwardRef<SwipeDeckHandle, Props>(function SwipeDeck(
 });
 
 const styles = StyleSheet.create({
-  deck: { width: "100%", maxWidth: 420, alignSelf: "center" },
-  top: { width: "100%", zIndex: 2, borderRadius: 20, ...shadow.card },
-  // The next card waits underneath, cut to the top card's height so a longer bio can't poke out
-  under: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, overflow: "hidden", borderRadius: 20 },
+  // Fills the space Discover gives it; both cards fill the deck
+  deck: { flex: 1, width: "100%" },
+  top: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 2, borderRadius: 22, ...shadow.card },
+  under: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, overflow: "hidden", borderRadius: 22 },
   stamp: {
     position: "absolute",
     top: 34,

@@ -31,7 +31,8 @@ def delete_account(
     photo_urls = [p.url for p in user.profile.photos] if user.profile else []
     # Tell matches their chat is closing before the rows disappear
     end_all_matches(db, user, user.id)
-    db.execute(delete(OtpCode).where(OtpCode.phone == user.phone))
+    if user.phone:
+        db.execute(delete(OtpCode).where(OtpCode.phone == user.phone))
     db.delete(user)  # everything else cascades (see ondelete rules in models.py)
     db.commit()
 

@@ -112,6 +112,47 @@ placeholders until the store prices are set.
      `REVENUECAT_WEBHOOK_AUTH`. Purchases, renewals, cancellations, refunds and expiries then
      update membership automatically.
 
+### Push notifications
+Sent through Expo's push service (free), which delivers to Apple and Google. In development
+(`PUSH_PROVIDER=console`) they're printed in the API logs. People choose what they get in
+Profile -> Notifications; with push off, they see new things only while the app is open. Message
+text never appears on the lock screen.
+
+To send real pushes:
+1. `npx eas init` (links the app to an Expo project and adds its project ID to `app.json`).
+2. Make a development build (`npx eas build --profile development`); Expo Go can't receive them.
+3. In `backend/.env`: `PUSH_PROVIDER=expo`.
+
+### Google sign-in
+"Continue with Google" appears once its client IDs are set; accounts can have a phone number,
+Google, or both (Profile -> Connect Google). Google gives a name and email only; ID checks are
+still done by Persona.
+1. Google Cloud console -> APIs & Services -> OAuth consent screen, then Credentials -> Create
+   OAuth client ID: one **Web** client (for the web app, with `http://localhost:8081` as an
+   authorised JavaScript origin), one **iOS** client (bundle ID `com.tebogolegoabe.runstride`)
+   and one **Android** client (package `com.tebogolegoabe.runstride` and your build's SHA-1).
+2. Put them in `.env` (`EXPO_PUBLIC_GOOGLE_*_CLIENT_ID`) and, as a JSON list, in
+   `backend/.env` (`GOOGLE_CLIENT_IDS`). Restart both.
+3. Works on the web straight away; phones need a development build.
+
+### Website (runstride.co.za)
+`site/` is the public website: landing page with the beta sign-up, privacy policy and terms
+(`site/public`), and the sign-up handler (`site/functions/api/waitlist.js`). It runs on
+Cloudflare Pages (free). Try it locally: `cd site && npx wrangler pages dev public --kv WAITLIST --binding EXPORT_KEY=test`.
+
+Deploy once (then every push to `main` redeploys it):
+1. Cloudflare dashboard -> Workers & Pages -> Create -> Pages -> Connect to Git -> pick this repo.
+   Build command: *(empty)*. Build output directory: `public`. Root directory (advanced): `site`.
+2. Storage & Databases -> KV -> create a namespace `runstride-waitlist`. In the Pages project:
+   Settings -> Bindings -> add a KV namespace binding named `WAITLIST` pointing to it.
+3. Settings -> Variables and Secrets -> add a **secret** `EXPORT_KEY` (a long random password,
+   e.g. from `node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"`).
+4. Deployments -> retry the latest deployment so the binding and secret apply.
+5. Custom domains -> add `runstride.co.za` and `www.runstride.co.za` (Cloudflare replaces the
+   old GoDaddy records).
+
+Download the sign-ups as a spreadsheet: `https://runstride.co.za/api/waitlist?key=<EXPORT_KEY>`.
+
 ### App
 ```bash
 npm install

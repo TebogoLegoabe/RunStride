@@ -1,7 +1,7 @@
 import { View, Pressable, StyleSheet, ActivityIndicator, ScrollView, Image } from "react-native";
 import { Text, TextInput } from "../components/ui/Text";
 import { useEffect, useState } from "react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import {
   ApiError,
@@ -49,7 +49,9 @@ export default function ProfileSetup() {
   const [token, setToken] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [slots, setSlots] = useState<Slot[]>([]);
-  const [name, setName] = useState("");
+  // Signed up with Google: start with the name from their Google account
+  const { name: suggestedName } = useLocalSearchParams<{ name?: string }>();
+  const [name, setName] = useState(suggestedName ?? "");
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
   const [year, setYear] = useState("");

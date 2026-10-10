@@ -30,6 +30,7 @@ from app.routers.matches import match_summary
 from app.races import sa_today
 from app.schemas import DiscoverCard, LikesYouOut, LocationBody, Sender, SharedRace, SwipeResponse, age_on
 from app.races import sender
+from app import push
 from app.security import utcnow
 
 router = APIRouter(tags=["discover"])
@@ -264,6 +265,15 @@ def _swipe(db: Session, me: User, settings: Settings, target_id: uuid.UUID, like
 
     if match is None:
         return SwipeResponse(matched=False)
+    # The other person liked first; they find out now
+    push.notify(
+        [target_id],
+        "matches",
+        "It's a match!",
+        "You and {name} like each other. Say hi!",
+        f"/chat/{match.id}?userId={me.id}&name={{name}}",
+        about=me.id,
+    )
     return SwipeResponse(matched=True, match=match_summary(db, match, me))
 
 

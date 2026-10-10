@@ -15,6 +15,7 @@ from app.models import (
     Block,
     ChatRequest,
     EntryListing,
+    EntryWant,
     Profile,
     ProfilePhoto,
     Race,
@@ -45,11 +46,14 @@ from app.races import (
     visible_to,
 )
 from app.realtime import hub
+from app import push
 from app.schemas import (
     Attendee,
     AttendanceBody,
     ListingBody,
     ListingOut,
+    EntryWantsBody,
+    EntryWantsOut,
     MentionCount,
     Mentionable,
     MessageBody,
@@ -214,11 +218,11 @@ def _unread_mentions(db: Session, me: User, race_id: uuid.UUID | None = None) ->
 
 
 def _swap_matches(db: Session, me: User, race_id: uuid.UUID, *, unread_only: bool):
-    """Statement selecting other people's open posts at this race that answer one of mine
-    (offering vs looking, same distance)."""
+    """Statement selecting the IDs of other people's open posts at this race that answer one of
+    mine (offering vs looking, same distance)."""
     mine = aliased(EntryListing)
     stmt = (
-        select(func.count(func.distinct(EntryListing.id)))
+        select(EntryListing.id)
         .select_from(EntryListing)
         .join(
             mine,
@@ -249,12 +253,36 @@ def _swap_matches(db: Session, me: User, race_id: uuid.UUID, *, unread_only: boo
     return stmt
 
 
+def _wanted_offers(me: User, race_id: uuid.UUID):
+    """Statement selecting the IDs of entries offered at this race for a distance I want, posted
+    since I set the alert and since I last opened the swap board."""
+    seen = select(RaceAttendance.swaps_seen_at).where(
+        RaceAttendance.race_id == race_id, RaceAttendance.user_id == me.id
+    ).scalar_subquery()
+    return (
+        select(EntryListing.id)
+        .join(EntryWant, and_(EntryWant.race_event_id == EntryListing.race_event_id, EntryWant.user_id == me.id))
+        .join(User, User.id == EntryListing.user_id)
+        .where(
+            EntryListing.race_id == race_id,
+            EntryListing.kind == "offering",
+            EntryListing.status == "open",
+            EntryListing.user_id != me.id,
+            EntryListing.created_at > EntryWant.created_at,
+            EntryListing.created_at > func.coalesce(seen, EntryWant.created_at),
+            not_blocked_with(me.id),
+        )
+    )
+
+
 def _unread_swap_matches(db: Session, me: User, race_id: uuid.UUID) -> int:
-    """New posts answering mine since I last opened the swap board. Alerts are a Plus /
-    race pass feature, so it's 0 without one."""
+    """New posts answering mine, or offering an entry I want, since I last opened the swap
+    board. Alerts are a Plus / race pass feature, so it's 0 without one."""
     if not has_race_access(db, me, race_id):
         return 0
-    return db.scalar(_swap_matches(db, me, race_id, unread_only=True)) or 0
+    answers = set(db.scalars(_swap_matches(db, me, race_id, unread_only=True)).all())
+    offers = set(db.scalars(_wanted_offers(me, race_id)).all())
+    return len(answers | offers)
 
 
 # --- Browsing races ---
@@ -552,6 +580,7 @@ def post_race_message(
             mentioned,
             {"type": "race_mention", "raceId": str(race.id), "raceName": race.name, "messageId": str(msg.id)},
         )
+        push.notify(mentioned, "races", "{name} mentioned you", f"In the {race.name} chat", f"/race/{race.id}", about=user.id)
     return out
 
 
@@ -616,17 +645,28 @@ def my_race_mentions(user: CurrentUser, db: DbSession) -> MentionCount:
 
 
 def _interested_count(db: Session, listing: EntryListing) -> int:
-    return db.scalar(
-        select(func.count())
-        .select_from(EntryListing)
-        .where(
-            EntryListing.race_id == listing.race_id,
-            EntryListing.race_event_id == listing.race_event_id,
-            EntryListing.kind != listing.kind,
-            EntryListing.status == "open",
-            EntryListing.user_id != listing.user_id,
-        )
+    """For an entry on offer: how many people want this distance (a post or an alert).
+    For a post looking for one: how many entries are on offer for it."""
+    posters = set(
+        db.scalars(
+            select(EntryListing.user_id).where(
+                EntryListing.race_id == listing.race_id,
+                EntryListing.race_event_id == listing.race_event_id,
+                EntryListing.kind != listing.kind,
+                EntryListing.status == "open",
+                EntryListing.user_id != listing.user_id,
+            )
+        ).all()
     )
+    if listing.kind == "offering" and listing.race_event_id is not None:
+        posters |= set(
+            db.scalars(
+                select(EntryWant.user_id).where(
+                    EntryWant.race_event_id == listing.race_event_id, EntryWant.user_id != listing.user_id
+                )
+            ).all()
+        )
+    return len(posters)
 
 
 def _listing_out(db: Session, listing: EntryListing, me: User, labels: dict) -> ListingOut:
@@ -720,9 +760,27 @@ def create_listing(race_id: uuid.UUID, body: ListingBody, user: CurrentUser, db:
         )
         .distinct()
     ).all()
-    if answers:
+    alerted = set(answers)
+    if listing.kind == "offering":
+        alerted |= set(
+            db.scalars(
+                select(EntryWant.user_id)
+                .join(User, User.id == EntryWant.user_id)
+                .join(
+                    RaceAttendance,
+                    and_(RaceAttendance.user_id == EntryWant.user_id, RaceAttendance.race_id == race.id),
+                )
+                .where(
+                    EntryWant.race_event_id == listing.race_event_id,
+                    EntryWant.user_id != user.id,
+                    not_blocked_with(user.id),
+                    race_access_condition(EntryWant.user_id, EntryWant.race_id),
+                )
+            ).all()
+        )
+    if alerted:
         hub.publish_from_thread(
-            list(answers),
+            list(alerted),
             {
                 "type": "swap_match",
                 "raceId": str(race.id),
@@ -732,7 +790,52 @@ def create_listing(race_id: uuid.UUID, body: ListingBody, user: CurrentUser, db:
                 "eventLabel": labels.get(listing.race_event_id),
             },
         )
+        distance = labels.get(listing.race_event_id) or "race"
+        push.notify(
+            list(alerted),
+            "swaps",
+            f"{distance} entry available" if listing.kind == "offering" else f"Someone needs a {distance} entry",
+            f"{race.name}: open the swap board to message them",
+            f"/race/{race.id}?section=swaps",
+        )
     return _listing_out(db, listing, user, labels)
+
+
+@router.get("/races/{race_id}/wants", response_model=EntryWantsOut)
+def get_entry_wants(race_id: uuid.UUID, user: CurrentUser, db: DbSession) -> EntryWantsOut:
+    race = get_race(db, race_id, user)
+    require_attending(db, race, user)
+    wanted = db.scalars(
+        select(EntryWant.race_event_id).where(EntryWant.user_id == user.id, EntryWant.race_id == race.id)
+    ).all()
+    return EntryWantsOut(race_event_ids=list(wanted), alerts=has_race_access(db, user, race.id))
+
+
+@router.put("/races/{race_id}/wants", response_model=EntryWantsOut)
+def set_entry_wants(race_id: uuid.UUID, body: EntryWantsBody, user: CurrentUser, db: DbSession) -> EntryWantsOut:
+    """Which distances you want an entry for. Works before the transfer window opens, so you're
+    first to know once entries are offered."""
+    race = get_race(db, race_id, user)
+    require_attending(db, race, user)
+    if swap_window(race, sa_today()) in ("none", "closed"):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, detail="Entries for this race can't be transferred, so there's nothing to alert you to."
+        )
+    distances = {e.id for e in race.events}
+    wanted = set(body.race_event_ids)
+    if not wanted <= distances:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="That distance isn't part of this race.")
+    current = {
+        w.race_event_id: w
+        for w in db.scalars(select(EntryWant).where(EntryWant.user_id == user.id, EntryWant.race_id == race.id)).all()
+    }
+    for event_id, want in current.items():
+        if event_id not in wanted:
+            db.delete(want)
+    for event_id in wanted - current.keys():
+        db.add(EntryWant(user_id=user.id, race_event_id=event_id, race_id=race.id, created_at=utcnow()))
+    db.commit()
+    return get_entry_wants(race_id, user, db)
 
 
 @router.post("/races/{race_id}/swaps/seen", status_code=status.HTTP_204_NO_CONTENT)
@@ -748,15 +851,23 @@ def swaps_seen(race_id: uuid.UUID, user: CurrentUser, db: DbSession) -> Response
 @router.get("/me/race-alerts", response_model=RaceAlerts)
 def my_race_alerts(user: CurrentUser, db: DbSession) -> RaceAlerts:
     """Unread mentions and swap alerts across your upcoming races, for the Races tab badge."""
-    with_posts = db.scalars(
-        select(EntryListing.race_id)
-        .join(Race, Race.id == EntryListing.race_id)
-        .where(EntryListing.user_id == user.id, EntryListing.status == "open", Race.ends_on >= sa_today())
-        .distinct()
-    ).all()
+    # Races where I have an open post or an entry alert
+    watching = set(
+        db.scalars(
+            select(EntryListing.race_id)
+            .join(Race, Race.id == EntryListing.race_id)
+            .where(EntryListing.user_id == user.id, EntryListing.status == "open", Race.ends_on >= sa_today())
+        ).all()
+    ) | set(
+        db.scalars(
+            select(EntryWant.race_id)
+            .join(Race, Race.id == EntryWant.race_id)
+            .where(EntryWant.user_id == user.id, Race.ends_on >= sa_today())
+        ).all()
+    )
     return RaceAlerts(
         mentions=_unread_mentions(db, user),
-        swap_matches=sum(_unread_swap_matches(db, user, race_id) for race_id in with_posts),
+        swap_matches=sum(_unread_swap_matches(db, user, race_id) for race_id in watching),
     )
 
 
