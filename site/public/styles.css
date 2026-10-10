@@ -277,15 +277,3 @@ footer a:hover { color: var(--heading); }
   .run-date { position: static; width: auto; margin-top: 1rem; }
 }
 @media (min-width: 1000px) { .race-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-
-/* Separator between the hero and "Why RunStride": a brand-gradient hairline that fades at the edges */
-#how { position: relative; }
-#how::before {
-  content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-  width: min(72rem, calc(100% - 2.5rem)); height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(214, 60, 151, 0.7) 30%, rgba(244, 124, 79, 0.7) 70%, transparent);
-}
-#how::after {
-  content: ""; position: absolute; top: -3px; left: 50%; transform: translateX(-50%);
-  width: 7px; height: 7px; border-radius: 50%; background: #f0605a; box-shadow: 0 0 14px rgba(240, 96, 90, 0.8);
-}
