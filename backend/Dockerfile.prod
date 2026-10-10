@@ -15,5 +15,7 @@ COPY . .
 RUN useradd --create-home --uid 10001 runstride && chown -R runstride /app
 USER runstride
 
+# On every start: bring the database up to date, then run the server. (Run one instance only:
+# live events are in memory, and two instances would both try to migrate.)
 # The host sets PORT. Behind its proxy, trust the forwarded client address (used for rate limits).
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]
