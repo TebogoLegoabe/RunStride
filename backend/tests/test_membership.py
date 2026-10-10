@@ -376,3 +376,29 @@ def test_entry_alert_fires_when_an_entry_is_offered(client, make_race, make_runn
     # Other distances don't trigger it
     post_listing(client, sipho, race, "offering", "Marathon")
     assert client.get("/me/race-alerts", headers=thandi["headers"]).json()["swapMatches"] == 0
+
+
+# --- Settings for hosting ---
+
+
+def test_database_urls_from_hosts_use_the_psycopg3_driver():
+    from app.config import Settings
+
+    for given in ("postgresql://u:p@h:5432/db", "postgres://u:p@h:5432/db", "postgresql+psycopg://u:p@h:5432/db"):
+        assert Settings(database_url=given).database_url == "postgresql+psycopg://u:p@h:5432/db"
+
+
+def test_production_refuses_unsafe_settings():
+    from app.config import Settings
+
+    good = dict(
+        environment="production",
+        secret_key="x" * 40,
+        photo_storage="s3",
+        sms_provider="bulksms",
+        require_id_verification=True,
+    )
+    assert Settings(**good).test_purchases is False  # forced off, never on in production
+    for bad in ({"photo_storage": "local"}, {"sms_provider": "console"}, {"secret_key": "dev-only-insecure-secret-change-me-before-deploying"}):
+        with pytest.raises(ValueError):
+            Settings(**{**good, **bad})

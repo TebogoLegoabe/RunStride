@@ -135,6 +135,35 @@ still done by Persona.
    `backend/.env` (`GOOGLE_CLIENT_IDS`). Restart both.
 3. Works on the web straight away; phones need a development build.
 
+### Hosting the API on Railway (api.runstride.co.za)
+`backend/railway.json` tells Railway to build `backend/Dockerfile.prod`, run `alembic upgrade head`
+before each deploy, and check `/health`. Run **one** instance only (live events are in memory).
+
+1. Railway -> New project. Add a **PostGIS database** (template marketplace: search "PostGIS"), or
+   a service from the Docker image `postgis/postgis:16-3.4` with a volume at `/var/lib/postgresql/data`
+   and variables `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `PGDATA=/var/lib/postgresql/data/pgdata`.
+2. Add a service from this GitHub repo. Settings -> Root Directory: `backend`.
+3. Variables on the API service (secrets from the services' own dashboards):
+
+   | Variable | Value |
+   |---|---|
+   | `ENVIRONMENT` | `production` |
+   | `SECRET_KEY` | long random: `python -c "import secrets;print(secrets.token_urlsafe(48))"` |
+   | `DATABASE_URL` | reference the database's connection URL (`postgresql://...`; converted automatically) |
+   | `PUBLIC_BASE_URL` | `https://api.runstride.co.za` |
+   | `PHOTO_STORAGE` | `s3` plus `S3_ENDPOINT_URL`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_BASE_URL` (Cloudflare R2) |
+   | `SMS_PROVIDER` | `bulksms` plus `BULKSMS_TOKEN_ID`, `BULKSMS_TOKEN_SECRET` |
+   | `PERSONA_API_KEY`, `PERSONA_INQUIRY_TEMPLATE_ID`, `PERSONA_WEBHOOK_SECRET` | from Persona |
+   | `GOOGLE_CLIENT_IDS` | `["<web id>","<ios id>","<android id>"]` |
+   | `PUSH_PROVIDER` | `expo` (once the development build exists) |
+
+   The API refuses to start in production with local photo storage, console SMS or the dev secret key.
+   Production also requires ID verification, so Persona must be set up first.
+4. Settings -> Networking -> Custom domain `api.runstride.co.za`. Railway shows a CNAME target; in Cloudflare
+   DNS add `api` -> that target with the proxy **off** (grey cloud).
+5. Persona webhook: `https://api.runstride.co.za/webhooks/persona`. RevenueCat (later): `/webhooks/revenuecat`.
+6. App builds use `EXPO_PUBLIC_API_URL=https://api.runstride.co.za`.
+
 ### Website (runstride.co.za)
 `site/` is the public website: landing page with the beta sign-up, privacy policy and terms
 (`site/public`), and the sign-up handler (`site/functions/api/waitlist.js`). It runs on

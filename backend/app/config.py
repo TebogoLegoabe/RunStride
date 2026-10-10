@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEV_SECRET_KEY = "dev-only-insecure-secret-change-me-before-deploying"
@@ -90,6 +91,15 @@ class Settings(BaseSettings):
     # Expo web dev server origins
     cors_origins: list[str] = ["http://localhost:8081", "http://localhost:19006"]
 
+    @field_validator("database_url")
+    @classmethod
+    def use_psycopg3(cls, url: str) -> str:
+        """Hosts like Railway give "postgresql://..." or "postgres://...": we use the psycopg 3 driver."""
+        for plain in ("postgres://", "postgresql://"):
+            if url.startswith(plain):
+                return "postgresql+psycopg://" + url[len(plain):]
+        return url
+
     @property
     def is_development(self) -> bool:
         return self.environment == "development"
@@ -99,6 +109,11 @@ class Settings(BaseSettings):
             raise ValueError("SECRET_KEY must be set outside development")
         if not self.is_development and not self.require_id_verification:
             raise ValueError("REQUIRE_ID_VERIFICATION can only be turned off in development")
+        if not self.is_development and self.photo_storage == "local":
+            # Hosted servers lose local files on every deploy
+            raise ValueError("PHOTO_STORAGE must be s3 outside development")
+        if not self.is_development and self.sms_provider != "bulksms":
+            raise ValueError("SMS_PROVIDER must be bulksms outside development")
         if not self.is_development and self.test_purchases:
             # Free Plus for anyone who asks: never outside development
             self.test_purchases = False
