@@ -13,7 +13,10 @@ function sleep(ms) {
 }
 
 async function apiTunnelUrl() {
-  execSync("docker compose --profile tunnel up -d tunnel", { stdio: "ignore" });
+  // A fresh tunnel every time. Free quick tunnels expire after a while ("Tunnel not found") but the
+  // container keeps running, so reusing it hands out an address that no longer works. Recreating it
+  // also starts a clean log, so the only address in it is the new one.
+  execSync("docker compose --profile tunnel up -d --force-recreate tunnel", { stdio: "ignore" });
   for (let i = 0; i < WAIT_SECONDS; i++) {
     // Only the recent lines: the tunnel's log grows for as long as it runs, and reading all of it
     // overflowed the buffer (ENOBUFS). The URL is printed each time it starts, so the tail has it.
