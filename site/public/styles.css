@@ -223,9 +223,9 @@ footer a:hover { color: var(--heading); }
   --screen-bg: #fffaf7;
   --join-bg: #2b1b30;
   --band-image: url("/race-band.jpg");
-  --band-opacity: 0.72;
-  --band-wash: rgba(241, 233, 225, 0.9);
-  --band-wash-mid: rgba(241, 233, 225, 0.46);
+  --band-opacity: 0.95;
+  --band-wash: rgba(241, 233, 225, 0.88);
+  --band-wash-mid: rgba(241, 233, 225, 0.66);
   --shadow-card: 0 8px 28px rgba(50, 34, 45, 0.035);
   --shadow-card-hover: 0 18px 38px rgba(50, 34, 45, 0.08);
 }
@@ -402,7 +402,7 @@ section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
   color-scheme: dark;
 
   --hero-bg: radial-gradient(ellipse at 80% 20%, #3b1e42 0, transparent 42%), linear-gradient(180deg, #1b0f24, #170c20);
-  --header-bg: rgba(21, 11, 29, 0.88);
+  --header-bg: rgba(21, 11, 29, 0.84);
   --panel: #241633;
   --panel-soft: rgba(36, 22, 51, 0.82);
   --panel-alt: #1f1229;
@@ -422,9 +422,9 @@ section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
   --screen-bg: #1b0f24;
   --join-bg: #140a1c;
   --band-image: url("/race-band-dark.jpg");
-  --band-opacity: 0.62;
-  --band-wash: rgba(21, 11, 29, 0.88);
-  --band-wash-mid: rgba(21, 11, 29, 0.5);
+  --band-opacity: 0.95;
+  --band-wash: rgba(21, 11, 29, 0.86);
+  --band-wash-mid: rgba(21, 11, 29, 0.6);
   --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.35);
   --shadow-card-hover: 0 18px 38px rgba(0, 0, 0, 0.5);
   }
@@ -444,7 +444,7 @@ section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
   color-scheme: dark;
 
   --hero-bg: radial-gradient(ellipse at 80% 20%, #3b1e42 0, transparent 42%), linear-gradient(180deg, #1b0f24, #170c20);
-  --header-bg: rgba(21, 11, 29, 0.88);
+  --header-bg: rgba(21, 11, 29, 0.84);
   --panel: #241633;
   --panel-soft: rgba(36, 22, 51, 0.82);
   --panel-alt: #1f1229;
@@ -464,7 +464,7 @@ section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
   --screen-bg: #1b0f24;
   --join-bg: #140a1c;
   --band-image: url("/race-band-dark.jpg");
-  --band-opacity: 0.3;
+  --band-opacity: 0.95;
   --band-wash: rgba(21, 11, 29, 0.93);
   --band-wash-mid: rgba(21, 11, 29, 0.62);
   --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.35);
@@ -509,15 +509,15 @@ section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
 
 /* Which part of the photo each band uses, and the wash that keeps text readable.
    #how and #safety sit on the pale panel colour, so their wash is lighter still. */
-#how { --band-image: url("/band-how.jpg"); --band-opacity: 0.7; --band-wash: rgba(255, 253, 251, 0.9); --band-wash-mid: rgba(255, 253, 251, 0.5); }
-#safety { --band-image: url("/band-safety.jpg"); --band-opacity: 0.68; --band-wash: rgba(255, 253, 251, 0.9); --band-wash-mid: rgba(255, 253, 251, 0.52); }
+#how { --band-image: url("/band-how.jpg"); --band-opacity: 0.95; --band-wash: rgba(255, 253, 251, 0.86); --band-wash-mid: rgba(255, 253, 251, 0.5); }
+#safety { --band-image: url("/band-safety.jpg"); --band-opacity: 0.95; --band-wash: rgba(255, 253, 251, 0.86); --band-wash-mid: rgba(255, 253, 251, 0.34); }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) #how { --band-image: url("/band-how-dark.jpg"); --band-opacity: 0.6; --band-wash: rgba(31, 18, 41, 0.88); --band-wash-mid: rgba(31, 18, 41, 0.52); }
-  :root:not([data-theme="light"]) #safety { --band-image: url("/band-safety-dark.jpg"); --band-opacity: 0.58; --band-wash: rgba(31, 18, 41, 0.88); --band-wash-mid: rgba(31, 18, 41, 0.54); }
+  :root:not([data-theme="light"]) #how { --band-image: url("/band-how-dark.jpg"); --band-opacity: 0.95; --band-wash: rgba(31, 18, 41, 0.84); --band-wash-mid: rgba(31, 18, 41, 0.36); }
+  :root:not([data-theme="light"]) #safety { --band-image: url("/band-safety-dark.jpg"); --band-opacity: 0.95; --band-wash: rgba(31, 18, 41, 0.84); --band-wash-mid: rgba(31, 18, 41, 0.36); }
 }
-:root[data-theme="dark"] #how { --band-image: url("/band-how-dark.jpg"); --band-opacity: 0.6; --band-wash: rgba(31, 18, 41, 0.88); --band-wash-mid: rgba(31, 18, 41, 0.52); }
-:root[data-theme="dark"] #safety { --band-image: url("/band-safety-dark.jpg"); --band-opacity: 0.58; --band-wash: rgba(31, 18, 41, 0.88); --band-wash-mid: rgba(31, 18, 41, 0.54); }
+:root[data-theme="dark"] #how { --band-image: url("/band-how-dark.jpg"); --band-opacity: 0.95; --band-wash: rgba(31, 18, 41, 0.84); --band-wash-mid: rgba(31, 18, 41, 0.36); }
+:root[data-theme="dark"] #safety { --band-image: url("/band-safety-dark.jpg"); --band-opacity: 0.95; --band-wash: rgba(31, 18, 41, 0.84); --band-wash-mid: rgba(31, 18, 41, 0.36); }
 
 /* ---------- Photo bands on the hero and the sign-up ----------
    The hero already uses ::before for its glow, so the photo goes on ::after,
@@ -543,13 +543,13 @@ section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
 .join .wrap { position: relative; z-index: 1; }
 
 /* The hero keeps its warm tint, the sign-up stays dark in both themes */
-.hero { --band-image: url("/band-hero.jpg"); --band-wash: rgba(251, 248, 244, 0.93); --band-wash-mid: rgba(251, 248, 244, 0.6); }
-.join { --band-image: url("/band-join-dark.jpg"); --band-wash: rgba(20, 10, 28, 0.93); --band-wash-mid: rgba(20, 10, 28, 0.62); }
+.hero { --band-image: url("/band-hero.jpg"); --band-wash: rgba(251, 248, 244, 0.88); --band-wash-mid: rgba(251, 248, 244, 0.34); }
+.join { --band-image: url("/band-join-dark.jpg"); --band-wash: rgba(20, 10, 28, 0.88); --band-wash-mid: rgba(20, 10, 28, 0.38); }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .hero { --band-image: url("/band-hero-dark.jpg"); --band-wash: rgba(27, 15, 36, 0.92); --band-wash-mid: rgba(27, 15, 36, 0.58); }
+  :root:not([data-theme="light"]) .hero { --band-image: url("/band-hero-dark.jpg"); --band-wash: rgba(27, 15, 36, 0.86); --band-wash-mid: rgba(27, 15, 36, 0.34); }
 }
-:root[data-theme="dark"] .hero { --band-image: url("/band-hero-dark.jpg"); --band-wash: rgba(27, 15, 36, 0.92); --band-wash-mid: rgba(27, 15, 36, 0.58); }
+:root[data-theme="dark"] .hero { --band-image: url("/band-hero-dark.jpg"); --band-wash: rgba(27, 15, 36, 0.86); --band-wash-mid: rgba(27, 15, 36, 0.34); }
 
 /* ---------- Contact ---------- */
 .contact { background: var(--panel-alt); border-top: 1px solid var(--line); }
