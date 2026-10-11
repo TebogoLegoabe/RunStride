@@ -550,3 +550,24 @@ section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
   :root:not([data-theme="light"]) .hero { --band-image: url("/band-hero-dark.jpg"); --band-wash: rgba(27, 15, 36, 0.92); --band-wash-mid: rgba(27, 15, 36, 0.58); }
 }
 :root[data-theme="dark"] .hero { --band-image: url("/band-hero-dark.jpg"); --band-wash: rgba(27, 15, 36, 0.92); --band-wash-mid: rgba(27, 15, 36, 0.58); }
+
+/* ---------- Contact ---------- */
+.contact { background: var(--panel-alt); border-top: 1px solid var(--line); }
+.contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.1rem; }
+.contact-card {
+  background: var(--panel); border: 1px solid var(--line-soft); border-radius: 18px;
+  padding: 1.5rem; box-shadow: var(--shadow-card);
+}
+.contact-card h3 { font-size: 1.05rem; font-weight: 700; color: var(--heading); }
+.contact-card p { color: var(--muted); font-size: 0.95rem; margin-top: 0.4rem; }
+.contact-link {
+  display: inline-block; margin-top: 0.9rem; font-weight: 700; color: var(--icon-ink);
+  text-decoration: none; border-bottom: 1px solid currentColor; padding-bottom: 1px;
+  overflow-wrap: anywhere;
+}
+.contact-link:hover { color: var(--heading); }
+.contact-urgent {
+  margin-top: 1.6rem; padding: 1rem 1.2rem; border-radius: 14px;
+  background: var(--icon-bg); color: var(--muted); font-size: 0.95rem;
+}
+.contact-urgent strong { color: var(--heading); }
