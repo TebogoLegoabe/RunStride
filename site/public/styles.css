@@ -552,7 +552,13 @@ section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
 :root[data-theme="dark"] .hero { --band-image: url("/band-hero-dark.jpg"); --band-wash: rgba(27, 15, 36, 0.86); --band-wash-mid: rgba(27, 15, 36, 0.34); }
 
 /* ---------- Contact ---------- */
-.contact { background: var(--panel-alt); border-top: 1px solid var(--line); }
+.contact { background: var(--panel-alt); border-top: 1px solid var(--line); position: relative; overflow: hidden; }
+.contact::before, .contact::after {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+}
+.contact::before { background: var(--band-image) center / cover no-repeat; opacity: var(--band-opacity); }
+.contact::after { background: linear-gradient(90deg, var(--band-wash) 0%, var(--band-wash) 34%, var(--band-wash-mid) 68%, var(--band-wash-mid) 100%); }
+.contact .wrap { position: relative; z-index: 1; }
 .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.1rem; }
 .contact-card {
   background: var(--panel); border: 1px solid var(--line-soft); border-radius: 18px;
@@ -571,3 +577,40 @@ section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
   background: var(--icon-bg); color: var(--muted); font-size: 0.95rem;
 }
 .contact-urgent strong { color: var(--heading); }
+
+.contact { --band-image: url("/band-contact.jpg"); --band-opacity: 0.95; --band-wash: rgba(255, 253, 251, 0.86); --band-wash-mid: rgba(255, 253, 251, 0.34); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .contact { --band-image: url("/band-contact-dark.jpg"); --band-wash: rgba(31, 18, 41, 0.84); --band-wash-mid: rgba(31, 18, 41, 0.36); } }
+:root[data-theme="dark"] .contact { --band-image: url("/band-contact-dark.jpg"); --band-wash: rgba(31, 18, 41, 0.84); --band-wash-mid: rgba(31, 18, 41, 0.36); }
+
+/* ---------- Phones ----------
+   A wide photo under "cover" on a narrow, tall section is zoomed until it's just a smear,
+   so phones load a portrait crop of the same photo instead. */
+@media (max-width: 700px) {
+  #how { --band-image: url("/band-how-m.jpg"); }
+  .races { --band-image: url("/race-band-m.jpg"); }
+  #safety { --band-image: url("/band-safety-m.jpg"); }
+  .hero { --band-image: url("/band-hero-m.jpg"); }
+  .join { --band-image: url("/band-join-m.jpg"); }
+  .contact { --band-image: url("/band-contact-m.jpg"); }
+}
+@media (max-width: 700px) and (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #how { --band-image: url("/band-how-m-dark.jpg"); }
+  :root:not([data-theme="light"]) .races { --band-image: url("/race-band-m-dark.jpg"); }
+  :root:not([data-theme="light"]) #safety { --band-image: url("/band-safety-m-dark.jpg"); }
+  :root:not([data-theme="light"]) .hero { --band-image: url("/band-hero-m-dark.jpg"); }
+  :root:not([data-theme="light"]) .join { --band-image: url("/band-join-m-dark.jpg"); }
+  :root:not([data-theme="light"]) .contact { --band-image: url("/band-contact-m-dark.jpg"); }
+}
+@media (max-width: 700px) {
+  :root[data-theme="dark"] #how { --band-image: url("/band-how-m-dark.jpg"); }
+  :root[data-theme="dark"] .races { --band-image: url("/race-band-m-dark.jpg"); }
+  :root[data-theme="dark"] #safety { --band-image: url("/band-safety-m-dark.jpg"); }
+  :root[data-theme="dark"] .hero { --band-image: url("/band-hero-m-dark.jpg"); }
+  :root[data-theme="dark"] .join { --band-image: url("/band-join-m-dark.jpg"); }
+  :root[data-theme="dark"] .contact { --band-image: url("/band-contact-m-dark.jpg"); }
+}
+
+/* Tighter rhythm: the bands were sitting too far apart, most noticeably on desktop */
+section { padding-block: clamp(3rem, 6vw, 5rem); }
+.section-head { margin-bottom: clamp(1.5rem, 3vw, 2.2rem); }
+.hero { padding-block: clamp(3rem, 6vw, 5rem); }
