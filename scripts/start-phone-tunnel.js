@@ -15,7 +15,12 @@ function sleep(ms) {
 async function apiTunnelUrl() {
   execSync("docker compose --profile tunnel up -d tunnel", { stdio: "ignore" });
   for (let i = 0; i < WAIT_SECONDS; i++) {
-    const logs = execSync("docker compose logs tunnel", { encoding: "utf8" });
+    // Only the recent lines: the tunnel's log grows for as long as it runs, and reading all of it
+    // overflowed the buffer (ENOBUFS). The URL is printed each time it starts, so the tail has it.
+    const logs = execSync("docker compose logs --tail 2000 tunnel", {
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+    });
     // Newest URL wins: the tunnel gets a new one each time it restarts
     const urls = logs.match(new RegExp(TUNNEL_URL, "g"));
     if (urls) return urls[urls.length - 1];
