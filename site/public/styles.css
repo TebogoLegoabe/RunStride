@@ -185,3 +185,107 @@ footer a:hover { color: var(--heading); }
 .lost img { margin: 0 auto 1.5rem; }
 .lost-text { color: var(--muted); margin-top: 0.8rem; }
 .lost-action { margin-top: 2rem; }
+
+/* 2026 visual refresh: a confident, warm editorial look with the brand's
+   plum and coral retained as accents. */
+:root {
+  --bg: #fbf8f4;
+  --bg-deep: #f1e9e1;
+  --surface: #fff;
+  --border: #e8ded6;
+  --text: #56505a;
+  --muted: #716a73;
+  --faint: #887e88;
+  --heading: #24172b;
+  --orange: #e86f4e;
+  --pink: #a33d74;
+  --gradient: linear-gradient(120deg, #a33d74, #df604f 72%, #ee8050);
+  --radius: 22px;
+  color-scheme: light;
+}
+body { line-height: 1.7; }
+.wrap { max-width: 76rem; padding-inline: clamp(1.25rem, 5vw, 4rem); }
+.top { background: rgba(251,248,244,.9); border-bottom-color: rgba(69,39,65,.1); }
+.top .wrap { min-height: 76px; }
+.brand { color: var(--heading); font-size: 1.15rem; letter-spacing: -.04em; }
+.brand img { width: 40px; }
+.top nav { gap: clamp(1rem, 3vw, 2.3rem); }
+.top nav a { color: #5f5661; }
+.top nav a.button { color: #fff; }
+.button { border-radius: 12px; box-shadow: 0 10px 24px rgba(163,61,116,.18); transition: transform .2s ease, box-shadow .2s ease; }
+.button:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(163,61,116,.25); }
+.hero { min-height: 650px; padding-block: clamp(4.5rem, 10vw, 8rem); background: radial-gradient(ellipse at 80% 20%, #f4dce0 0, transparent 36%), linear-gradient(180deg,#fbf8f4,#f8f2ec); }
+.hero::before { width: 44rem; height: 44rem; background: radial-gradient(closest-side,rgba(232,111,78,.13),transparent 72%); }
+.hero .wrap { grid-template-columns: minmax(0,1.08fr) minmax(20rem,.92fr); gap: clamp(2rem,8vw,7rem); }
+.eyebrow { color: #a33d74; font-size: .75rem; letter-spacing: .16em; }
+.hero h1 { max-width: 12ch; font-size: clamp(3rem,6.5vw,5.4rem); line-height: 1.02; letter-spacing: -.065em; margin-top: 1rem; }
+.hero h1 em { background: linear-gradient(120deg,#a33d74,#e86f4e); -webkit-background-clip: text; background-clip: text; }
+.hero .lead { color: #625964; font-size: clamp(1.05rem,1.6vw,1.2rem); max-width: 38rem; margin-top: 1.5rem; }
+.hero .actions { margin-top: 2.2rem; }
+.hero .actions .button { padding: .95rem 1.5rem; }
+.hero .note { color: #766d77; }
+.phone { width: min(18rem,100%); border-radius: 2.2rem; padding: .55rem; background: #24172b; box-shadow: 0 36px 90px rgba(51,25,48,.24), inset 0 0 0 1px rgba(255,255,255,.22); }
+.screen { border-radius: 1.75rem; background: #fffaf7; padding: .75rem; }
+.runner { background: linear-gradient(150deg,#f19a71 0,#cb5681 52%,#502c65 100%); }
+.runner .info { background: linear-gradient(transparent,rgba(36,23,43,.92)); }
+.runner .chip { background: #fff; color: #87365f; }
+.buttons .pass { background: #eee5e2; color: #725f6e; }
+section { padding-block: clamp(4rem,8vw,6.5rem); }
+.section-head { margin-bottom: 2.7rem; }
+.section-head h2 { max-width: 17ch; font-size: clamp(2rem,4.5vw,3.3rem); letter-spacing: -.05em; }
+.section-head p { color: var(--muted); }
+.features { gap: 1rem; }
+.feature { background: rgba(255,255,255,.86); border-color: rgba(69,39,65,.1); border-radius: 18px; padding: 1.6rem; box-shadow: 0 8px 28px rgba(50,34,45,.035); transition: transform .2s ease, box-shadow .2s ease; }
+.feature:hover { transform: translateY(-4px); box-shadow: 0 18px 38px rgba(50,34,45,.08); }
+.feature .icon { border-radius: 13px; background: #f7e7e5; }
+.feature .icon svg { stroke: #a33d74; }
+.feature h3 { color: var(--heading); }
+.feature p,.step p { color: #716a73; }
+.races { background: #f1e9e1; }
+.steps { gap: 2rem; }
+.step { padding: 1.4rem 1rem 1.3rem 4rem; border-top: 1px solid #ddcfc7; }
+.step::before { top: 1.2rem; border: 0; background: #fff; color: #a33d74; box-shadow: 0 3px 12px rgba(42,20,40,.08); }
+.step h3 { color: var(--heading); }
+.callout { border-color: #d95c69; color: #655b66; }
+.safety-list { gap: 1.2rem 2.5rem; }
+.safety-list li { padding: 1rem; background: #fff; border: 1px solid rgba(69,39,65,.09); border-radius: 15px; box-shadow: 0 6px 20px rgba(50,34,45,.035); }
+.safety-list li::before { content: "✓"; color: #a33d74; }
+.safety-list strong { color: var(--heading); }
+.join { background: #2b1b30; color: #eee5ed; }
+.join .eyebrow { color: #f29a78; }
+.join-title { color: white; max-width: 13ch; font-size: clamp(2.2rem,4.5vw,3.4rem); letter-spacing: -.05em; }
+.join .points { color: #ded1df; }
+.join .points li::before { color: #f29a78; }
+form { background: #fff; border: 0; border-radius: 20px; padding: clamp(1.25rem,4vw,2rem); box-shadow: 0 22px 60px rgba(0,0,0,.16); }
+.field label, fieldset legend { color: var(--heading); }
+input[type="text"],input[type="email"],select { color: var(--heading); background: #fcfaf8; border-color: #e7ded9; }
+input[type="text"]:focus,input[type="email"]:focus,select:focus { border-color: #a33d74; outline: 3px solid rgba(163,61,116,.12); }
+.options label { color: #5b5360; background: #fcfaf8; border-color: #e7ded9; }
+.options label:has(input:checked) { background: #f8e9ee; border-color: #c56b8e; color: #783354; }
+.check { color: #69616a; }
+.join a { color: #a33d74; }
+footer { color: #786e78; border-color: #e4d9d2; }
+footer a { color: #5f5661; }
+.doc { color: #56505a; }
+.doc .summary,.table-wrap { background: white; border-color: #e8ded6; }
+.doc thead th { color: var(--heading); background: #f4ece6; }
+.doc th,.doc td { border-color: #e8ded6; }
+@media (max-width: 860px) {
+  .hero { min-height: auto; }
+  .hero .wrap,.join .wrap { grid-template-columns: 1fr; }
+  .hero .wrap { text-align: center; }
+  .hero h1,.hero .lead { margin-inline: auto; }
+  .hero .actions { justify-content: center; }
+  .phone { margin-top: 1rem; }
+  .join-title { max-width: 18ch; }
+}
+@media (max-width: 480px) {
+  .top .wrap { min-height: 66px; }
+  .top .button { padding: .55rem .85rem; }
+  .hero { padding-block: 4rem 3.5rem; }
+  .hero h1 { font-size: clamp(2.65rem,13vw,3.5rem); }
+  .hero .actions { flex-direction: column; }
+  .phone { width: min(15rem,80%); }
+  .safety-list { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .feature,.button { transition: none; } }
