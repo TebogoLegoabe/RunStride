@@ -223,9 +223,9 @@ footer a:hover { color: var(--heading); }
   --screen-bg: #fffaf7;
   --join-bg: #2b1b30;
   --band-image: url("/race-band.jpg");
-  --band-opacity: 0.4;
-  --band-wash: rgba(241, 233, 225, 0.94);
-  --band-wash-mid: rgba(241, 233, 225, 0.68);
+  --band-opacity: 0.72;
+  --band-wash: rgba(241, 233, 225, 0.9);
+  --band-wash-mid: rgba(241, 233, 225, 0.46);
   --shadow-card: 0 8px 28px rgba(50, 34, 45, 0.035);
   --shadow-card-hover: 0 18px 38px rgba(50, 34, 45, 0.08);
 }
@@ -374,7 +374,7 @@ footer a { color: var(--nav-ink); }
 /* A cream wash over the photo keeps the headings and cards easy to read */
 .races::after, #how::after, #safety::after {
   content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: linear-gradient(90deg, var(--band-wash), var(--band-wash-mid) 55%, var(--band-wash));
+  background: linear-gradient(90deg, var(--band-wash) 0%, var(--band-wash) 34%, var(--band-wash-mid) 68%, var(--band-wash-mid) 100%);
 }
 .races .wrap, #how .wrap, #safety .wrap { position: relative; z-index: 1; }
 /* The step cards lift off the photo */
@@ -422,9 +422,9 @@ section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
   --screen-bg: #1b0f24;
   --join-bg: #140a1c;
   --band-image: url("/race-band-dark.jpg");
-  --band-opacity: 0.3;
-  --band-wash: rgba(21, 11, 29, 0.93);
-  --band-wash-mid: rgba(21, 11, 29, 0.62);
+  --band-opacity: 0.62;
+  --band-wash: rgba(21, 11, 29, 0.88);
+  --band-wash-mid: rgba(21, 11, 29, 0.5);
   --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.35);
   --shadow-card-hover: 0 18px 38px rgba(0, 0, 0, 0.5);
   }
@@ -509,12 +509,12 @@ section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
 
 /* Which part of the photo each band uses, and the wash that keeps text readable.
    #how and #safety sit on the pale panel colour, so their wash is lighter still. */
-#how { --band-image: url("/band-how.jpg"); --band-opacity: 0.3; --band-wash: rgba(255, 253, 251, 0.95); --band-wash-mid: rgba(255, 253, 251, 0.76); }
-#safety { --band-image: url("/band-safety.jpg"); --band-opacity: 0.28; --band-wash: rgba(255, 253, 251, 0.95); --band-wash-mid: rgba(255, 253, 251, 0.78); }
+#how { --band-image: url("/band-how.jpg"); --band-opacity: 0.7; --band-wash: rgba(255, 253, 251, 0.9); --band-wash-mid: rgba(255, 253, 251, 0.5); }
+#safety { --band-image: url("/band-safety.jpg"); --band-opacity: 0.68; --band-wash: rgba(255, 253, 251, 0.9); --band-wash-mid: rgba(255, 253, 251, 0.52); }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) #how { --band-image: url("/band-how-dark.jpg"); --band-opacity: 0.26; --band-wash: rgba(31, 18, 41, 0.94); --band-wash-mid: rgba(31, 18, 41, 0.66); }
-  :root:not([data-theme="light"]) #safety { --band-image: url("/band-safety-dark.jpg"); --band-opacity: 0.24; --band-wash: rgba(31, 18, 41, 0.94); --band-wash-mid: rgba(31, 18, 41, 0.68); }
+  :root:not([data-theme="light"]) #how { --band-image: url("/band-how-dark.jpg"); --band-opacity: 0.6; --band-wash: rgba(31, 18, 41, 0.88); --band-wash-mid: rgba(31, 18, 41, 0.52); }
+  :root:not([data-theme="light"]) #safety { --band-image: url("/band-safety-dark.jpg"); --band-opacity: 0.58; --band-wash: rgba(31, 18, 41, 0.88); --band-wash-mid: rgba(31, 18, 41, 0.54); }
 }
-:root[data-theme="dark"] #how { --band-image: url("/band-how-dark.jpg"); --band-opacity: 0.26; --band-wash: rgba(31, 18, 41, 0.94); --band-wash-mid: rgba(31, 18, 41, 0.66); }
-:root[data-theme="dark"] #safety { --band-image: url("/band-safety-dark.jpg"); --band-opacity: 0.24; --band-wash: rgba(31, 18, 41, 0.94); --band-wash-mid: rgba(31, 18, 41, 0.68); }
+:root[data-theme="dark"] #how { --band-image: url("/band-how-dark.jpg"); --band-opacity: 0.6; --band-wash: rgba(31, 18, 41, 0.88); --band-wash-mid: rgba(31, 18, 41, 0.52); }
+:root[data-theme="dark"] #safety { --band-image: url("/band-safety-dark.jpg"); --band-opacity: 0.58; --band-wash: rgba(31, 18, 41, 0.88); --band-wash-mid: rgba(31, 18, 41, 0.54); }
