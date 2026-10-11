@@ -289,3 +289,19 @@ footer a { color: #5f5661; }
   .safety-list { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { .feature,.button { transition: none; } }
+
+/* Clear visual breaks between the main page sections. */
+.hero { border-bottom: 1px solid #eee3dc; }
+#how { background: #fffdfb; }
+.races { border-block: 1px solid #e7dcd3; }
+#safety { background: #fbf8f4; }
+.join { border-top: 1px solid rgba(255,255,255,.1); }
+#how .wrap, #races .wrap, #safety .wrap, #join .wrap { padding-block: .5rem; }
+#how .section-head, #races .section-head, #safety .section-head { margin-bottom: 3rem; }
+.features, .steps, .safety-list { row-gap: 1.5rem; }
+.feature { min-height: 100%; }
+.safety-list li { min-height: 100%; }
+@media (min-width: 861px) {
+  .hero + #how { padding-block: 6rem; }
+  #safety { padding-block: 6rem; }
+}
