@@ -518,3 +518,35 @@ section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
 }
 :root[data-theme="dark"] #how { --band-image: url("/band-how-dark.jpg"); --band-opacity: 0.6; --band-wash: rgba(31, 18, 41, 0.88); --band-wash-mid: rgba(31, 18, 41, 0.52); }
 :root[data-theme="dark"] #safety { --band-image: url("/band-safety-dark.jpg"); --band-opacity: 0.58; --band-wash: rgba(31, 18, 41, 0.88); --band-wash-mid: rgba(31, 18, 41, 0.54); }
+
+/* ---------- Photo bands on the hero and the sign-up ----------
+   The hero already uses ::before for its glow, so the photo goes on ::after,
+   behind the content and under a wash that protects the headline. */
+.hero { position: relative; overflow: hidden; }
+.hero::after {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    linear-gradient(90deg, var(--band-wash) 0%, var(--band-wash) 30%, var(--band-wash-mid) 72%, var(--band-wash-mid) 100%),
+    var(--band-image) center / cover no-repeat;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent);
+  mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent);
+}
+.hero .wrap { position: relative; z-index: 1; }
+
+.join { position: relative; overflow: hidden; }
+.join::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    linear-gradient(90deg, var(--band-wash) 0%, var(--band-wash) 34%, var(--band-wash-mid) 74%, var(--band-wash-mid) 100%),
+    var(--band-image) center / cover no-repeat;
+}
+.join .wrap { position: relative; z-index: 1; }
+
+/* The hero keeps its warm tint, the sign-up stays dark in both themes */
+.hero { --band-image: url("/band-hero.jpg"); --band-wash: rgba(251, 248, 244, 0.93); --band-wash-mid: rgba(251, 248, 244, 0.6); }
+.join { --band-image: url("/band-join-dark.jpg"); --band-wash: rgba(20, 10, 28, 0.93); --band-wash-mid: rgba(20, 10, 28, 0.62); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero { --band-image: url("/band-hero-dark.jpg"); --band-wash: rgba(27, 15, 36, 0.92); --band-wash-mid: rgba(27, 15, 36, 0.58); }
+}
+:root[data-theme="dark"] .hero { --band-image: url("/band-hero-dark.jpg"); --band-wash: rgba(27, 15, 36, 0.92); --band-wash-mid: rgba(27, 15, 36, 0.58); }
