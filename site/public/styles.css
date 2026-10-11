@@ -360,9 +360,11 @@ footer a { color: var(--nav-ink); }
 .runner small { font-size: 0.68rem; line-height: 1.45; }
 .runner .chip { font-size: 0.64rem; }
 
-/* ---------- Races: a soft photo band behind the cream ---------- */
-.races { position: relative; overflow: hidden; }
-.races::before {
+/* ---------- Soft photo bands behind the sections ----------
+   Each band uses a different part of the photo, blurred hard so it reads as texture.
+   A wash of the section's own colour sits over it, so text contrast is unaffected. */
+.races, #how, #safety { position: relative; overflow: hidden; }
+.races::before, #how::before, #safety::before {
   content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background: var(--band-image) center / cover no-repeat;
   opacity: var(--band-opacity);
@@ -370,11 +372,11 @@ footer a { color: var(--nav-ink); }
   mask-image: linear-gradient(180deg, transparent, #000 28%, #000 72%, transparent);
 }
 /* A cream wash over the photo keeps the headings and cards easy to read */
-.races::after {
+.races::after, #how::after, #safety::after {
   content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background: linear-gradient(90deg, var(--band-wash), var(--band-wash-mid) 55%, var(--band-wash));
 }
-.races .wrap { position: relative; z-index: 1; }
+.races .wrap, #how .wrap, #safety .wrap { position: relative; z-index: 1; }
 /* The step cards lift off the photo */
 .races .step::before { box-shadow: 0 4px 16px rgba(42, 20, 40, 0.14); }
 
@@ -504,3 +506,15 @@ section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
 :root[data-theme="light"] .t-sun { display: none; }
 :root[data-theme="light"] .t-moon { display: block; }
 @media (max-width: 480px) { .theme-toggle { width: 2.15rem; height: 2.15rem; } }
+
+/* Which part of the photo each band uses, and the wash that keeps text readable.
+   #how and #safety sit on the pale panel colour, so their wash is lighter still. */
+#how { --band-image: url("/band-how.jpg"); --band-opacity: 0.3; --band-wash: rgba(255, 253, 251, 0.95); --band-wash-mid: rgba(255, 253, 251, 0.76); }
+#safety { --band-image: url("/band-safety.jpg"); --band-opacity: 0.28; --band-wash: rgba(255, 253, 251, 0.95); --band-wash-mid: rgba(255, 253, 251, 0.78); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #how { --band-image: url("/band-how-dark.jpg"); --band-opacity: 0.26; --band-wash: rgba(31, 18, 41, 0.94); --band-wash-mid: rgba(31, 18, 41, 0.66); }
+  :root:not([data-theme="light"]) #safety { --band-image: url("/band-safety-dark.jpg"); --band-opacity: 0.24; --band-wash: rgba(31, 18, 41, 0.94); --band-wash-mid: rgba(31, 18, 41, 0.68); }
+}
+:root[data-theme="dark"] #how { --band-image: url("/band-how-dark.jpg"); --band-opacity: 0.26; --band-wash: rgba(31, 18, 41, 0.94); --band-wash-mid: rgba(31, 18, 41, 0.66); }
+:root[data-theme="dark"] #safety { --band-image: url("/band-safety-dark.jpg"); --band-opacity: 0.24; --band-wash: rgba(31, 18, 41, 0.94); --band-wash-mid: rgba(31, 18, 41, 0.68); }
