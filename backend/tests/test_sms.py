@@ -83,7 +83,9 @@ def test_provider_selection(monkeypatch, overrides, expected):
 @pytest.mark.parametrize(
     "overrides",
     [
-        {"sms_provider": "bulksms"},  # missing credentials
+        # Missing credentials. Spelled out as empty so a developer's real keys in backend/.env
+        # can't make this pass or fail.
+        {"sms_provider": "bulksms", "bulksms_token_id": "", "bulksms_token_secret": ""},
     ],
 )
 def test_misconfigured_provider_refuses(monkeypatch, overrides):
@@ -153,6 +155,17 @@ def test_code_message_warns_not_to_share(client, sms):
     assert "Never share it" in sms.messages[0][1]
 
 
+def test_code_message_avoids_the_wording_bulksms_rejects(client, sms):
+    """BulkSMS's route silently failed "Your RunStride code is 123456" (FAILED.NOT_SENT, 0 credits)
+    and delivered "RunStride: use 123456 to sign in". Don't drift back to the rejected form."""
+    client.post("/auth/otp/send", json={"phone": "082 555 1000"})
+
+    body = sms.messages[0][1]
+    assert "code is" not in body.lower()
+    assert body.startswith("RunStride: use ") and " to sign in." in body
+    assert body.isascii() and len(body) <= 160  # one text, one credit
+
+
 # --- Protecting the SMS budget ---
 
 
@@ -181,7 +194,7 @@ def test_defaults_leave_headroom_in_a_2000_credit_bundle():
 
 def test_codes_fit_in_one_text():
     """Over 160 characters (or any emoji/accent) costs extra credits."""
-    sample = "Your RunStride code is 123456. It expires in 10 minutes. Never share it with anyone."
+    sample = "RunStride: use 123456 to sign in. It expires in 10 minutes. Never share it with anyone."
     assert len(sample) <= 160 and sample.isascii()
 
 

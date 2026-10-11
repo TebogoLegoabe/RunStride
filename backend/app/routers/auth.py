@@ -111,7 +111,10 @@ def send_otp(
     try:
         sms.send(
             phone,
-            f"Your RunStride code is {code}. It expires in {settings.otp_ttl_minutes} minutes. "
+            # Wording matters: BulkSMS's route rejected "Your RunStride code is 123456" (FAILED.NOT_SENT,
+            # no charge) but delivered this form. Tested live 11 Oct 2026. Keep it ASCII and under 160
+            # characters so it stays one text (one credit).
+            f"RunStride: use {code} to sign in. It expires in {settings.otp_ttl_minutes} minutes. "
             "Never share it with anyone.",
         )
     except SmsError:
