@@ -17,6 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="/styles.css">
+  <script src="/theme.js"></script>
 </head>
 <body>
   <header class="top">
@@ -25,6 +26,10 @@
       <nav aria-label="Main">
         <a href="#races">Races</a>
         <a href="#safety">Safety</a>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">
+          <svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+          <svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></svg>
+        </button>
         <a class="button" href="#join">Join the beta</a>
       </nav>
     </div>
@@ -34,7 +39,7 @@
     <section class="hero">
       <div class="wrap">
         <div>
-          <p class="eyebrow">Dating for runners · South Africa</p>
+          <p class="eyebrow">Find your pace. Find your people.</p>
           <h1>Find someone who runs at <em>your pace</em>.</h1>
           <p class="lead">RunStride matches you on pace, distance and goals, introduces you to people at the races you're already running, and keeps you safe on the first run together.</p>
           <div class="actions">
@@ -78,22 +83,22 @@
         </div>
         <div class="features">
           <article class="feature">
-            <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0-8-8"/><path d="M12 12l4-3"/><path d="M4 12h2"/></svg></div>
+            <div class="icon"><svg viewBox="0 0 24 24"><path d="M3.8 18a8.2 8.2 0 1 1 16.4 0"/><path d="M12 18l4.6-6.2"/><circle cx="12" cy="18" r="1.4"/></svg></div>
             <h3>Matched on pace</h3>
             <p>Every profile shows a running match score from your pace, weekly distance, terrain, goals and the time of day you run.</p>
           </article>
           <article class="feature">
-            <div class="icon"><svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg></div>
+            <div class="icon"><svg viewBox="0 0 24 24"><path d="M5.5 21.5V3"/><path d="M5.5 4.2h12.3l-2.6 4.3 2.6 4.3H5.5"/></svg></div>
             <h3>Meet at races</h3>
             <p>See who's running the same races, chat in each race's group, and find a partner for race day.</p>
           </article>
           <article class="feature">
-            <div class="icon"><svg viewBox="0 0 24 24"><path d="M7 7h11l-3-3"/><path d="M17 17H6l3 3"/></svg></div>
+            <div class="icon"><svg viewBox="0 0 24 24"><path d="M4 8.8h13.2l-3.4-3.4"/><path d="M20 15.2H6.8l3.4 3.4"/></svg></div>
             <h3>Swap race entries</h3>
             <p>Injured, or missed the entry? Find someone to swap with, then transfer on the organiser's official site.</p>
           </article>
           <article class="feature">
-            <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+            <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3l7.5 2.8v6.1c0 4.3-3 7.6-7.5 9.1-4.5-1.5-7.5-4.8-7.5-9.1V5.8L12 3z"/><path d="M9 12.1l2.2 2.2 4-4.2"/></svg></div>
             <h3>Safe first runs</h3>
             <p>Suggest a run in the chat. On the day, share your live location with a trusted contact, check in, or press the panic button.</p>
           </article>
