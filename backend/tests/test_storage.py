@@ -116,13 +116,11 @@ def test_s3_without_bucket_refuses(monkeypatch):
         get_photo_storage()
 
 
-def test_local_storage_is_development_only(monkeypatch):
-    monkeypatch.setattr(
-        storage_module, "get_settings", lambda: Settings(environment="production", secret_key="x" * 40)
-    )
-
-    with pytest.raises(RuntimeError, match="development only"):
-        get_photo_storage()
+def test_local_storage_is_development_only():
+    """Photos on a hosted server's disk vanish on every deploy, so production refuses to start with
+    them: caught when the settings load, not when the first photo is uploaded."""
+    with pytest.raises(ValueError, match="PHOTO_STORAGE"):
+        Settings(environment="production", secret_key="x" * 40, sms_provider="bulksms")
 
 
 def test_local_storage_in_development(monkeypatch, tmp_path):

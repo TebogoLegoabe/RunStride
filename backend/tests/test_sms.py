@@ -69,7 +69,7 @@ def test_bulksms_unreachable_raises_sms_error():
         ({"sms_provider": "bulksms", "bulksms_token_id": "a", "bulksms_token_secret": "b"}, BulkSmsSender),
         (
             {"sms_provider": "bulksms", "bulksms_token_id": "a", "bulksms_token_secret": "b", "environment": "production",
-             "secret_key": "x" * 40},
+             "secret_key": "x" * 40, "photo_storage": "s3"},
             BulkSmsSender,
         ),
     ],
@@ -84,7 +84,6 @@ def test_provider_selection(monkeypatch, overrides, expected):
     "overrides",
     [
         {"sms_provider": "bulksms"},  # missing credentials
-        {"sms_provider": "console", "environment": "production", "secret_key": "x" * 40},  # console in production
     ],
 )
 def test_misconfigured_provider_refuses(monkeypatch, overrides):
@@ -92,6 +91,12 @@ def test_misconfigured_provider_refuses(monkeypatch, overrides):
 
     with pytest.raises(RuntimeError):
         get_sms_sender()
+
+
+def test_production_refuses_to_start_with_the_console_sender():
+    """Texts printed to a log instead of sent: caught when the settings load, not on first sign-in."""
+    with pytest.raises(ValueError, match="SMS_PROVIDER"):
+        Settings(environment="production", secret_key="x" * 40, photo_storage="s3", sms_provider="console")
 
 
 # --- Sign-in codes: fraud limits and delivery failures ---
@@ -146,3 +151,51 @@ def test_code_message_warns_not_to_share(client, sms):
     client.post("/auth/otp/send", json={"phone": "082 555 1000"})
 
     assert "Never share it" in sms.messages[0][1]
+
+
+# --- Protecting the SMS budget ---
+
+
+def test_one_number_cannot_drain_the_credits(client, sms, settings):
+    settings.otp_resend_cooldown_seconds = 0
+    settings.otp_max_sends_per_hour = 100  # so the daily cap is the thing being tested
+    settings.otp_max_sends_per_number_per_day = 3
+    for _ in range(3):
+        client.post("/auth/otp/send", json={"phone": "082 555 1000"}).raise_for_status()
+
+    res = client.post("/auth/otp/send", json={"phone": "082 555 1000"})
+
+    assert res.status_code == 429
+    assert "tomorrow" in res.json()["detail"]
+    assert len(sms.messages) == 3
+    # Someone else is unaffected
+    client.post("/auth/otp/send", json={"phone": "082 555 2000"}).raise_for_status()
+
+
+def test_defaults_leave_headroom_in_a_2000_credit_bundle():
+    s = Settings()
+    assert s.otp_max_sends_per_day <= 500  # a bad day can't spend the whole bundle
+    assert s.otp_max_sends_per_hour <= 3 and s.otp_max_sends_per_number_per_day <= 6
+    assert s.otp_resend_cooldown_seconds >= 60
+
+
+def test_codes_fit_in_one_text():
+    """Over 160 characters (or any emoji/accent) costs extra credits."""
+    sample = "Your RunStride code is 123456. It expires in 10 minutes. Never share it with anyone."
+    assert len(sample) <= 160 and sample.isascii()
+
+
+def test_credit_balance_is_read_from_the_profile():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path.endswith("/profile")
+        return httpx.Response(200, json={"credits": {"balance": 1234.5}})
+
+    sender = BulkSmsSender("id", "secret", transport=httpx.MockTransport(handler))
+    assert sender.credits() == 1234.5
+
+
+def test_credit_balance_failures_are_not_fatal():
+    sender = BulkSmsSender("id", "secret", transport=httpx.MockTransport(lambda r: httpx.Response(401)))
+    assert sender.credits() is None
+    odd = BulkSmsSender("id", "secret", transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})))
+    assert odd.credits() is None

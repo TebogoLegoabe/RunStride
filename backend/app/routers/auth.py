@@ -76,6 +76,11 @@ def send_otp(
         raise _too_many("Please wait a few seconds before requesting another code.")
     if len(recent_sends) >= settings.otp_max_sends_per_hour:
         raise _too_many("Too many codes requested. Please try again later.")
+    if (
+        _count_since(db, now - timedelta(days=1), OtpCode.phone == phone)
+        >= settings.otp_max_sends_per_number_per_day
+    ):
+        raise _too_many("Too many codes requested today. Please try again tomorrow, or sign in with Google.")
     # Per address and overall: stop one attacker (or a runaway bill) cycling through many numbers
     if ip and _count_since(db, now - timedelta(hours=1), OtpCode.request_ip == ip) >= settings.otp_max_sends_per_ip_per_hour:
         raise _too_many("Too many codes requested from this network. Please try again later.")

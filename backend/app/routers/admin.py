@@ -9,11 +9,11 @@ from app.config import get_settings
 from app.deps import AdminUser, DbSession
 from app.membership import end_plus, grant_plus, plus_status
 from app.phone import InvalidPhoneNumber, normalize_phone
-from app.models import AccountStatus, Race, RaceAttendance, RaceEvent, RaceMessage, Report, User
+from app.models import AccountStatus, OtpCode, Race, RaceAttendance, RaceEvent, RaceMessage, Report, User
 from app.moderation import end_all_matches, resolve_other_open_reports
 from app.realtime import hub
 from app.routers.races import race_detail
-from app.schemas import GrantPlusBody, PlusOut, RaceBody, RaceDetail, ReportDetail, ReportedPerson, ReportPerson, ReportSummary, ResolveBody
+from app.schemas import GrantPlusBody, PlusOut, SmsStatus, RaceBody, RaceDetail, ReportDetail, ReportedPerson, ReportPerson, ReportSummary, ResolveBody
 from app.security import utcnow
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -243,4 +243,33 @@ def take_plus(phone: str, admin: AdminUser, db: DbSession) -> PlusOut:
     db.commit()
     active, until, source = plus_status(db, user)
     return PlusOut(active=active, expires_at=until, source=source)
+
+
+# --- SMS budget ---
+
+LOW_CREDITS = 200
+
+
+@router.get("/sms", response_model=SmsStatus)
+def sms_status(admin: AdminUser, db: DbSession) -> SmsStatus:
+    """Sign-in codes sent in the last day and the BulkSMS credits left, so a runaway bill or an
+    empty balance (nobody could sign in) is noticed before users hit it."""
+    from app.sms import BulkSmsSender
+
+    settings = get_settings()
+    sent_today = db.scalar(select(func.count()).select_from(OtpCode).where(OtpCode.created_at > utcnow() - timedelta(days=1)))
+    credits = None
+    if settings.sms_provider == "bulksms":
+        credits = BulkSmsSender(
+            settings.bulksms_token_id, settings.bulksms_token_secret, settings.bulksms_base_url
+        ).credits()
+    # Low: under a fixed floor, or under a week at today's pace (each text is 1 to 2.5 credits)
+    low = credits is not None and (credits < LOW_CREDITS or credits < sent_today * 7)
+    return SmsStatus(
+        provider=settings.sms_provider,
+        credits_left=credits,
+        sent_today=sent_today,
+        daily_cap=settings.otp_max_sends_per_day,
+        low=low,
+    )
 

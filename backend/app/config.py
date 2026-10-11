@@ -16,12 +16,16 @@ class Settings(BaseSettings):
 
     otp_ttl_minutes: int = 10
     otp_max_attempts: int = 5
-    otp_resend_cooldown_seconds: int = 30
-    otp_max_sends_per_hour: int = 5
+    otp_resend_cooldown_seconds: int = 60
+    otp_max_sends_per_hour: int = 3
+    # Per number, per day: one person can't drain the SMS credits by asking again and again
+    otp_max_sends_per_number_per_day: int = 6
 
     # Guards against SMS pumping (bots requesting codes to run up the SMS bill)
     otp_max_sends_per_ip_per_hour: int = 10
-    otp_max_sends_per_day: int = 2000  # across everyone; raise as real usage grows
+    # Across everyone: a hard ceiling on a bad day. Keep it well under your SMS credit balance
+    # (a 2,000 credit bundle is about 2,000 texts), and raise it as real usage grows.
+    otp_max_sends_per_day: int = 300
     # Countries (ISO codes) people can sign up from
     sms_allowed_regions: list[str] = ["ZA"]
 

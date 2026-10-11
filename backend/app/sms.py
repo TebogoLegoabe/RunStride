@@ -42,6 +42,18 @@ class BulkSmsSender:
         self._base_url = base_url.rstrip("/")
         self._transport = transport
 
+    def credits(self) -> float | None:
+        """Credits left on the account, or None if BulkSMS doesn't say. (GET /profile)"""
+        try:
+            with httpx.Client(timeout=10, transport=self._transport) as client:
+                res = client.get(f"{self._base_url}/profile", auth=self._auth)
+            res.raise_for_status()
+            balance = (res.json().get("credits") or {}).get("balance")
+            return float(balance) if balance is not None else None
+        except (httpx.HTTPError, ValueError, TypeError):
+            logger.exception("Couldn't read the BulkSMS credit balance")
+            return None
+
     def send(self, to: str, message: str) -> None:
         try:
             with httpx.Client(timeout=10, transport=self._transport) as client:

@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { Text, TextInput } from "../components/ui/Text";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ApiError, getMe, sendOtp, verifyOtp } from "../lib/api";
 import { routeFor } from "../lib/routing";
@@ -17,6 +17,15 @@ export default function Verify() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Each code is a paid text message: wait a minute before asking for another
+  const RESEND_SECONDS = 60;
+  const [wait, setWait] = useState(RESEND_SECONDS);
+
+  useEffect(() => {
+    if (wait <= 0) return;
+    const id = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(id);
+  }, [wait]);
 
   const handleVerify = async () => {
     if (!phone) return;
@@ -36,12 +45,13 @@ export default function Verify() {
   };
 
   const handleResend = async () => {
-    if (!phone) return;
+    if (!phone || wait > 0) return;
     setError(null);
     setNotice(null);
     try {
       await sendOtp(phone);
       setNotice("New code sent.");
+      setWait(RESEND_SECONDS);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     }
@@ -93,14 +103,17 @@ export default function Verify() {
         )}
       </Pressable>
 
-      <Pressable style={styles.linkButton} onPress={handleResend}>
-        <Text style={styles.linkText}>Didn't get it? Resend code</Text>
+      <Pressable style={styles.linkButton} onPress={handleResend} disabled={wait > 0}>
+        <Text style={[styles.linkText, wait > 0 && styles.linkWaiting]}>
+          {wait > 0 ? `Didn't get it? Resend in ${wait}s` : "Didn't get it? Resend code"}
+        </Text>
       </Pressable>
     </AuthCard>
   );
 }
 
 const styles = StyleSheet.create({
+  linkWaiting: { opacity: 0.5 },
   title: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 8 },
   subtitle: { fontSize: 14, color: colors.textMuted, marginBottom: 32 },
   input: {

@@ -685,6 +685,16 @@ class TestPurchaseBody(CamelModel):
     race_id: uuid.UUID | None = None  # race passes: use it on this race straight away
 
 
+class SmsStatus(CamelModel):
+    """How the SMS budget is doing, for admins."""
+
+    provider: str
+    credits_left: float | None  # None: unknown (console provider, or BulkSMS didn't say)
+    sent_today: int  # sign-in codes in the last 24 hours
+    daily_cap: int
+    low: bool  # under a week's worth at today's pace, or under 200 credits
+
+
 class GrantPlusBody(CamelModel):
     """An admin giving someone Plus, e.g. a beta tester. No days: until it's taken away."""
 
