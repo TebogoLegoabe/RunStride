@@ -10,11 +10,11 @@ from app.schemas import PollAnswerBody, PollOption, PollOut, PollResults
 router = APIRouter(tags=["polls"])
 
 POLL_ID = "id-verification"
-QUESTION = "Should people have to verify their ID on RunStride?"
+QUESTION = "How should we make sure people are real?"
 OPTIONS = [
-    PollOption(value="want", label="Yes, I'd want to see verified people"),
-    PollOption(value="optional", label="Make it optional, with a badge"),
-    PollOption(value="phone", label="A phone number is enough"),
+    PollOption(value="want", label="I'd feel safer if people also add their ID"),
+    PollOption(value="optional", label="Make the ID check optional, with a badge"),
+    PollOption(value="phone", label="Google or phone sign-in is enough"),
 ]
 
 

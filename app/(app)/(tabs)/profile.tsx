@@ -18,7 +18,7 @@ import { GoogleButton, googleAvailable } from "../../../components/GoogleButton"
 import { useMembership } from "../../../components/MembershipProvider";
 import { formatRaceDates } from "../../../lib/format";
 import { openPlus } from "../../../lib/upsell";
-import { clearToken } from "../../../lib/session";
+import { clearDeviceToken, clearToken } from "../../../lib/session";
 import type { Me, MyProfile } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { colors } from "../../../lib/theme";
@@ -103,6 +103,7 @@ export default function ProfileTab() {
     setError(null);
     try {
       await deleteAccount(token);
+      await clearDeviceToken();
       await signOut();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);

@@ -33,6 +33,13 @@ class OtpVerifyResponse(CamelModel):
     token: str
     user_id: uuid.UUID
     profile_complete: bool
+    # Lets this phone sign back in without a new text for a while; the app keeps it, even after sign-out
+    device_token: str | None = None
+
+
+class DeviceSignInBody(CamelModel):
+    phone: str = Field(min_length=1, max_length=32)
+    device_token: str = Field(min_length=20, max_length=200)
 
 
 class MeResponse(CamelModel):

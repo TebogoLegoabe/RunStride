@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://runstride:runstride@localhost:5433/runstride"
     secret_key: str = DEV_SECRET_KEY
     access_token_ttl_days: int = 30
+    # A phone that signed in with a code can sign back in without a new text for this long
+    trusted_device_days: int = 30
 
     otp_ttl_minutes: int = 10
     otp_max_attempts: int = 5

@@ -97,11 +97,14 @@ export const sendOtp = (phone: string) =>
     body: { phone },
   });
 
+type SignedIn = { token: string; userId: string; profileComplete: boolean; deviceToken: string | null };
+
 export const verifyOtp = (phone: string, code: string) =>
-  apiRequest<{ token: string; userId: string; profileComplete: boolean }>("/auth/otp/verify", {
-    method: "POST",
-    body: { phone, code },
-  });
+  apiRequest<SignedIn>("/auth/otp/verify", { method: "POST", body: { phone, code } });
+
+// Sign back in on a phone we remember (it signed in with a code in the last 30 days): no new text
+export const deviceSignIn = (phone: string, deviceToken: string) =>
+  apiRequest<SignedIn>("/auth/device", { method: "POST", body: { phone, deviceToken } });
 
 // --- Google sign-in ---
 export const googleSignIn = (idToken: string) =>

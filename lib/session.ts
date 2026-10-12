@@ -22,6 +22,35 @@ export async function getToken(): Promise<string | null> {
   return SecureStore.getItemAsync(TOKEN_KEY);
 }
 
+// A remembered phone: signing out keeps this, so signing back in within 30 days needs no new text.
+const DEVICE_KEY = "runstride.deviceToken";
+
+export async function saveDeviceToken(token: string): Promise<void> {
+  if (Platform.OS === "web") {
+    localStorage.setItem(DEVICE_KEY, token);
+    return;
+  }
+  await SecureStore.setItemAsync(DEVICE_KEY, token);
+}
+
+export async function getDeviceToken(): Promise<string | null> {
+  try {
+    if (Platform.OS === "web") return localStorage.getItem(DEVICE_KEY);
+    return await SecureStore.getItemAsync(DEVICE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function clearDeviceToken(): Promise<void> {
+  try {
+    if (Platform.OS === "web") localStorage.removeItem(DEVICE_KEY);
+    else await SecureStore.deleteItemAsync(DEVICE_KEY);
+  } catch {
+    // nothing to forget
+  }
+}
+
 export async function clearToken(): Promise<void> {
   if (Platform.OS === "web") {
     localStorage.removeItem(TOKEN_KEY);

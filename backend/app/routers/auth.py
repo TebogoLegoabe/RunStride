@@ -1,17 +1,19 @@
 import logging
+import secrets
 from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 
 from app.config import Settings
 from app.deps import AppSettings, DbSession
-from app.models import OtpCode, User
+from app.models import OtpCode, TrustedDevice, User
 from app.moderation import lockout_message
 from app.phone import InvalidPhoneNumber, normalize_phone, region_of
 from app.google_auth import GoogleIdentity, GoogleVerifier, InvalidGoogleToken, get_google_verifier
 from app.schemas import (
+    DeviceSignInBody,
     GoogleAuthBody,
     GoogleAuthResponse,
     OtpSendRequest,
@@ -19,7 +21,7 @@ from app.schemas import (
     OtpVerifyRequest,
     OtpVerifyResponse,
 )
-from app.security import create_access_token, generate_otp, hash_otp, otp_matches, utcnow
+from app.security import create_access_token, generate_otp, hash_device_token, hash_otp, otp_matches, utcnow
 from app.sms import SmsError, SmsSender, get_sms_sender
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -166,12 +168,58 @@ def verify_otp(body: OtpVerifyRequest, db: DbSession, settings: AppSettings) -> 
         user = User(phone=phone)
         db.add(user)
     user.last_login_at = now
+    device_token = _remember_device(db, user, settings, now)
     db.commit()
 
     return OtpVerifyResponse(
         token=create_access_token(user.id),
         user_id=user.id,
         profile_complete=user.profile_complete,
+        device_token=device_token,
+    )
+
+
+def _remember_device(db, user: User, settings: Settings, now) -> str:
+    """A new device token for this phone. This person's expired ones are cleaned up on the way."""
+    db.execute(delete(TrustedDevice).where(TrustedDevice.user_id == user.id, TrustedDevice.expires_at <= now))
+    token = secrets.token_urlsafe(32)
+    db.add(
+        TrustedDevice(
+            user_id=user.id,
+            token_hash=hash_device_token(token),
+            expires_at=now + timedelta(days=settings.trusted_device_days),
+        )
+    )
+    return token
+
+
+@router.post("/device", response_model=OtpVerifyResponse)
+def sign_in_with_device(body: DeviceSignInBody, db: DbSession, settings: AppSettings) -> OtpVerifyResponse:
+    """Sign back in on a phone that signed in with a code in the last 30 days, with no new text.
+    The device token is single-use: each sign-in returns a fresh one."""
+    phone = _normalize(body.phone, settings)
+    now = utcnow()
+    invalid = HTTPException(status.HTTP_401_UNAUTHORIZED, "Please sign in with a new code.")
+    device = db.scalar(
+        select(TrustedDevice).where(TrustedDevice.token_hash == hash_device_token(body.device_token)).with_for_update()
+    )
+    if device is None or device.expires_at <= now:
+        raise invalid
+    user = db.get(User, device.user_id)
+    if user is None or user.phone != phone:
+        raise invalid
+    locked = lockout_message(user)
+    if locked:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, locked)
+    db.delete(device)
+    user.last_login_at = now
+    device_token = _remember_device(db, user, settings, now)
+    db.commit()
+    return OtpVerifyResponse(
+        token=create_access_token(user.id),
+        user_id=user.id,
+        profile_complete=user.profile_complete,
+        device_token=device_token,
     )
 
 

@@ -295,6 +295,19 @@ class Message(Base):
     run_date: Mapped[RunDate | None] = relationship()
 
 
+class TrustedDevice(Base):
+    """A phone that signed in with a text code and may sign back in without one until it expires.
+    Only a hash of the device token is stored."""
+
+    __tablename__ = "trusted_devices"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class PollAnswer(Base):
     """A beta tester's answer to a one-off question. One answer per person per poll."""
 

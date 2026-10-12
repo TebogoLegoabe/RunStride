@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ApiError, getMe, sendOtp, verifyOtp } from "../lib/api";
 import { routeFor } from "../lib/routing";
-import { saveToken } from "../lib/session";
+import { saveDeviceToken, saveToken } from "../lib/session";
 import { colors } from "../lib/theme";
 import { AuthCard } from "../components/ui/AuthCard";
 
@@ -35,6 +35,7 @@ export default function Verify() {
     try {
       const res = await verifyOtp(phone, code);
       await saveToken(res.token);
+      if (res.deviceToken) await saveDeviceToken(res.deviceToken);
       router.replace(routeFor(await getMe(res.token)));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
@@ -69,6 +70,12 @@ export default function Verify() {
   }
 
   const canSubmit = code.length === 6 && !loading;
+
+  // Autofilled from the text message (or typed): no need to press a button
+  useEffect(() => {
+    if (code.length === 6 && !loading) handleVerify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
 
   return (
     <AuthCard>

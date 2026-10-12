@@ -2,7 +2,9 @@ import { Pressable, StyleSheet, ActivityIndicator, View } from "react-native";
 import { Text, TextInput } from "../components/ui/Text";
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { ApiError, sendOtp } from "../lib/api";
+import { ApiError, deviceSignIn, getMe, sendOtp } from "../lib/api";
+import { routeFor } from "../lib/routing";
+import { clearDeviceToken, getDeviceToken, saveDeviceToken, saveToken } from "../lib/session";
 import { colors } from "../lib/theme";
 import { AuthCard } from "../components/ui/AuthCard";
 import { GoogleButton, googleAvailable } from "../components/GoogleButton";
@@ -18,6 +20,21 @@ export default function Signup() {
     setError(null);
     setLoading(true);
     try {
+      // A phone we remember signs straight back in, with no text message
+      const remembered = await getDeviceToken();
+      if (remembered) {
+        try {
+          const res = await deviceSignIn(phone.trim(), remembered);
+          await saveToken(res.token);
+          if (res.deviceToken) await saveDeviceToken(res.deviceToken);
+          router.replace(routeFor(await getMe(res.token)));
+          return;
+        } catch (e) {
+          // Expired, or a different number: fall through to a normal code
+          if (!(e instanceof ApiError) || e.status !== 401) throw e;
+          await clearDeviceToken();
+        }
+      }
       const res = await sendOtp(phone.trim());
       router.push({ pathname: "/verify", params: { phone: res.phone } });
     } catch (e) {

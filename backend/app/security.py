@@ -24,6 +24,10 @@ def hash_otp(phone: str, code: str) -> str:
     return hmac.new(key, f"{phone}:{code}".encode(), hashlib.sha256).hexdigest()
 
 
+def hash_device_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
 def otp_matches(phone: str, code: str, code_hash: str) -> bool:
     return hmac.compare_digest(hash_otp(phone, code), code_hash)
 
