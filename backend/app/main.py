@@ -20,6 +20,7 @@ from app.routers import (
     discover,
     matches,
     notifications,
+    polls,
     preferences,
     profile,
     races,
@@ -95,6 +96,7 @@ app.include_router(admin.router)
 app.include_router(verification.router)
 app.include_router(billing.router)
 app.include_router(notifications.router)
+app.include_router(polls.router)
 
 media_dir = Path(get_settings().media_dir)
 media_dir.mkdir(parents=True, exist_ok=True)

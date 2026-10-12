@@ -687,6 +687,29 @@ class TestPurchaseBody(CamelModel):
     race_id: uuid.UUID | None = None  # race passes: use it on this race straight away
 
 
+class PollOption(CamelModel):
+    value: str
+    label: str
+
+
+class PollOut(CamelModel):
+    id: str
+    question: str
+    options: list[PollOption]
+    answered: bool
+
+
+class PollAnswerBody(CamelModel):
+    answer: str = Field(max_length=40)
+
+
+class PollResults(CamelModel):
+    id: str
+    question: str
+    total: int
+    counts: dict[str, int]
+
+
 class SmsStatus(CamelModel):
     """How the SMS budget is doing, for admins."""
 

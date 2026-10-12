@@ -7,8 +7,9 @@
 //   a KV namespace bound as WAITLIST
 //   an environment variable (secret) EXPORT_KEY: a long random password for the download link
 
-const CITIES = ["Cape Town", "Johannesburg", "Pretoria", "Durban", "Gqeberha", "Bloemfontein", "Somewhere else"];
+const CITIES = ["Cape Town", "Johannesburg", "Pretoria", "Durban", "Polokwane", "Gqeberha", "Bloemfontein", "Somewhere else"];
 const PHONES = ["iphone", "android"];
+const ID_VIEWS = ["", "want", "optional", "phone"]; // should people have to verify their ID?
 const DISTANCES = ["", "5-10k", "half", "marathon", "ultra-trail"];
 
 const json = (body, status = 200) =>
@@ -34,10 +35,11 @@ export async function onRequestPost({ request, env }) {
   const city = clean(data.city, 40);
   const phone = clean(data.phone, 20);
   const distance = clean(data.distance, 20);
+  const idcheck = clean(data.idcheck, 20);
   if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return json({ error: "Please give your first name and a valid email address." }, 422);
   }
-  if (!CITIES.includes(city) || !PHONES.includes(phone) || !DISTANCES.includes(distance)) {
+  if (!CITIES.includes(city) || !PHONES.includes(phone) || !DISTANCES.includes(distance) || !ID_VIEWS.includes(idcheck)) {
     return json({ error: "Please choose your city and your phone." }, 422);
   }
   if (data.consent !== "yes") {
@@ -54,6 +56,7 @@ export async function onRequestPost({ request, env }) {
     city,
     phone,
     distance,
+    idcheck,
     tester: data.tester === "yes",
     consentedAt: new Date().toISOString(),
   };
@@ -66,13 +69,13 @@ export async function onRequestGet({ request, env }) {
   if (!env.EXPORT_KEY || !env.WAITLIST || !(await sameSecret(key, env.EXPORT_KEY))) {
     return new Response("Not found", { status: 404 });
   }
-  const rows = [["name", "email", "city", "phone", "distance", "tester", "signed_up"]];
+  const rows = [["name", "email", "city", "phone", "distance", "id_check", "tester", "signed_up"]];
   let cursor;
   do {
     const page = await env.WAITLIST.list({ prefix: "signup:", cursor });
     for (const entry of page.keys) {
       const s = JSON.parse((await env.WAITLIST.get(entry.name)) || "{}");
-      rows.push([s.name, s.email, s.city, s.phone, s.distance, s.tester ? "yes" : "no", s.consentedAt]);
+      rows.push([s.name, s.email, s.city, s.phone, s.distance, s.idcheck, s.tester ? "yes" : "no", s.consentedAt]);
     }
     cursor = page.list_complete ? undefined : page.cursor;
   } while (cursor);
