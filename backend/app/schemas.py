@@ -43,6 +43,7 @@ class MeResponse(CamelModel):
     verification_status: VerificationStatus
     # False only in development while ID verification is switched off
     verification_required: bool
+    verification_available: bool = False  # Persona is set up, so the app can offer "Get verified"
     profile_complete: bool
     has_running_profile: bool
     has_dating_preferences: bool
@@ -184,6 +185,7 @@ class MatchSummary(CamelModel):
     unread_count: int = 0
     kind: str = "dating"
     origin_race_name: str | None = None
+    verified: bool = False
 
 
 class SwipeResponse(CamelModel):

@@ -11,6 +11,7 @@ import { RunDateCard } from "./RunDateCard";
 import { SuggestRunSheet } from "./SuggestRunSheet";
 import { colors } from "../lib/theme";
 import { useTopPadding } from "../lib/responsive";
+import { dismissTip, tipDismissed } from "../lib/tips";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const PAGE_SIZE = 30; // matches the API's default page
@@ -30,6 +31,7 @@ type Props = {
   userId?: string;
   name?: string;
   photo?: string;
+  verified?: boolean; // the other person passed ID verification
   // Leave the conversation: back on phones, close the pane in the desktop split view
   onClose: () => void;
   // Inside the Matches split view: no back button, no notch padding
@@ -37,7 +39,7 @@ type Props = {
 };
 
 // One conversation. Used full screen on phones and as the right-hand pane of Matches on wide screens.
-export function ChatView({ matchId, userId, name, photo, onClose, embedded = false }: Props) {
+export function ChatView({ matchId, userId, name, photo, verified = false, onClose, embedded = false }: Props) {
   const topPadding = useTopPadding(0);
   const { token, connected, subscribe, refreshUnread } = useChat();
   const [myId, setMyId] = useState<string | null>(null);
@@ -49,11 +51,20 @@ export function ChatView({ matchId, userId, name, photo, onClose, embedded = fal
   const [ended, setEnded] = useState(false);
   const [safetyOpen, setSafetyOpen] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const [showTip, setShowTip] = useState(false);
   // Latest state of each run, which changes after its card was first sent
   const [runs, setRuns] = useState<Record<string, RunDate>>({});
   const [error, setError] = useState<string | null>(null);
   // Newest message we have, for catching up after a reconnect
   const lastId = useRef<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    tipDismissed(`match.${matchId}`).then((done) => live && setShowTip(!done));
+    return () => {
+      live = false;
+    };
+  }, [matchId]);
 
   useEffect(() => {
     lastId.current = messages && messages.length ? messages[messages.length - 1].id : null;
@@ -205,6 +216,32 @@ export function ChatView({ matchId, userId, name, photo, onClose, embedded = fal
           <ActivityIndicator color={colors.primary} />
         </View>
       ) : (
+        <>
+        {showTip && (
+          <View style={styles.tip}>
+            <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
+            <View style={styles.tipBody}>
+              <Text style={styles.tipTitle}>Before you meet</Text>
+              <Text style={styles.tipText}>
+                {verified
+                  ? `${name ?? "They"} is ID-verified. `
+                  : `${name ?? "They"} hasn't verified their ID, so take a little extra care. `}
+                Chat here for a while first. Meet somewhere open and busy, ideally at a race or with a group,
+                and share your run with a friend.
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                setShowTip(false);
+                dismissTip(`match.${matchId}`);
+              }}
+              accessibilityLabel="Dismiss tip"
+              hitSlop={10}
+            >
+              <Ionicons name="close" size={18} color={colors.textMuted} />
+            </Pressable>
+          </View>
+        )}
         <FlatList
           inverted
           style={styles.list}
@@ -255,6 +292,7 @@ export function ChatView({ matchId, userId, name, photo, onClose, embedded = fal
             );
           }}
         />
+        </>
       )}
 
       {error && <Text style={styles.error}>{error}</Text>}
@@ -344,6 +382,19 @@ const styles = StyleSheet.create({
   list: { flex: 1 },
   listContent: { padding: 12, maxWidth: 720, width: "100%", alignSelf: "center" },
   olderSpinner: { marginVertical: 12 },
+  tip: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginHorizontal: 12,
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.primaryTintSoft,
+  },
+  tipBody: { flex: 1 },
+  tipTitle: { color: colors.heading, fontSize: 13, fontWeight: "700", marginBottom: 2 },
+  tipText: { color: colors.text, fontSize: 13, lineHeight: 18 },
   emptyChat: { padding: 24, transform: [{ scaleY: -1 }] }, // counter the inverted list
   emptyChatText: { color: colors.textMuted, fontSize: 15, lineHeight: 22, textAlign: "center" },
   bubbleRow: { marginVertical: 3, alignItems: "flex-start" },

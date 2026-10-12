@@ -138,8 +138,8 @@ export function SuggestRunSheet({ visible, token, matchId, name, onClose, onSent
 
             <View style={styles.tip}>
               <Text style={styles.tipText}>
-                Staying safe: meet somewhere public and busy, in daylight if you can, and tell a
-                friend where you're going.
+                Meeting for the first time? Pick somewhere public and busy, in daylight, or better: a
+                race or a group run. Tell a friend where you're going and share your run.
               </Text>
             </View>
 

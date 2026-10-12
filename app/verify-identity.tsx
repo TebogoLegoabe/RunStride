@@ -147,6 +147,13 @@ export default function VerifyIdentity() {
         </Pressable>
       )}
 
+      <Pressable
+        style={styles.linkButton}
+        onPress={() => (router.canGoBack() ? router.back() : router.replace("/discover"))}
+      >
+        <Text style={styles.linkText}>Not now</Text>
+      </Pressable>
+
       {state.status !== "verified" && (
         <Pressable style={styles.linkButton} onPress={() => token && refresh(token)}>
           <Text style={styles.linkText}>Already finished? Check status</Text>

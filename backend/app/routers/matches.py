@@ -13,7 +13,7 @@ from app.config import Settings
 from app.db import SessionLocal
 from app.deps import AppSettings, CurrentUser, DbSession
 from app.dev_seed import dev_auto_reply
-from app.models import Match, Message, Race, User
+from app.models import Match, Message, Race, User, VerificationStatus
 from app.moderation import lockout_message
 from app.realtime import hub, publish_message
 from app.schemas import LastMessage, MatchSummary, MessageBody, MessageOut
@@ -34,6 +34,7 @@ def match_summary(db: Session, match: Match, me: User, *, with_chat: bool = Fals
         photo=photos[0].url if photos else None,
         matched_at=match.created_at,
         kind=match.kind,
+        verified=other.verification_status == VerificationStatus.verified,
     )
     if match.origin_race_id is not None:
         race = db.get(Race, match.origin_race_id)

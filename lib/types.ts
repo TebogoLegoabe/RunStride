@@ -37,6 +37,7 @@ export interface MatchSummary {
   unreadCount: number;
   kind: "dating" | "race";
   originRaceName: string | null; // for race chats: where you met
+  verified: boolean; // they passed ID verification
 }
 
 export interface RunDate {
@@ -96,7 +97,8 @@ export interface Me {
   email: string | null;
   hasGoogle: boolean;
   verificationStatus: VerificationStatus;
-  verificationRequired: boolean; // false only in development while ID verification is off
+  verificationRequired: boolean; // true only if ID verification is a gate (it is optional by default)
+  verificationAvailable: boolean; // ID verification is set up, so we can offer "Get verified"
   profileComplete: boolean;
   hasRunningProfile: boolean;
   hasDatingPreferences: boolean;

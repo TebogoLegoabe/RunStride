@@ -37,7 +37,7 @@ export default function Matches() {
   // Wide screens show the list and the open conversation side by side
   const { isWide } = useBreakpoint();
   const topPadding = useTopPadding();
-  const [open, setOpen] = useState<{ matchId: string; userId: string; name: string; photo: string } | null>(null);
+  const [open, setOpen] = useState<{ matchId: string; userId: string; name: string; photo: string; verified?: string } | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -156,7 +156,7 @@ export default function Matches() {
   );
 
   const openChat = (m: MatchSummary) => {
-    const params = { matchId: m.id, userId: m.userId, name: m.displayName, photo: m.photo ?? "" };
+    const params = { matchId: m.id, userId: m.userId, name: m.displayName, photo: m.photo ?? "", verified: m.verified ? "1" : "" };
     if (isWide) setOpen(params);
     else router.push({ pathname: "/chat/[matchId]", params });
   };
@@ -259,7 +259,7 @@ export default function Matches() {
       {list}
       <View style={styles.chatPane}>
         {open ? (
-          <ChatView key={open.matchId} {...open} embedded onClose={() => setOpen(null)} />
+          <ChatView key={open.matchId} {...open} verified={open.verified === "1"} embedded onClose={() => setOpen(null)} />
         ) : (
           <EmptyState
             icon="chatbubble-ellipses"

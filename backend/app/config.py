@@ -60,7 +60,9 @@ class Settings(BaseSettings):
     persona_api_version: str = "2023-01-05"
     # Development only: let users into the app without ID verification (while Persona
     # isn't set up yet). Can't be turned off outside development.
-    require_id_verification: bool = True
+    # ID verification is optional by default: people who verify get a badge. Turn this on to make it
+    # a gate (unverified people can't match or see others).
+    require_id_verification: bool = False
     # Declined/failed inquiries allowed before the user has to contact support
     max_verification_attempts: int = 3
 
@@ -111,8 +113,6 @@ class Settings(BaseSettings):
     def model_post_init(self, __context) -> None:
         if not self.is_development and self.secret_key == DEV_SECRET_KEY:
             raise ValueError("SECRET_KEY must be set outside development")
-        if not self.is_development and not self.require_id_verification:
-            raise ValueError("REQUIRE_ID_VERIFICATION can only be turned off in development")
         if not self.is_development and self.photo_storage == "local":
             # Hosted servers lose local files on every deploy
             raise ValueError("PHOTO_STORAGE must be s3 outside development")

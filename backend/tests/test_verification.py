@@ -255,16 +255,21 @@ def test_signature_accepts_either_secret_during_rotation():
     assert not verify_webhook_signature(header, body, "", now=now)
 
 
-def test_verification_can_be_switched_off_in_development(client, settings, headers):
+def test_verification_is_optional_by_default(client, headers):
+    me = client.get("/me", headers=headers).json()
+    assert me["verificationRequired"] is False
+
+
+def test_verification_can_be_made_mandatory(client, settings, headers):
+    settings.require_id_verification = True
+
     assert client.get("/me", headers=headers).json()["verificationRequired"] is True
 
-    settings.require_id_verification = False
 
-    assert client.get("/me", headers=headers).json()["verificationRequired"] is False
+def test_verification_is_offered_only_when_persona_is_configured(client, settings, headers):
+    assert client.get("/me", headers=headers).json()["verificationAvailable"] is False
 
+    settings.persona_api_key = "key"
+    settings.persona_inquiry_template_id = "itmpl_1"
 
-def test_verification_cannot_be_switched_off_outside_development():
-    from app.config import Settings
-
-    with pytest.raises(ValueError, match="REQUIRE_ID_VERIFICATION"):
-        Settings(environment="production", secret_key="x" * 40, require_id_verification=False)
+    assert client.get("/me", headers=headers).json()["verificationAvailable"] is True

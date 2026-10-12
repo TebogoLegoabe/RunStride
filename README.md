@@ -158,7 +158,8 @@ before each deploy, and check `/health`. Run **one** instance only (live events 
    | `PUSH_PROVIDER` | `expo` (once the development build exists) |
 
    The API refuses to start in production with local photo storage, console SMS or the dev secret key.
-   Production also requires ID verification, so Persona must be set up first.
+   ID verification is optional: people who verify get a badge, and "Get verified" only appears once
+   the `PERSONA_*` values are set. Set `REQUIRE_ID_VERIFICATION=true` to make it a gate instead.
 4. Settings -> Networking -> Custom domain `api.runstride.co.za`. Railway shows a CNAME target; in Cloudflare
    DNS add `api` -> that target with the proxy **off** (grey cloud).
 5. Persona webhook: `https://api.runstride.co.za/webhooks/persona`. RevenueCat (later): `/webhooks/revenuecat`.

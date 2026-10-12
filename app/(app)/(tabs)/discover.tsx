@@ -207,7 +207,7 @@ export default function Discover() {
     setMatch(null);
     router.push({
       pathname: "/chat/[matchId]",
-      params: { matchId: match.id, userId: match.userId, name: match.displayName, photo: match.photo ?? "" },
+      params: { matchId: match.id, userId: match.userId, name: match.displayName, photo: match.photo ?? "", verified: match.verified ? "1" : "" },
     });
   };
 

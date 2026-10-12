@@ -10,7 +10,7 @@ os.environ["DATABASE_URL"] = os.environ.get(
 )
 # Tests assume production-like defaults, whatever a developer has in backend/.env
 # (environment variables take priority over the .env file)
-os.environ["REQUIRE_ID_VERIFICATION"] = "true"
+os.environ["REQUIRE_ID_VERIFICATION"] = "false"
 os.environ["PERSONA_API_KEY"] = ""
 os.environ["PERSONA_INQUIRY_TEMPLATE_ID"] = ""
 os.environ["PERSONA_WEBHOOK_SECRET"] = ""
