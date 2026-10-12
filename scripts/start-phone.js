@@ -35,7 +35,9 @@ if (!ip) {
   process.exit(1);
 }
 
-const apiUrl = `http://${ip}:8000`;
+// `npm run phone:prod`: use the live API (https://api.runstride.co.za) instead of the one on this computer
+const prod = process.env.RUNSTRIDE_PROD === "1";
+const apiUrl = prod ? "https://api.runstride.co.za" : `http://${ip}:8000`;
 console.log(`\nPhone should be on the same Wi-Fi as this computer.`);
 console.log(`  App (QR code): exp://${ip}:8081`);
 console.log(`  API:           ${apiUrl}\n`);
