@@ -46,6 +46,13 @@
         }
       ]
     ],
-    "backgroundColor": "#2e0444"
+    "backgroundColor": "#2e0444",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0d0324a3-4703-41a0-a21f-014c27d9908b"
+      }
+    },
+    "owner": "tebogolegoabe100"
   }
 }
