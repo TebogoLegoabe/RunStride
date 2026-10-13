@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "376689644582",
+    "project_id": "runstride-97f4b",
+    "storage_bucket": "runstride-97f4b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:376689644582:android:be125af0d361ff8de782e7",
+        "android_client_info": {
+          "package_name": "com.tebogolegoabe.runstride"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYppbHA5DKe9TkVo-RJ84PNoK2p4ZMFVA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
