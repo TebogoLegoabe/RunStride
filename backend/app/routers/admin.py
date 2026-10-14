@@ -63,11 +63,19 @@ def _summary(db: DbSession, report: Report) -> dict:
 def list_reports(
     admin: AdminUser,
     db: DbSession,
+    response: Response,
     status_filter: Annotated[Literal["open", "resolved"], Query(alias="status")] = "open",
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> list[ReportSummary]:
     # Open reports oldest-first (first come, first served); resolved newest-first
     order = Report.created_at.asc() if status_filter == "open" else Report.resolved_at.desc()
-    reports = db.scalars(select(Report).where(Report.status == status_filter).order_by(order).limit(200)).all()
+    response.headers["X-Total-Count"] = str(
+        db.scalar(select(func.count()).select_from(Report).where(Report.status == status_filter))
+    )
+    reports = db.scalars(
+        select(Report).where(Report.status == status_filter).order_by(order, Report.id).offset(offset).limit(limit)
+    ).all()
     return [ReportSummary(**_summary(db, r)) for r in reports]
 
 
@@ -120,11 +128,17 @@ def resolve_report(report_id: uuid.UUID, body: ResolveBody, admin: AdminUser, db
 def admin_list_races(
     admin: AdminUser,
     db: DbSession,
+    response: Response,
     status_filter: Annotated[Literal["pending", "published", "rejected"], Query(alias="status")] = "pending",
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> list[RaceDetail]:
     """Suggestions waiting for review (default), or the published/rejected lists."""
+    response.headers["X-Total-Count"] = str(
+        db.scalar(select(func.count()).select_from(Race).where(Race.status == status_filter))
+    )
     races = db.scalars(
-        select(Race).where(Race.status == status_filter).order_by(Race.starts_on).limit(500)
+        select(Race).where(Race.status == status_filter).order_by(Race.starts_on, Race.id).offset(offset).limit(limit)
     ).all()
     return [race_detail(db, r, admin) for r in races]
 

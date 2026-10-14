@@ -33,13 +33,27 @@ export default function ModerationQueue() {
     if (params.view === "ids" || params.view === "races") setView([params.view]);
   }, [params.view]);
   const [reports, setReports] = useState<ReportSummary[] | null>(null);
+  const [reportTotal, setReportTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  const loadMore = async () => {
+    if (!token || !reports || view[0] === "races" || view[0] === "ids") return;
+    try {
+      const page = await getReports(token, view[0], reports.length);
+      setReports([...reports, ...page.items]);
+      setReportTotal(page.total);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+    }
+  };
 
   const load = useCallback(async () => {
     if (!token || view[0] === "races" || view[0] === "ids") return;
     const status = view[0];
     try {
-      setReports(await getReports(token, status));
+      const page = await getReports(token, status);
+      setReports(page.items);
+      setReportTotal(page.total);
       setError(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
@@ -82,6 +96,15 @@ export default function ModerationQueue() {
         <FlatList
           data={reports}
           keyExtractor={(r) => r.id}
+          ListFooterComponent={
+            reports.length < reportTotal ? (
+              <Pressable style={styles.more} onPress={loadMore}>
+                <Text style={styles.moreText}>
+                  Load more ({reports.length} of {reportTotal})
+                </Text>
+              </Pressable>
+            ) : null
+          }
           ListEmptyComponent={
             <Text style={styles.empty}>{view[0] === "open" ? "Nothing to review. 🎉" : "No resolved reports yet."}</Text>
           }
@@ -118,6 +141,8 @@ const styles = StyleSheet.create({
   heading: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 12 },
   error: { color: colors.dangerText, fontSize: 14, marginBottom: 12 },
   spinner: { marginTop: 32 },
+  more: { alignSelf: "center", padding: 14 },
+  moreText: { color: colors.primary, fontSize: 14, fontWeight: "700" },
   empty: { color: colors.textMuted, fontSize: 15, textAlign: "center", marginTop: 32 },
   row: {
     paddingHorizontal: 16,

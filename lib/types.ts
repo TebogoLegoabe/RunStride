@@ -308,6 +308,7 @@ export interface Listing {
   createdAt: string;
   user: Person;
   mine: boolean;
+  sellerVerified: boolean; // the poster passed the ID check
   interestedCount: number; // open posts the other way for the same distance
 }
 

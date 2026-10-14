@@ -87,22 +87,27 @@ def check_rate_limits(db: Session, me: User, settings: Settings) -> None:
 
 
 @router.get("/matches", response_model=list[MatchSummary])
-def list_matches(user: CurrentUser, db: DbSession) -> list[MatchSummary]:
-    # One query per match for the last message and unread count: fine at this scale,
-    # worth folding into a single query once people have hundreds of matches.
-    matches = db.scalars(
-        select(Match).where(
-            or_(Match.user_a_id == user.id, Match.user_b_id == user.id),
-            Match.ended_at.is_(None),
-        )
-    ).all()
-    summaries = [match_summary(db, m, user, with_chat=True) for m in matches]
+def list_matches(
+    user: CurrentUser,
+    db: DbSession,
+    response: Response,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+) -> list[MatchSummary]:
+    """Your conversations, a page at a time. The X-Total-Count header holds how many there are in all."""
+    mine = (or_(Match.user_a_id == user.id, Match.user_b_id == user.id), Match.ended_at.is_(None))
+    response.headers["X-Total-Count"] = str(db.scalar(select(func.count()).select_from(Match).where(*mine)))
+    last_message_at = select(func.max(Message.created_at)).where(Message.match_id == Match.id).scalar_subquery()
     # Most recent activity first: the latest message, or when you matched
-    summaries.sort(
-        key=lambda s: s.last_message.created_at if s.last_message else s.matched_at,
-        reverse=True,
-    )
-    return summaries
+    matches = db.scalars(
+        select(Match)
+        .where(*mine)
+        .order_by(func.coalesce(last_message_at, Match.created_at).desc(), Match.id)
+        .offset(offset)
+        .limit(limit)
+    ).all()
+    # One query per match for the last message and unread count: fine for a page of 30
+    return [match_summary(db, m, user, with_chat=True) for m in matches]
 
 
 @router.delete("/matches/{match_id}", status_code=status.HTTP_204_NO_CONTENT)

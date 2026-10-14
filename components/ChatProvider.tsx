@@ -39,10 +39,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const refreshUnread = useCallback(() => {
     if (!token) return;
-    Promise.all([getMatches(token), getChatRequests(token)])
+    // Conversations are listed by latest activity, so unread ones are on the first pages
+    Promise.all([getMatches(token, { limit: 100 }), getChatRequests(token)])
       .then(([matches, requests]) =>
         setUnreadTotal(
-          matches.reduce((sum, m) => sum + m.unreadCount, 0) + requests.filter((r) => r.incoming).length
+          matches.items.reduce((sum, m) => sum + m.unreadCount, 0) + requests.filter((r) => r.incoming).length
         )
       )
       .catch(() => {}); // the badge can wait for the next event

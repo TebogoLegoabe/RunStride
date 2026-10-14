@@ -686,28 +686,55 @@ def _listing_out(db: Session, listing: EntryListing, me: User, labels: dict) -> 
         created_at=listing.created_at,
         user=sender(db, listing.user_id),
         mine=listing.user_id == me.id,
+        seller_verified=db.scalar(select(User.verification_status).where(User.id == listing.user_id))
+        == VerificationStatus.verified,
     )
 
 
 @router.get("/races/{race_id}/listings", response_model=list[ListingOut])
-def list_listings(race_id: uuid.UUID, user: CurrentUser, db: DbSession, settings: AppSettings) -> list[ListingOut]:
-    """Open swap board posts. Empty outside the race's official substitution window."""
+def list_listings(
+    race_id: uuid.UUID,
+    user: CurrentUser,
+    db: DbSession,
+    settings: AppSettings,
+    response: Response,
+    kind: Annotated[Literal["offering", "looking"] | None, Query()] = None,
+    race_event_id: uuid.UUID | None = None,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+) -> list[ListingOut]:
+    """Open swap board posts, a page at a time. Empty outside the race's official substitution window.
+
+    `kind` and `race_event_id` filter to offers or requests, and to one distance. Your own posts come
+    first on the first page. X-Total-Count is how many other people's posts match."""
     race = get_race(db, race_id, user)
     require_attending(db, race, user)
+    response.headers["X-Total-Count"] = "0"
     if swap_window(race, sa_today()) != "open":
         return []
+    filters = [EntryListing.race_id == race.id, EntryListing.status == "open"]
+    if kind:
+        filters.append(EntryListing.kind == kind)
+    if race_event_id:
+        filters.append(EntryListing.race_event_id == race_event_id)
+    others = (
+        select(EntryListing).join(User, User.id == EntryListing.user_id).where(*filters, *visible_to(user, settings))
+    )
+    response.headers["X-Total-Count"] = str(db.scalar(select(func.count()).select_from(others.subquery())))
     listings = db.scalars(
-        select(EntryListing)
-        .join(User, User.id == EntryListing.user_id)
-        .where(EntryListing.race_id == race.id, EntryListing.status == "open", *visible_to(user, settings))
+        others
         # Posts by Plus members and race pass holders come first, then newest
-        .order_by(race_access_condition(EntryListing.user_id, EntryListing.race_id).desc(), EntryListing.created_at.desc())
-    ).all()
-    mine = db.scalars(
-        select(EntryListing).where(
-            EntryListing.race_id == race.id, EntryListing.status == "open", EntryListing.user_id == user.id
+        .order_by(
+            race_access_condition(EntryListing.user_id, EntryListing.race_id).desc(),
+            EntryListing.created_at.desc(),
+            EntryListing.id,
         )
+        .offset(offset)
+        .limit(limit)
     ).all()
+    mine = (
+        db.scalars(select(EntryListing).where(*filters, EntryListing.user_id == user.id)).all() if offset == 0 else []
+    )
     labels = {e.id: e.label for e in race.events}
     return [_listing_out(db, l, user, labels) for l in [*mine, *listings]]
 

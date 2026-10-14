@@ -9,6 +9,7 @@ import {
   createListing,
   getEntryWants,
   getListings,
+  type ListingFilters,
   markSwapsSeen,
   sendChatRequest,
   setEntryWants,
@@ -19,12 +20,18 @@ import { formatRaceDates } from "../../lib/format";
 import type { Listing, RaceDetail } from "../../lib/types";
 import { useChat } from "../ChatProvider";
 import { ChoiceChips } from "../ChoiceChips";
+import { SafetySheet } from "../SafetySheet";
 import { colors, fonts, radius } from "../../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const KINDS = [
   { value: "offering", label: "I have an entry" },
   { value: "looking", label: "I need an entry" },
+] as const;
+const BOARD_KINDS = [
+  { value: "all", label: "All" },
+  { value: "offering", label: "Entries on offer" },
+  { value: "looking", label: "Entries wanted" },
 ] as const;
 
 type Props = { race: RaceDetail };
@@ -35,6 +42,11 @@ export function RaceSwaps({ race }: Props) {
   const { hasRaceAccess } = useMembership();
   const alerts = hasRaceAccess(race.id);
   const [listings, setListings] = useState<Listing[] | null>(null);
+  const [total, setTotal] = useState(0); // other people's posts matching the filters
+  const [boardKind, setBoardKind] = useState<string[]>(["all"]);
+  const [boardEvent, setBoardEvent] = useState<string[]>(["all"]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [reporting, setReporting] = useState<Listing | null>(null);
   const [kind, setKind] = useState<("offering" | "looking")[]>(["offering"]);
   const [eventId, setEventId] = useState<string[]>(race.events[0] ? [race.events[0].id] : []);
   const [price, setPrice] = useState("");
@@ -67,15 +79,44 @@ export function RaceSwaps({ race }: Props) {
     }
   };
 
+  // The board's filters, as the API wants them ("all" means no filter)
+  const boardFilters = useCallback(
+    (): ListingFilters => ({
+      kind: boardKind[0] === "offering" || boardKind[0] === "looking" ? boardKind[0] : undefined,
+      raceEventId: boardEvent[0] && boardEvent[0] !== "all" ? boardEvent[0] : undefined,
+    }),
+    [boardKind, boardEvent]
+  );
+
   const load = useCallback(async () => {
     if (!token || !open) return;
     try {
-      setListings(await getListings(token, race.id));
+      const page = await getListings(token, race.id, boardFilters());
+      setListings(page.items);
+      setTotal(page.total);
       setError(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     }
-  }, [token, race.id, open]);
+  }, [token, race.id, open, boardFilters]);
+
+  const others = listings?.filter((l) => !l.mine).length ?? 0;
+  const loadMore = async () => {
+    if (!token || loadingMore || !listings) return;
+    setLoadingMore(true);
+    try {
+      const page = await getListings(token, race.id, { ...boardFilters(), offset: others });
+      setListings((current) => {
+        const have = new Set((current ?? []).map((l) => l.id));
+        return [...(current ?? []), ...page.items.filter((l) => !have.has(l.id))];
+      });
+      setTotal(page.total);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Looking at the board clears its swap alerts
   const seen = useCallback(() => {
@@ -293,7 +334,33 @@ export function RaceSwaps({ race }: Props) {
             {busy ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.primaryText}>Post</Text>}
           </Pressable>
 
+          <View style={styles.scamBox}>
+            <Ionicons name="shield-half" size={18} color={colors.warningText} />
+            <View style={styles.scamBody}>
+              <Text style={styles.scamTitle}>Before you pay for an entry</Text>
+              <Text style={styles.scamText}>
+                Only pay once the organiser has confirmed the name change, and never in advance to someone who won't
+                use the official transfer. Look for the ✓ badge: it means they passed an ID check. Report anything
+                that feels off.
+              </Text>
+            </View>
+          </View>
+
           <Text style={styles.section}>On the board</Text>
+          <ChoiceChips
+            options={BOARD_KINDS}
+            selected={boardKind}
+            onChange={(v) => setBoardKind(v.length ? v : ["all"])}
+            single
+          />
+          {race.events.length > 1 && (
+            <ChoiceChips
+              options={[{ value: "all", label: "All distances" }, ...race.events.map((e) => ({ value: e.id, label: e.label }))]}
+              selected={boardEvent}
+              onChange={(v) => setBoardEvent(v.length ? v : ["all"])}
+              single
+            />
+          )}
           {listings === null ? (
             <ActivityIndicator color={colors.primary} />
           ) : listings.length === 0 ? (
@@ -304,10 +371,18 @@ export function RaceSwaps({ race }: Props) {
                 <Text style={[styles.kind, l.kind === "offering" ? styles.offering : styles.looking]}>
                   {l.kind === "offering" ? "Has an entry" : "Needs an entry"} · {l.eventLabel}
                 </Text>
-                <Text style={styles.who}>
-                  {l.mine ? "You" : l.user.displayName}
-                  {l.priceRands !== null ? ` · R${l.priceRands}` : ""}
-                </Text>
+                <View style={styles.whoRow}>
+                  <Text style={styles.who}>
+                    {l.mine ? "You" : l.user.displayName}
+                    {l.priceRands !== null ? ` · R${l.priceRands}` : ""}
+                  </Text>
+                  {!l.mine &&
+                    (l.sellerVerified ? (
+                      <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+                    ) : (
+                      <Text style={styles.unverified}>not ID-verified</Text>
+                    ))}
+                </View>
                 {l.note && <Text style={styles.note}>{l.note}</Text>}
                 {l.interestedCount > 0 && (
                   <Text style={styles.interest}>
@@ -321,15 +396,44 @@ export function RaceSwaps({ race }: Props) {
                     <Text style={styles.closeText}>Close post</Text>
                   </Pressable>
                 ) : (
-                  <Pressable style={styles.outline} onPress={() => message(l)} disabled={busy}>
-                    <Text style={styles.outlineText}>Message</Text>
-                  </Pressable>
+                  <View style={styles.cardActions}>
+                    <Pressable style={styles.outline} onPress={() => message(l)} disabled={busy}>
+                      <Text style={styles.outlineText}>Message</Text>
+                    </Pressable>
+                    <Pressable onPress={() => setReporting(l)} accessibilityLabel="Report this post">
+                      <Text style={styles.closeText}>Report</Text>
+                    </Pressable>
+                  </View>
                 )}
               </View>
             ))
           )}
+          {listings !== null && others < total && (
+            <Pressable style={styles.more} onPress={loadMore} disabled={loadingMore}>
+              {loadingMore ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <Text style={styles.moreText}>
+                  Load more ({others} of {total})
+                </Text>
+              )}
+            </Pressable>
+          )}
         </>
       )}
+
+      <SafetySheet
+        visible={reporting !== null}
+        token={token}
+        person={{ id: reporting?.user.id ?? "", name: reporting?.user.displayName ?? "" }}
+        raceId={race.id}
+        onClose={() => setReporting(null)}
+        onDone={() => {
+          setReporting(null);
+          setNotice("Thanks. A real person will look into it.");
+          load();
+        }}
+      />
     </View>
   );
 }
@@ -389,6 +493,23 @@ const styles = StyleSheet.create({
   offering: { color: colors.primary },
   looking: { color: colors.pink },
   who: { color: colors.heading, fontSize: 15, fontWeight: "600" },
+  whoRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  unverified: { color: colors.textFaint, fontSize: 11 },
+  cardActions: { flexDirection: "row", alignItems: "center", gap: 16 },
+  more: { alignSelf: "center", padding: 14 },
+  moreText: { color: colors.primary, fontSize: 14, fontWeight: "700" },
+  scamBox: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+    backgroundColor: colors.warningTint,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 6,
+  },
+  scamBody: { flex: 1 },
+  scamTitle: { color: colors.heading, fontSize: 14, fontFamily: fonts.bold, marginBottom: 2 },
+  scamText: { color: colors.text, fontSize: 13, lineHeight: 18 },
   note: { color: colors.text, fontSize: 14, marginTop: 4 },
   interest: { color: colors.pink, fontSize: 12, fontWeight: "700", marginTop: 6 },
   alertOff: {

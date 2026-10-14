@@ -1,6 +1,6 @@
-import { View, StyleSheet, Pressable, FlatList, Image } from "react-native";
+import { View, StyleSheet, Pressable, FlatList, Image, ActivityIndicator } from "react-native";
 import { Text } from "../../../components/ui/Text";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ApiError, answerChatRequest, getChatRequests, getLikesYou, getMatches, getMe, mediaUrl } from "../../../lib/api";
 import { LikesYouCard } from "../../../components/LikesYouCard";
@@ -39,15 +39,22 @@ export default function Matches() {
   const topPadding = useTopPadding();
   const [open, setOpen] = useState<{ matchId: string; userId: string; name: string; photo: string; verified?: string } | null>(null);
 
+  // How many conversations are loaded, so a refresh keeps them (30 at a time, up to 100)
+  const loaded = useRef(30);
+  const [matchTotal, setMatchTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   const load = useCallback(async () => {
     if (!token) return;
     try {
       const [m, r, l] = await Promise.all([
-        getMatches(token),
+        getMatches(token, { limit: loaded.current }),
         getChatRequests(token),
         getLikesYou(token).catch(() => null), // a nice extra; never block the list on it
       ]);
-      setMatches(m);
+      setMatches(m.items);
+      setMatchTotal(m.total);
+      loaded.current = Math.min(100, Math.max(30, m.items.length));
       setRequests(r);
       setLikes(l);
       setError(null);
@@ -55,6 +62,25 @@ export default function Matches() {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     }
   }, [token]);
+
+  const loadMore = async () => {
+    if (!token || !matches || loadingMore || matches.length >= matchTotal) return;
+    setLoadingMore(true);
+    try {
+      const page = await getMatches(token, { offset: matches.length, limit: 30 });
+      setMatches((current) => {
+        const have = new Set((current ?? []).map((m) => m.id));
+        const next = [...(current ?? []), ...page.items.filter((m) => !have.has(m.id))];
+        loaded.current = Math.min(100, Math.max(30, next.length));
+        return next;
+      });
+      setMatchTotal(page.total);
+    } catch {
+      // the next scroll tries again
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     if (token) getMe(token).then((me) => setMyId(me.id)).catch(() => {});
@@ -189,6 +215,9 @@ export default function Matches() {
       <FlatList
         data={matches}
         keyExtractor={(m) => m.id}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={loadingMore ? <ActivityIndicator color={colors.primary} style={{ margin: 16 }} /> : null}
         ListHeaderComponent={requestsHeader}
         contentContainerStyle={matches.length === 0 ? styles.emptyWrap : undefined}
         ListEmptyComponent={

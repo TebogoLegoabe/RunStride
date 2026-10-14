@@ -21,12 +21,26 @@ export function RaceAdmin() {
   const { token } = useChat();
   const [list, setList] = useState<("pending" | "published")[]>(["pending"]);
   const [races, setRaces] = useState<RaceDetail[] | null>(null);
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  const loadMore = async () => {
+    if (!token || !races) return;
+    try {
+      const page = await getAdminRaces(token, list[0], races.length);
+      setRaces([...races, ...page.items]);
+      setTotal(page.total);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+    }
+  };
 
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      setRaces(await getAdminRaces(token, list[0]));
+      const page = await getAdminRaces(token, list[0]);
+      setRaces(page.items);
+      setTotal(page.total);
       setError(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
@@ -110,11 +124,20 @@ export function RaceAdmin() {
           </View>
         ))
       )}
+      {races !== null && races.length < total && (
+        <Pressable style={styles.more} onPress={loadMore}>
+          <Text style={styles.moreText}>
+            Load more ({races.length} of {total})
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  more: { alignSelf: "center", padding: 14 },
+  moreText: { color: colors.primary, fontSize: 14, fontWeight: "700" },
   distances: { color: colors.text, fontSize: 13, marginTop: 4 },
   noDistances: { color: colors.warningText, fontSize: 13, marginTop: 4 },
   wrap: { paddingHorizontal: 16, maxWidth: 720, width: "100%", alignSelf: "center" },

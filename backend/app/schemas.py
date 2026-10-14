@@ -613,6 +613,7 @@ class ListingOut(CamelModel):
     created_at: datetime
     user: Sender
     mine: bool
+    seller_verified: bool = False  # the poster passed the ID check
     # Open posts the other way for the same distance, e.g. people looking for the entry offered
     interested_count: int = 0
 

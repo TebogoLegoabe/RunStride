@@ -244,7 +244,19 @@ export const likeRunner = (token: string, userId: string) =>
 export const passRunner = (token: string, userId: string) =>
   apiRequest<SwipeResult>(`/discover/${userId}/pass`, { method: "POST", token });
 
-export const getMatches = (token: string) => apiRequest<MatchSummary[]>("/matches", { token });
+// A page of a list, plus how many there are in all (the X-Total-Count header)
+export type Paged<T> = { items: T[]; total: number };
+
+async function apiPaged<T>(path: string, token: string): Promise<Paged<T>> {
+  const res = await apiResponse(path, { token });
+  const items = (await res.json()) as T[];
+  const header = res.headers.get("X-Total-Count");
+  const total = header !== null && Number.isFinite(Number(header)) ? Number(header) : items.length;
+  return { items, total };
+}
+
+export const getMatches = (token: string, { offset = 0, limit = 30 }: { offset?: number; limit?: number } = {}) =>
+  apiPaged<MatchSummary>(`/matches?offset=${offset}&limit=${limit}`, token);
 
 export const unmatch = (token: string, matchId: string) =>
   apiRequest<void>(`/matches/${matchId}`, { method: "DELETE", token });
@@ -288,8 +300,8 @@ export const reportUser = (
 ) => apiRequest<{ id: string }>("/reports", { method: "POST", body: report, token });
 
 // --- Moderation (admins only) ---
-export const getReports = (token: string, status: "open" | "resolved" = "open") =>
-  apiRequest<ReportSummary[]>(`/admin/reports?status=${status}`, { token });
+export const getReports = (token: string, status: "open" | "resolved" = "open", offset = 0) =>
+  apiPaged<ReportSummary>(`/admin/reports?status=${status}&offset=${offset}&limit=30`, token);
 
 export const getReport = (token: string, reportId: string) =>
   apiRequest<ReportDetail>(`/admin/reports/${reportId}`, { token });
@@ -453,8 +465,14 @@ export const spendRacePass = (token: string, raceId: string) =>
 
 export const getLikesYou = (token: string) => apiRequest<LikesYou>("/me/likes", { token });
 
-export const getListings = (token: string, raceId: string) =>
-  apiRequest<Listing[]>(`/races/${raceId}/listings`, { token });
+export type ListingFilters = { kind?: "offering" | "looking"; raceEventId?: string; offset?: number; limit?: number };
+
+export const getListings = (token: string, raceId: string, f: ListingFilters = {}) => {
+  const params = new URLSearchParams({ offset: String(f.offset ?? 0), limit: String(f.limit ?? 20) });
+  if (f.kind) params.set("kind", f.kind);
+  if (f.raceEventId) params.set("race_event_id", f.raceEventId);
+  return apiPaged<Listing>(`/races/${raceId}/listings?${params}`, token);
+};
 
 export const createListing = (
   token: string,
@@ -477,8 +495,8 @@ export const answerChatRequest = (token: string, requestId: string, answer: "acc
   apiRequest<ChatRequest>(`/chat-requests/${requestId}/${answer}`, { method: "POST", token });
 
 // --- Race admin ---
-export const getAdminRaces = (token: string, status: "pending" | "published" | "rejected" = "pending") =>
-  apiRequest<RaceDetail[]>(`/admin/races?status=${status}`, { token });
+export const getAdminRaces = (token: string, status: "pending" | "published" | "rejected" = "pending", offset = 0) =>
+  apiPaged<RaceDetail>(`/admin/races?status=${status}&offset=${offset}&limit=30`, token);
 
 export const createRace = (token: string, race: RaceInput) =>
   apiRequest<RaceDetail>("/admin/races", { method: "POST", body: race, token });
