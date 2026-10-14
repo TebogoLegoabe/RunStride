@@ -6,7 +6,10 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "scheme": ["runstride", "com.tebogolegoabe.runstride"],
+    "scheme": [
+      "runstride",
+      "com.tebogolegoabe.runstride"
+    ],
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -52,7 +55,8 @@
         {
           "color": "#f47c4f"
         }
-      ]
+      ],
+      "@react-native-google-signin/google-signin"
     ],
     "backgroundColor": "#2e0444",
     "extra": {
