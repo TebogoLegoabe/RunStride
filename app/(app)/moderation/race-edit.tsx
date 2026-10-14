@@ -7,7 +7,7 @@ import { ApiError, createRace, getRace, updateRace } from "../../../lib/api";
 import { toIsoWithOffset } from "../../../lib/format";
 import type { RaceInput } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
-import { ChoiceChips } from "../../../components/ChoiceChips";
+import { Dropdown } from "../../../components/ui/Dropdown";
 import { colors } from "../../../lib/theme";
 import { useTopPadding } from "../../../lib/responsive";
 
@@ -171,8 +171,7 @@ export default function RaceEdit() {
       {input("End date (multi-day races only)", endsOn, setEndsOn, "YYYY-MM-DD", false)}
       {input("Venue", venue, setVenue, "Where it starts")}
       {input("Town or city", city, setCity)}
-      <Text style={styles.label}>Province</Text>
-      <ChoiceChips options={PROVINCES} selected={province} onChange={setProvince} single />
+      <Dropdown label="Province" options={PROVINCES} selected={province} onChange={setProvince} style={styles.provinceDrop} />
       {input("Official race page", officialUrl, setOfficialUrl, "https://", false)}
 
       <Text style={styles.section}>Distances</Text>
@@ -230,6 +229,7 @@ export default function RaceEdit() {
 }
 
 const styles = StyleSheet.create({
+  provinceDrop: { flexGrow: 0, marginBottom: 14 },
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
   content: { padding: 16, paddingBottom: 60, maxWidth: 640, width: "100%", alignSelf: "center" },

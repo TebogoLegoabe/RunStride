@@ -21,6 +21,7 @@ import type { Listing, RaceDetail } from "../../lib/types";
 import { useChat } from "../ChatProvider";
 import { ChoiceChips } from "../ChoiceChips";
 import { SafetySheet } from "../SafetySheet";
+import { Dropdown } from "../ui/Dropdown";
 import { colors, fonts, radius } from "../../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
@@ -347,20 +348,22 @@ export function RaceSwaps({ race }: Props) {
           </View>
 
           <Text style={styles.section}>On the board</Text>
-          <ChoiceChips
-            options={BOARD_KINDS}
-            selected={boardKind}
-            onChange={(v) => setBoardKind(v.length ? v : ["all"])}
-            single
-          />
-          {race.events.length > 1 && (
-            <ChoiceChips
-              options={[{ value: "all", label: "All distances" }, ...race.events.map((e) => ({ value: e.id, label: e.label }))]}
-              selected={boardEvent}
-              onChange={(v) => setBoardEvent(v.length ? v : ["all"])}
-              single
+          <View style={styles.dropRow}>
+            <Dropdown
+              label="Show"
+              options={BOARD_KINDS}
+              selected={boardKind}
+              onChange={(v) => setBoardKind(v.length ? v : ["all"])}
             />
-          )}
+            {race.events.length > 1 && (
+              <Dropdown
+                label="Distance"
+                options={[{ value: "all", label: "All distances" }, ...race.events.map((e) => ({ value: e.id, label: e.label }))]}
+                selected={boardEvent}
+                onChange={(v) => setBoardEvent(v.length ? v : ["all"])}
+              />
+            )}
+          </View>
           {listings === null ? (
             <ActivityIndicator color={colors.primary} />
           ) : listings.length === 0 ? (
@@ -493,6 +496,7 @@ const styles = StyleSheet.create({
   offering: { color: colors.primary },
   looking: { color: colors.pink },
   who: { color: colors.heading, fontSize: 15, fontWeight: "600" },
+  dropRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
   whoRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   unverified: { color: colors.textFaint, fontSize: 11 },
   cardActions: { flexDirection: "row", alignItems: "center", gap: 16 },

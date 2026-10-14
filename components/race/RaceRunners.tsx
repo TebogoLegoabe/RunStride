@@ -7,7 +7,7 @@ import { ApiError, answerChatRequest, getAttendees, mediaUrl, sendChatRequest } 
 import type { Attendee, RaceEvent, RaceRunners as Runners } from "../../lib/types";
 import { useChat } from "../ChatProvider";
 import { useMembership } from "../MembershipProvider";
-import { ChoiceChips } from "../ChoiceChips";
+import { Dropdown } from "../ui/Dropdown";
 import { Button } from "../ui/Button";
 import { RACE_PASS } from "../../lib/plans";
 import { isUpgradeError, openPlus } from "../../lib/upsell";
@@ -134,11 +134,12 @@ export function RaceRunners({ raceId, raceName, events }: Props) {
 
       {events.length > 0 && (
         <View style={styles.filters}>
-          <ChoiceChips
+          <Dropdown
+            label="Distance"
             options={distanceOptions}
             selected={distance}
             onChange={(v) => filter(() => setDistance(v.length ? v : [ALL]))}
-            single
+            style={styles.distanceDrop}
           />
           <Pressable
             style={[styles.paceToggle, similarPace && styles.paceToggleOn]}
@@ -270,6 +271,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   filters: { marginBottom: 6 },
+  distanceDrop: { flexGrow: 0, alignSelf: "flex-start", minWidth: 200, marginBottom: 10 },
   paceToggle: {
     flexDirection: "row",
     alignItems: "center",

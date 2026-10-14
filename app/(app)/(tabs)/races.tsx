@@ -24,6 +24,7 @@ import { EmptyState } from "../../../components/ui/EmptyState";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { IconButton } from "../../../components/ui/IconButton";
 import { Pagination } from "../../../components/ui/Pagination";
+import { Dropdown } from "../../../components/ui/Dropdown";
 import { ChoiceChips } from "../../../components/ChoiceChips";
 import { colors, gradient } from "../../../lib/theme";
 import { CONTENT_WIDTH, hoverable, useBreakpoint, useColumns, useTopPadding } from "../../../lib/responsive";
@@ -100,7 +101,6 @@ export default function Races() {
   const [province, setProvince] = useState<string[]>(["any"]);
   const [when, setWhen] = useState<When[]>(["any"]);
   const [distances, setDistances] = useState<RaceDistance[]>([]);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [races, setRaces] = useState<RaceSummary[] | null>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -270,32 +270,23 @@ export default function Races() {
           <View style={styles.flex}>
             <ChoiceChips options={VIEWS} selected={view} onChange={setView} single />
           </View>
-          <Pressable
-            style={[styles.filterButton, activeFilters > 0 && styles.filterButtonOn]}
-            onPress={() => setFiltersOpen((o) => !o)}
-          >
-            <Ionicons name="options-outline" size={16} color={activeFilters ? colors.primary : colors.text} />
-            <Text style={[styles.filterButtonText, activeFilters > 0 && styles.filterButtonTextOn]}>
-              Filters{activeFilters ? ` (${activeFilters})` : ""}
-            </Text>
-          </Pressable>
         </View>
-        {filtersOpen && (
-          <View style={styles.filterPanel}>
-            <Text style={styles.filterLabel}>Where</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <ChoiceChips options={PROVINCE_OPTIONS} selected={province} onChange={setProvince} single />
-            </ScrollView>
-            <Text style={styles.filterLabel}>When</Text>
-            <ChoiceChips options={WHEN_OPTIONS} selected={when} onChange={setWhen} single />
-            <Text style={styles.filterLabel}>Distance</Text>
-            <ChoiceChips options={DISTANCE_OPTIONS} selected={distances} onChange={setDistances} />
-            {activeFilters > 0 && (
-              <Pressable onPress={clearFilters}>
-                <Text style={styles.clearText}>Clear filters</Text>
-              </Pressable>
-            )}
-          </View>
+        <View style={styles.dropRow}>
+          <Dropdown label="Where" options={PROVINCE_OPTIONS} selected={province} onChange={setProvince} />
+          <Dropdown label="When" options={WHEN_OPTIONS} selected={when} onChange={setWhen} />
+          <Dropdown
+            label="Distance"
+            options={DISTANCE_OPTIONS}
+            selected={distances}
+            onChange={setDistances}
+            multiple
+            emptyLabel="Any distance"
+          />
+        </View>
+        {activeFilters > 0 && (
+          <Pressable onPress={clearFilters} style={styles.clearRow}>
+            <Text style={styles.clearText}>Clear filters</Text>
+          </Pressable>
         )}
         {error && <Text style={styles.error}>{error}</Text>}
         {countText && <Text style={styles.count}>{countText}</Text>}
@@ -645,6 +636,8 @@ const styles = StyleSheet.create({
   search: { flex: 1, color: colors.heading, fontSize: 15, paddingVertical: 12 },
   error: { color: colors.dangerText, fontSize: 14, marginBottom: 10 },
   viewRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  dropRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 },
+  clearRow: { alignSelf: "flex-start", paddingVertical: 4, marginBottom: 8 },
   flex: { flex: 1 },
   filterButton: {
     flexDirection: "row",
