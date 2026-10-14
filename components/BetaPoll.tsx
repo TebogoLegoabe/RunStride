@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { apiRequest } from "../lib/api";
 import { dismissTip, tipDismissed } from "../lib/tips";
+import { useMembership } from "./MembershipProvider";
 import { colors } from "../lib/theme";
 
 type Poll = { id: string; question: string; options: { value: string; label: string }[]; answered: boolean };
 
 // One question for beta testers, shown until they answer or tap "Not now". Never blocks anything.
 export function BetaPoll({ token }: { token: string | null }) {
+  const { membership } = useMembership();
   const [poll, setPoll] = useState<Poll | null>(null);
   const [open, setOpen] = useState(false);
   const [thanks, setThanks] = useState(false);
@@ -32,7 +34,8 @@ export function BetaPoll({ token }: { token: string | null }) {
     };
   }, [token]);
 
-  if (!poll) return null;
+  // The free Plus offer comes first; this waits until it has been taken
+  if (!poll || !membership || membership.betaOfferDays > 0) return null;
 
   const close = () => {
     setOpen(false);

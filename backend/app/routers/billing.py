@@ -8,7 +8,7 @@ Real purchases happen in the app stores. RevenueCat tells us about them through 
 import hmac
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from sqlalchemy import select
@@ -44,6 +44,15 @@ log = logging.getLogger(__name__)
 router = APIRouter(tags=["membership"])
 
 
+def beta_offer_days(user: User, settings, plus_active: bool, plus_until) -> int:
+    """Days of free Plus on offer: only until it has been taken, and not to someone with Plus for good."""
+    if settings.beta_plus_days <= 0 or user.beta_plus_claimed_at is not None:
+        return 0
+    if plus_active and plus_until is None:
+        return 0
+    return settings.beta_plus_days
+
+
 def membership(db, user: User, settings) -> MembershipOut:
     active, until, source = plus_status(db, user)
     passes = db.execute(
@@ -68,6 +77,7 @@ def membership(db, user: User, settings) -> MembershipOut:
             chat_requests_per_race=FREE_CHAT_REQUESTS_PER_RACE,
         ),
         test_purchases=settings.test_purchases,
+        beta_offer_days=beta_offer_days(user, settings, active, until),
     )
 
 
@@ -80,6 +90,19 @@ def get_membership(user: CurrentUser, db: DbSession, settings: AppSettings) -> M
 def set_dating_mode(body: DatingModeBody, user: CurrentUser, db: DbSession, settings: AppSettings) -> MembershipOut:
     """Taken: hidden from Discover and race runner lists; races, chats and swaps carry on."""
     user.dating_mode = body.mode
+    db.commit()
+    return membership(db, user, settings)
+
+
+@router.post("/billing/activate-beta", response_model=MembershipOut)
+def activate_beta_plus(user: CurrentUser, db: DbSession, settings: AppSettings) -> MembershipOut:
+    """Switch on the free beta Plus, once per account. Payments replace this later."""
+    active, until, _ = plus_status(db, user)
+    days = beta_offer_days(user, settings, active, until)
+    if days <= 0:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="This offer isn't available.")
+    grant_plus(db, user, source="beta", duration=timedelta(days=days))
+    user.beta_plus_claimed_at = utcnow()
     db.commit()
     return membership(db, user, settings)
 

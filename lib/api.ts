@@ -5,6 +5,8 @@
 import type { ReportReason } from "./options";
 import { photoFile } from "./photoFile";
 import type {
+  AdminStats,
+  AdminUserRow,
   IdCheckState,
   IdReview,
   NotificationSettings,
@@ -197,6 +199,23 @@ export async function submitIdCheck(token: string, idNumber: string, idPhotoUri:
   if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
   return res.json() as Promise<IdCheckState>;
 }
+
+// --- Admin: overview and people ---
+export const getAdminStats = (token: string) => apiRequest<AdminStats>("/admin/stats", { token });
+
+export const getAdminUsers = (
+  token: string,
+  { q = "", sort = "newest", offset = 0 }: { q?: string; sort?: "newest" | "active"; offset?: number } = {}
+) => apiPaged<AdminUserRow>(`/admin/users?q=${encodeURIComponent(q)}&sort=${sort}&offset=${offset}&limit=30`, token);
+
+export const setUserStatus = (token: string, id: string, action: "suspend" | "ban" | "reinstate", days = 7) =>
+  apiRequest<AdminUserRow>(`/admin/users/${id}/status`, { method: "POST", body: { action, days }, token });
+
+export const giveUserPlus = (token: string, id: string, days?: number) =>
+  apiRequest<AdminUserRow>(`/admin/users/${id}/plus`, { method: "POST", body: { days }, token });
+
+export const takeUserPlus = (token: string, id: string) =>
+  apiRequest<AdminUserRow>(`/admin/users/${id}/plus`, { method: "DELETE", token });
 
 export const getIdChecks = (token: string) => apiRequest<IdReview[]>("/admin/id-checks", { token });
 
@@ -458,6 +477,10 @@ export const markSwapsSeen = (token: string, raceId: string) =>
   apiRequest<void>(`/races/${raceId}/swaps/seen`, { method: "POST", token });
 
 // --- Membership ---
+
+// Switch on the free beta Plus (once per account)
+export const activateBetaPlus = (token: string) =>
+  apiRequest<Membership>("/billing/activate-beta", { method: "POST", token });
 
 export const getMembership = (token: string) => apiRequest<Membership>("/me/membership", { token });
 

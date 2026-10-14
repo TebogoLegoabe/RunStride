@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Annotated
 
 import jwt
@@ -9,6 +10,7 @@ from app.config import Settings, get_settings
 from app.db import get_db
 from app.models import User
 from app.moderation import lockout_message
+from app.security import utcnow
 from app.security import decode_access_token
 
 DbSession = Annotated[Session, Depends(get_db)]
@@ -38,6 +40,11 @@ def get_current_user(
     locked = lockout_message(user)
     if locked:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=locked)
+    # Who is active: noted at most every five minutes, so it costs one small write now and then
+    now = utcnow()
+    if user.last_seen_at is None or now - user.last_seen_at > timedelta(minutes=5):
+        user.last_seen_at = now
+        db.commit()
     return user
 
 

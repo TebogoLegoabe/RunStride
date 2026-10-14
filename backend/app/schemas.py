@@ -685,6 +685,8 @@ class MembershipOut(CamelModel):
     limits: MembershipLimits
     # Development: purchases are granted straight away, with no store and no charge
     test_purchases: bool
+    # Free Plus they can switch on once during the beta: how many days (0: not on offer)
+    beta_offer_days: int = 0
 
 
 class DatingModeBody(CamelModel):
@@ -742,6 +744,59 @@ class PollResults(CamelModel):
     question: str
     total: int
     counts: dict[str, int]
+
+
+class DayCount(CamelModel):
+    day: date
+    count: int
+
+
+class AdminStats(CamelModel):
+    users_total: int
+    profiles_complete: int
+    new_today: int
+    new_week: int
+    active_now: int  # seen in the last 5 minutes
+    active_day: int
+    active_week: int
+    active_month: int
+    plus_active: int
+    verified: int
+    with_google: int
+    suspended_or_banned: int
+    matches_total: int
+    messages_day: int
+    races_published: int
+    pending_races: int
+    open_reports: int
+    pending_id_checks: int
+    signups_by_day: list[DayCount]  # the last 14 days
+
+
+class AdminUserRow(CamelModel):
+    id: uuid.UUID
+    display_name: str | None
+    phone: str | None
+    email: str | None
+    created_at: datetime
+    last_seen_at: datetime | None
+    account_status: str
+    verification_status: str
+    plus_active: bool
+    plus_source: str | None
+    plus_until: datetime | None
+    has_google: bool
+    profile_complete: bool
+    is_admin: bool
+
+
+class UserStatusBody(CamelModel):
+    action: Literal["suspend", "ban", "reinstate"]
+    days: int = Field(default=7, ge=1, le=365)
+
+
+class AdminPlusBody(CamelModel):
+    days: int | None = Field(default=None, ge=1, le=3650)  # empty: until removed
 
 
 class SmsStatus(CamelModel):

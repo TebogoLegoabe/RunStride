@@ -3,17 +3,18 @@ from datetime import timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from app.config import get_settings
 from app.deps import AdminUser, DbSession
 from app.membership import end_plus, grant_plus, plus_status
 from app.phone import InvalidPhoneNumber, normalize_phone
-from app.models import AccountStatus, OtpCode, Race, RaceAttendance, RaceEvent, RaceMessage, Report, User
+from app.models import AccountStatus, Entitlement, IdSubmission, Match, Message, OtpCode, Profile, Race, RaceAttendance, RaceEvent, RaceMessage, Report, User
 from app.moderation import end_all_matches, resolve_other_open_reports
 from app.realtime import hub
 from app.routers.races import race_detail
-from app.schemas import GrantPlusBody, PlusOut, SmsStatus, RaceBody, RaceDetail, ReportDetail, ReportedPerson, ReportPerson, ReportSummary, ResolveBody
+from app.races import SA_TZ
+from app.schemas import AdminPlusBody, AdminStats, AdminUserRow, DayCount, UserStatusBody, GrantPlusBody, PlusOut, SmsStatus, RaceBody, RaceDetail, ReportDetail, ReportedPerson, ReportPerson, ReportSummary, ResolveBody
 from app.security import utcnow
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -287,3 +288,141 @@ def sms_status(admin: AdminUser, db: DbSession) -> SmsStatus:
         low=low,
     )
 
+
+
+# --- Overview and people ---
+
+
+@router.get("/stats", response_model=AdminStats)
+def stats(admin: AdminUser, db: DbSession) -> AdminStats:
+    now = utcnow()
+
+    def users_where(*conditions) -> int:
+        return db.scalar(select(func.count()).select_from(User).where(*conditions)) or 0
+
+    def seen_since(delta: timedelta) -> int:
+        return users_where(User.last_seen_at > now - delta)
+
+    plus_active = db.scalar(
+        select(func.count(func.distinct(Entitlement.user_id))).where(
+            Entitlement.kind == "plus", or_(Entitlement.expires_at.is_(None), Entitlement.expires_at > now)
+        )
+    )
+    signup_day = func.date(func.timezone("Africa/Johannesburg", User.created_at))
+    day_rows = db.execute(
+        select(signup_day, func.count()).where(User.created_at > now - timedelta(days=14)).group_by(signup_day)
+    ).all()
+    by_day = {d: n for d, n in day_rows}
+    today = now.astimezone(SA_TZ).date()
+    signups = [DayCount(day=today - timedelta(days=i), count=by_day.get(today - timedelta(days=i), 0)) for i in range(13, -1, -1)]
+    return AdminStats(
+        users_total=users_where(),
+        profiles_complete=db.scalar(select(func.count()).select_from(Profile)) or 0,
+        new_today=users_where(User.created_at > now - timedelta(days=1)),
+        new_week=users_where(User.created_at > now - timedelta(days=7)),
+        active_now=seen_since(timedelta(minutes=5)),
+        active_day=seen_since(timedelta(hours=24)),
+        active_week=seen_since(timedelta(days=7)),
+        active_month=seen_since(timedelta(days=30)),
+        plus_active=plus_active or 0,
+        verified=users_where(User.verification_status == "verified"),
+        with_google=users_where(User.google_sub.is_not(None)),
+        suspended_or_banned=users_where(User.account_status.in_(["suspended", "banned"])),
+        matches_total=db.scalar(select(func.count()).select_from(Match).where(Match.ended_at.is_(None))) or 0,
+        messages_day=(db.scalar(select(func.count()).select_from(Message).where(Message.created_at > now - timedelta(hours=24))) or 0)
+        + (db.scalar(select(func.count()).select_from(RaceMessage).where(RaceMessage.created_at > now - timedelta(hours=24))) or 0),
+        races_published=db.scalar(select(func.count()).select_from(Race).where(Race.status == "published")) or 0,
+        pending_races=db.scalar(select(func.count()).select_from(Race).where(Race.status == "pending")) or 0,
+        open_reports=db.scalar(select(func.count()).select_from(Report).where(Report.status == "open")) or 0,
+        pending_id_checks=db.scalar(select(func.count()).select_from(IdSubmission).where(IdSubmission.status == "pending")) or 0,
+        signups_by_day=signups,
+    )
+
+
+def _user_row(db: DbSession, user: User) -> AdminUserRow:
+    active, until, source = plus_status(db, user)
+    return AdminUserRow(
+        id=user.id,
+        display_name=user.profile.display_name if user.profile else None,
+        phone=user.phone,
+        email=user.email,
+        created_at=user.created_at,
+        last_seen_at=user.last_seen_at,
+        account_status=user.account_status,
+        verification_status=getattr(user.verification_status, "value", user.verification_status),
+        plus_active=active,
+        plus_source=source,
+        plus_until=until,
+        has_google=user.google_sub is not None,
+        profile_complete=user.profile_complete,
+        is_admin=user.is_admin,
+    )
+
+
+@router.get("/users", response_model=list[AdminUserRow])
+def list_users(
+    admin: AdminUser,
+    db: DbSession,
+    response: Response,
+    q: Annotated[str | None, Query(max_length=80)] = None,
+    sort: Annotated[Literal["newest", "active"], Query()] = "newest",
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+) -> list[AdminUserRow]:
+    """People, newest first (or most recently active). `q` matches name, email or phone digits."""
+    stmt = select(User).outerjoin(Profile, Profile.user_id == User.id)
+    if q:
+        like = f"%{q.strip()}%"
+        digits = "".join(ch for ch in q if ch.isdigit())
+        conditions = [Profile.display_name.ilike(like), User.email.ilike(like)]
+        if len(digits) >= 3:
+            conditions.append(User.phone.ilike(f"%{digits.lstrip('0')}%"))
+        stmt = stmt.where(or_(*conditions))
+    response.headers["X-Total-Count"] = str(db.scalar(select(func.count()).select_from(stmt.subquery())))
+    order = User.last_seen_at.desc().nulls_last() if sort == "active" else User.created_at.desc()
+    users = db.scalars(stmt.order_by(order, User.id).offset(offset).limit(limit)).all()
+    return [_user_row(db, u) for u in users]
+
+
+def _target(db: DbSession, user_id: uuid.UUID) -> User:
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No such account.")
+    return user
+
+
+@router.post("/users/{user_id}/status", response_model=AdminUserRow)
+def set_user_status(user_id: uuid.UUID, body: UserStatusBody, admin: AdminUser, db: DbSession) -> AdminUserRow:
+    user = _target(db, user_id)
+    if user.is_admin and body.action != "reinstate":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Admins can't be suspended or banned here.")
+    if body.action == "suspend":
+        user.account_status = AccountStatus.suspended
+        user.suspended_until = utcnow() + timedelta(days=body.days)
+    elif body.action == "ban":
+        user.account_status = AccountStatus.banned
+        user.suspended_until = None
+        end_all_matches(db, user, admin.id)
+    else:
+        user.account_status = AccountStatus.active
+        user.suspended_until = None
+    db.commit()
+    return _user_row(db, user)
+
+
+@router.post("/users/{user_id}/plus", response_model=AdminUserRow)
+def give_user_plus(user_id: uuid.UUID, body: AdminPlusBody, admin: AdminUser, db: DbSession) -> AdminUserRow:
+    user = _target(db, user_id)
+    grant_plus(db, user, source="admin", duration=timedelta(days=body.days) if body.days else None)
+    db.commit()
+    return _user_row(db, user)
+
+
+@router.delete("/users/{user_id}/plus", response_model=AdminUserRow)
+def take_user_plus(user_id: uuid.UUID, admin: AdminUser, db: DbSession) -> AdminUserRow:
+    """Ends Plus given by admins or switched on during the beta. Store purchases are left alone."""
+    user = _target(db, user_id)
+    end_plus(db, user, source="admin")
+    end_plus(db, user, source="beta")
+    db.commit()
+    return _user_row(db, user)

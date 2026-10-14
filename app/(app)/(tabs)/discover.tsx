@@ -26,6 +26,7 @@ import { IconButton } from "../../../components/ui/IconButton";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { BetaPoll } from "../../../components/BetaPoll";
+import { BetaPlusOffer } from "../../../components/BetaPlusOffer";
 import { SafetySheet } from "../../../components/SafetySheet";
 import { colors } from "../../../lib/theme";
 import { useBreakpoint, useTopPadding } from "../../../lib/responsive";
@@ -390,6 +391,7 @@ export default function Discover() {
         onMessage={openMatchChat}
         onClose={() => setMatch(null)}
       />
+      <BetaPlusOffer token={token} />
       <BetaPoll token={token} />
     </View>
   );

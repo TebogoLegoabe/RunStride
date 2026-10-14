@@ -7,19 +7,27 @@ import { formatWhen, labelFor } from "../../../lib/format";
 import { REPORT_REASONS } from "../../../lib/options";
 import type { ReportSummary } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
-import { ChoiceChips } from "../../../components/ChoiceChips";
+import { Dropdown } from "../../../components/ui/Dropdown";
 import { RaceAdmin } from "../../../components/admin/RaceAdmin";
 import { IdChecks } from "../../../components/admin/IdChecks";
+import { Overview } from "../../../components/admin/Overview";
+import { People } from "../../../components/admin/People";
 import { colors } from "../../../lib/theme";
 import { useTopPadding } from "../../../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const VIEWS = [
-  { value: "open", label: "Open" },
-  { value: "resolved", label: "Resolved" },
-  { value: "races", label: "Races" },
+  { value: "overview", label: "Overview" },
+  { value: "people", label: "People" },
   { value: "ids", label: "ID checks" },
+  { value: "races", label: "Races" },
+  { value: "open", label: "Reports: open" },
+  { value: "resolved", label: "Reports: resolved" },
 ] as const;
+
+type Section = (typeof VIEWS)[number]["value"];
+// Sections that aren't a list of reports
+const NOT_REPORTS: Section[] = ["overview", "people", "ids", "races"];
 
 // Admins only (the tab is hidden for everyone else, and the API refuses non-admins)
 export default function ModerationQueue() {
@@ -28,7 +36,7 @@ export default function ModerationQueue() {
   const { token } = useChat();
   // A notification opens the tab on the list that needs attention
   const params = useLocalSearchParams<{ view?: string }>();
-  const [view, setView] = useState<("open" | "resolved" | "races" | "ids")[]>(["open"]);
+  const [view, setView] = useState<Section[]>(["overview"]);
   useEffect(() => {
     if (params.view === "ids" || params.view === "races") setView([params.view]);
   }, [params.view]);
@@ -37,9 +45,9 @@ export default function ModerationQueue() {
   const [error, setError] = useState<string | null>(null);
 
   const loadMore = async () => {
-    if (!token || !reports || view[0] === "races" || view[0] === "ids") return;
+    if (!token || !reports || NOT_REPORTS.includes(view[0])) return;
     try {
-      const page = await getReports(token, view[0], reports.length);
+      const page = await getReports(token, view[0] as "open" | "resolved", reports.length);
       setReports([...reports, ...page.items]);
       setReportTotal(page.total);
     } catch (e) {
@@ -48,8 +56,8 @@ export default function ModerationQueue() {
   };
 
   const load = useCallback(async () => {
-    if (!token || view[0] === "races" || view[0] === "ids") return;
-    const status = view[0];
+    if (!token || NOT_REPORTS.includes(view[0])) return;
+    const status = view[0] as "open" | "resolved";
     try {
       const page = await getReports(token, status);
       setReports(page.items);
@@ -69,20 +77,29 @@ export default function ModerationQueue() {
   return (
     <View style={[styles.container, { paddingTop: topPadding }]}>
       <View style={styles.inner}>
-        <Text style={styles.heading}>Moderation</Text>
-        <ChoiceChips
+        <Text style={styles.heading}>Admin</Text>
+        <Dropdown
+          label="Section"
           options={VIEWS}
           selected={view}
           onChange={(v) => {
             setReports(null);
             setView(v);
           }}
-          single
+          style={styles.section}
         />
         {error && <Text style={styles.error}>{error}</Text>}
       </View>
 
-      {view[0] === "races" ? (
+      {view[0] === "overview" ? (
+        <ScrollView>
+          <Overview go={(section) => setView([section])} />
+        </ScrollView>
+      ) : view[0] === "people" ? (
+        <ScrollView keyboardShouldPersistTaps="handled">
+          <People />
+        </ScrollView>
+      ) : view[0] === "races" ? (
         <ScrollView>
           <RaceAdmin />
         </ScrollView>
@@ -141,6 +158,7 @@ const styles = StyleSheet.create({
   heading: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 12 },
   error: { color: colors.dangerText, fontSize: 14, marginBottom: 12 },
   spinner: { marginTop: 32 },
+  section: { flexGrow: 0, alignSelf: "flex-start", minWidth: 220, marginBottom: 14 },
   more: { alignSelf: "center", padding: 14 },
   moreText: { color: colors.primary, fontSize: 14, fontWeight: "700" },
   empty: { color: colors.textMuted, fontSize: 15, textAlign: "center", marginTop: 32 },

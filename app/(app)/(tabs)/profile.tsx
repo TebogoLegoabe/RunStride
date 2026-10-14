@@ -5,6 +5,7 @@ import { useFocusEffect, useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
   ApiError,
+  activateBetaPlus,
   connectGoogle,
   deleteAccount,
   disconnectGoogle,
@@ -28,6 +29,11 @@ const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 
 // "Mon 3 Nov" from an ISO timestamp
 const day = (iso: string) => formatRaceDates(iso.slice(0, 10), iso.slice(0, 10));
+// "12 days", "1 day", "today" until a date, rounded up
+const daysLeft = (iso: string) => {
+  const days = Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
+  return days <= 0 ? "less than a day" : days === 1 ? "1 day" : `${days} days`;
+};
 
 type Confirm = "sign-out" | "delete" | null;
 
@@ -58,6 +64,16 @@ export default function ProfileTab() {
     setError(null);
     try {
       setMe(await disconnectGoogle(token));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+    }
+  };
+
+  const activateBeta = async () => {
+    if (!token) return;
+    setError(null);
+    try {
+      updateMembership(await activateBetaPlus(token));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     }
@@ -162,22 +178,26 @@ export default function ProfileTab() {
         <>
           <Text style={styles.section}>Membership</Text>
           <View style={styles.group}>
-            <Pressable style={styles.row} onPress={() => openPlus(router)}>
+            <Pressable style={styles.row} onPress={() => (membership.betaOfferDays > 0 ? activateBeta() : openPlus(router))}>
               <Ionicons name="flash" size={20} color={colors.primary} />
               <View style={styles.rowStack}>
                 <Text style={styles.rowTitle}>RunStride Plus</Text>
                 <Text style={styles.rowSub}>
                   {membership.plus.active
                     ? membership.plus.expiresAt
-                      ? `Active until ${day(membership.plus.expiresAt)}`
+                      ? membership.plus.source === "beta"
+                        ? `Free beta Plus: ${daysLeft(membership.plus.expiresAt)} left`
+                        : `Active until ${day(membership.plus.expiresAt)}`
                       : membership.plus.source === "admin"
                         ? "Active, given by RunStride"
                         : "Active"
-                    : "Everyone at your races, unlimited likes and swap alerts"}
+                    : membership.betaOfferDays > 0
+                      ? `Free for ${membership.betaOfferDays} days during the beta`
+                      : "Everyone at your races, unlimited likes and swap alerts"}
                 </Text>
               </View>
               <Text style={membership.plus.active ? styles.statusOn : styles.statusCta}>
-                {membership.plus.active ? "Active" : "Get Plus"}
+                {membership.plus.active ? "Active" : membership.betaOfferDays > 0 ? "Activate free" : "Get Plus"}
               </Text>
             </Pressable>
             {(membership.racePasses.length > 0 || membership.racePassCredits > 0) && (

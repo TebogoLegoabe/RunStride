@@ -346,12 +346,52 @@ export type DatingMode = "looking" | "taken";
 export type ProductId = "plus_weekly" | "plus_monthly" | "race_pass";
 
 export interface Membership {
-  plus: { active: boolean; expiresAt: string | null; source: "store" | "admin" | "dev" | null };
+  plus: { active: boolean; expiresAt: string | null; source: "store" | "admin" | "dev" | "beta" | null };
   datingMode: DatingMode;
   racePassCredits: number; // bought, not yet used on a race
   racePasses: { raceId: string; raceName: string; expiresAt: string }[];
   limits: { dailyLikes: number; likesUsedToday: number; runnersVisiblePerRace: number; chatRequestsPerRace: number };
   testPurchases: boolean; // development: purchases are granted with no store and no charge
+  betaOfferDays: number; // free Plus they can switch on once during the beta (0: not on offer)
+}
+
+export interface AdminStats {
+  usersTotal: number;
+  profilesComplete: number;
+  newToday: number;
+  newWeek: number;
+  activeNow: number;
+  activeDay: number;
+  activeWeek: number;
+  activeMonth: number;
+  plusActive: number;
+  verified: number;
+  withGoogle: number;
+  suspendedOrBanned: number;
+  matchesTotal: number;
+  messagesDay: number;
+  racesPublished: number;
+  pendingRaces: number;
+  openReports: number;
+  pendingIdChecks: number;
+  signupsByDay: { day: string; count: number }[];
+}
+
+export interface AdminUserRow {
+  id: string;
+  displayName: string | null;
+  phone: string | null;
+  email: string | null;
+  createdAt: string;
+  lastSeenAt: string | null;
+  accountStatus: "active" | "suspended" | "banned";
+  verificationStatus: string;
+  plusActive: boolean;
+  plusSource: string | null;
+  plusUntil: string | null;
+  hasGoogle: boolean;
+  profileComplete: boolean;
+  isAdmin: boolean;
 }
 
 export interface RaceRunners {

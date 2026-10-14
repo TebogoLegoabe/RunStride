@@ -60,6 +60,10 @@ class User(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Last time the app talked to the server (updated at most every few minutes): who is active
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # When they took the free beta Plus offer (once per account)
+    beta_plus_claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Rounded to ~1 km before storing (see routers/discover.py); never shown to other users
     location: Mapped[object | None] = mapped_column(
         Geography(geometry_type="POINT", srid=4326, spatial_index=False)
@@ -574,14 +578,15 @@ class Entitlement(Base):
     __table_args__ = (
         Index("ix_entitlements_user_id_kind", "user_id", "kind"),
         CheckConstraint("kind IN ('plus', 'race_pass')", name="entitlement_kind_values"),
-        CheckConstraint("source IN ('store', 'admin', 'dev')", name="entitlement_source_values"),
+        CheckConstraint("source IN ('store', 'admin', 'dev', 'beta')", name="entitlement_source_values"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     kind: Mapped[str] = mapped_column(String(20))
     race_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("races.id", ondelete="SET NULL"))
-    # store: bought through Apple/Google; admin: given (e.g. beta testers); dev: test purchase
+    # store: bought through Apple/Google; admin: given (e.g. beta testers); dev: test purchase;
+    # beta: the free offer people activate themselves during the beta
     source: Mapped[str] = mapped_column(String(20))
     product_id: Mapped[str | None] = mapped_column(String(100))
     # The store's transaction ID, so a purchase is only ever recorded once
