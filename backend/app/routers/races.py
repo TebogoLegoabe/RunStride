@@ -368,6 +368,9 @@ def suggest_race(body: RaceSuggestionBody, user: CurrentUser, db: DbSession) -> 
             race.events.append(RaceEvent(label=event.label.strip(), distance_km=km))
     db.add(race)
     db.commit()
+    push.notify_admins(
+        db, "New race suggested", f"{race.name}, {race.city}: open Moderation to review", "/moderation?view=races", exclude=user.id
+    )
     return RaceSummary(**_summary_fields(db, race, user))
 
 

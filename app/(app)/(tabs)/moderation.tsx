@@ -1,7 +1,7 @@
 import { View, StyleSheet, Pressable, ActivityIndicator, FlatList, ScrollView } from "react-native";
 import { Text } from "../../../components/ui/Text";
-import { useCallback, useState } from "react";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ApiError, getReports } from "../../../lib/api";
 import { formatWhen, labelFor } from "../../../lib/format";
 import { REPORT_REASONS } from "../../../lib/options";
@@ -26,7 +26,12 @@ export default function ModerationQueue() {
   const topPadding = useTopPadding();
   const router = useRouter();
   const { token } = useChat();
+  // A notification opens the tab on the list that needs attention
+  const params = useLocalSearchParams<{ view?: string }>();
   const [view, setView] = useState<("open" | "resolved" | "races" | "ids")[]>(["open"]);
+  useEffect(() => {
+    if (params.view === "ids" || params.view === "races") setView([params.view]);
+  }, [params.view]);
   const [reports, setReports] = useState<ReportSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 

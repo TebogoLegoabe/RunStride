@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Form, HTTPException, Response, UploadFile, status
 from sqlalchemy import func, select
 
+from app import push
 from app.deps import AdminUser, AppSettings, CurrentUser, DbSession
 from app.images import InvalidImage, process_photo
 from app.models import AccountStatus, IdSubmission, Profile, User, VerificationStatus
@@ -121,6 +122,9 @@ def submit_id_check(
     )
     user.verification_status = VerificationStatus.pending
     db.commit()
+    push.notify_admins(
+        db, "ID check waiting", f"{profile.display_name} wants to get verified", "/moderation?view=ids", exclude=user.id
+    )
     return id_check_state(user, db, settings)
 
 

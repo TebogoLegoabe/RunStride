@@ -130,6 +130,13 @@ def notify(
     _dispatch(lambda: _deliver(recipients, category, title, body, url, about))
 
 
+def notify_admins(db, title: str, body: str, url: str, *, exclude=None) -> None:
+    """Tell every admin about something waiting for review (a race suggestion, an ID check).
+    Follows their notification settings: all push off means none."""
+    admin_ids = db.scalars(select(User.id).where(User.is_admin.is_(True))).all()
+    notify([a for a in admin_ids if a != exclude], "admin", title, body, url)
+
+
 def _deliver(recipients, category, title, body, url, about) -> None:
     try:
         with SessionLocal() as db:
