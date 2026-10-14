@@ -7,9 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import delete, func, select, update
 
 from app.config import Settings
-from app.deps import AppSettings, DbSession
+from app.deps import AppSettings, CurrentUser, DbSession
 from app.models import OtpCode, TrustedDevice, User
-from app.moderation import lockout_message
+from app.moderation import end_all_matches, lockout_message
 from app.phone import InvalidPhoneNumber, normalize_phone, region_of
 from app.google_auth import GoogleIdentity, GoogleVerifier, InvalidGoogleToken, get_google_verifier
 from app.schemas import (
@@ -23,6 +23,7 @@ from app.schemas import (
 )
 from app.security import create_access_token, generate_otp, hash_device_token, hash_otp, otp_matches, utcnow
 from app.sms import SmsError, SmsSender, get_sms_sender
+from app.storage import PhotoStorage, get_photo_storage
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger("runstride.auth")
@@ -130,11 +131,8 @@ def send_otp(
     return OtpSendResponse(sent=True, phone=phone)
 
 
-@router.post("/otp/verify", response_model=OtpVerifyResponse)
-def verify_otp(body: OtpVerifyRequest, db: DbSession, settings: AppSettings) -> OtpVerifyResponse:
-    phone = _normalize(body.phone, settings)
-    now = utcnow()
-
+def _consume_code(db, phone: str, code: str, settings: Settings, now) -> None:
+    """Check a sign-in code for this number and use it up. Raises the right HTTP error if it's wrong."""
     otp = db.scalars(
         select(OtpCode)
         .where(OtpCode.phone == phone, OtpCode.consumed_at.is_(None))
@@ -153,12 +151,19 @@ def verify_otp(body: OtpVerifyRequest, db: DbSession, settings: AppSettings) -> 
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many incorrect attempts. Please request a new code.",
         )
-    if not otp_matches(phone, body.code, otp.code_hash):
+    if not otp_matches(phone, code, otp.code_hash):
         otp.attempts += 1
         db.commit()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="That code is incorrect.")
 
     otp.consumed_at = now
+
+
+@router.post("/otp/verify", response_model=OtpVerifyResponse)
+def verify_otp(body: OtpVerifyRequest, db: DbSession, settings: AppSettings) -> OtpVerifyResponse:
+    phone = _normalize(body.phone, settings)
+    now = utcnow()
+    _consume_code(db, phone, body.code, settings, now)
     user = db.scalar(select(User).where(User.phone == phone))
     locked = lockout_message(user) if user else None
     if locked:
@@ -267,3 +272,57 @@ def google_sign_in(
         suggested_name=identity.given_name if user.profile is None else None,
     )
 
+
+
+@router.post("/phone", response_model=OtpVerifyResponse)
+def add_phone(
+    body: OtpVerifyRequest,
+    user: CurrentUser,
+    db: DbSession,
+    settings: AppSettings,
+    photos: Annotated[PhotoStorage, Depends(get_photo_storage)],
+) -> OtpVerifyResponse:
+    """A Google-only account adds (and proves) a phone number, so everyone has both.
+
+    If that number already belongs to a phone account, the two are joined: the phone account keeps
+    going and now also signs in with this Google account, and the brand-new Google-only account is
+    removed. The response carries the token for whichever account is left."""
+    if user.phone is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This account already has a phone number.")
+    phone = _normalize(body.phone, settings)
+    now = utcnow()
+    _consume_code(db, phone, body.code, settings, now)
+
+    existing = db.scalar(select(User).where(User.phone == phone))
+    if existing is None:
+        user.phone = phone
+        db.commit()
+        return OtpVerifyResponse(
+            token=create_access_token(user.id), user_id=user.id, profile_complete=user.profile_complete
+        )
+
+    locked = lockout_message(existing)
+    if locked:
+        db.commit()  # the code is used up either way
+        raise HTTPException(status.HTTP_403_FORBIDDEN, locked)
+    if existing.google_sub is not None and existing.google_sub != user.google_sub:
+        db.commit()
+        raise HTTPException(status.HTTP_409_CONFLICT, "That number is already linked to a different Google account.")
+
+    google_sub, email = user.google_sub, user.email
+    photo_urls = [p.url for p in user.profile.photos] if user.profile else []
+    end_all_matches(db, user, user.id)
+    db.delete(user)  # frees the Google account for the phone account (the ID is unique)
+    db.flush()
+    existing.google_sub = google_sub
+    existing.email = email
+    existing.last_login_at = now
+    db.commit()
+    for url in photo_urls:
+        try:
+            photos.delete(url)
+        except Exception:
+            logger.exception("Could not delete photo %s", url)
+    return OtpVerifyResponse(
+        token=create_access_token(existing.id), user_id=existing.id, profile_complete=existing.profile_complete
+    )

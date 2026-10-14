@@ -5,6 +5,8 @@ import type { Href, useRouter } from "expo-router";
 import type { Me } from "./types";
 
 export function routeFor(me: Me): Href {
+  // Signed in with Google only: add a phone number first (joins an existing account with that number)
+  if (!me.phone) return "/add-phone";
   if (!me.profileComplete) return "/profile-setup";
   if (me.verificationRequired && me.verificationStatus !== "verified") return "/verify-identity";
   if (!me.hasRunningProfile) return "/running-preferences";

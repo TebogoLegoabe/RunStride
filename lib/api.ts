@@ -119,6 +119,15 @@ export const googleSignIn = (idToken: string) =>
 export const connectGoogle = (token: string, idToken: string) =>
   apiRequest<import("./types").Me>("/me/google", { method: "POST", body: { idToken }, token });
 
+// A Google-only account proves a phone number. The response's token is for the account that's left:
+// the phone account, if that number already had one (the two are joined).
+export const addPhone = (token: string, phone: string, code: string) =>
+  apiRequest<{ token: string; userId: string; profileComplete: boolean }>("/auth/phone", {
+    method: "POST",
+    body: { phone, code },
+    token,
+  });
+
 export const disconnectGoogle = (token: string) =>
   apiRequest<import("./types").Me>("/me/google", { method: "DELETE", token });
 
