@@ -86,6 +86,21 @@ def upsert(db, body: RaceBody) -> str:
     return action
 
 
+def import_csv(db, text: str) -> tuple[dict[str, int], list[str]]:
+    """Import every row, all or nothing: (counts, errors). The caller commits when there are no errors."""
+    counts = {"added": 0, "updated": 0}
+    errors: list[str] = []
+    reader = csv.DictReader(text.splitlines())
+    for line_no, row in enumerate(reader, start=2):
+        try:
+            body = row_to_body(row)
+        except (KeyError, ValueError, ValidationError, TypeError) as exc:
+            errors.append(f"line {line_no}: {exc}")
+            continue
+        counts[upsert(db, body)] += 1
+    return counts, errors
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("csv_file", type=Path)
@@ -100,16 +115,8 @@ def main() -> None:
             f"CSV files found there: {', '.join(available) or 'none'}"
         )
 
-    counts = {"added": 0, "updated": 0}
-    errors = []
-    with SessionLocal() as db, args.csv_file.open(newline="", encoding="utf-8-sig") as f:
-        for line_no, row in enumerate(csv.DictReader(f), start=2):
-            try:
-                body = row_to_body(row)
-            except (KeyError, ValueError, ValidationError) as exc:
-                errors.append(f"line {line_no}: {exc}")
-                continue
-            counts[upsert(db, body)] += 1
+    with SessionLocal() as db:
+        counts, errors = import_csv(db, args.csv_file.read_text(encoding="utf-8-sig"))
         if errors:
             db.rollback()
             print("Nothing imported: fix these rows first.", file=sys.stderr)

@@ -799,6 +799,13 @@ class AdminPlusBody(CamelModel):
     days: int | None = Field(default=None, ge=1, le=3650)  # empty: until removed
 
 
+class RaceImportResult(CamelModel):
+    imported: bool  # false: nothing was saved, fix the listed rows and send it again
+    added: int = 0
+    updated: int = 0
+    errors: list[str] = []
+
+
 class SmsStatus(CamelModel):
     """How the SMS budget is doing, for admins."""
 

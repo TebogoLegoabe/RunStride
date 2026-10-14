@@ -2,7 +2,7 @@ import uuid
 from datetime import timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import func, or_, select
 
 from app.config import get_settings
@@ -14,7 +14,8 @@ from app.moderation import end_all_matches, resolve_other_open_reports
 from app.realtime import hub
 from app.routers.races import race_detail
 from app.races import SA_TZ
-from app.schemas import AdminPlusBody, AdminStats, AdminUserRow, DayCount, UserStatusBody, GrantPlusBody, PlusOut, SmsStatus, RaceBody, RaceDetail, ReportDetail, ReportedPerson, ReportPerson, ReportSummary, ResolveBody
+from app.race_import import import_csv
+from app.schemas import RaceImportResult, AdminPlusBody, AdminStats, AdminUserRow, DayCount, UserStatusBody, GrantPlusBody, PlusOut, SmsStatus, RaceBody, RaceDetail, ReportDetail, ReportedPerson, ReportPerson, ReportSummary, ResolveBody
 from app.security import utcnow
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -168,6 +169,25 @@ def _apply_race(db: DbSession, race: Race, body: RaceBody) -> None:
         event.starts_at = item.starts_at
         keep.append(event)
     race.events = keep
+
+
+@router.post("/races/import", response_model=RaceImportResult)
+def import_races(file: UploadFile, admin: AdminUser, db: DbSession) -> RaceImportResult:
+    """Add or update many races from a CSV file (the same columns as backend/data/races.csv).
+    All or nothing: if any row is wrong, nothing is saved and the problems are listed."""
+    raw = file.file.read(2 * 1024 * 1024 + 1)
+    if len(raw) > 2 * 1024 * 1024:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, detail="That file is too large (2 MB at most).")
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Save the file as CSV (UTF-8) and try again.")
+    counts, errors = import_csv(db, text)
+    if errors:
+        db.rollback()
+        return RaceImportResult(imported=False, errors=errors[:30])
+    db.commit()
+    return RaceImportResult(imported=True, added=counts["added"], updated=counts["updated"])
 
 
 @router.post("/races", response_model=RaceDetail, status_code=status.HTTP_201_CREATED)

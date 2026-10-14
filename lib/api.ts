@@ -527,6 +527,21 @@ export const answerChatRequest = (token: string, requestId: string, answer: "acc
   apiRequest<ChatRequest>(`/chat-requests/${requestId}/${answer}`, { method: "POST", token });
 
 // --- Race admin ---
+// Web only: a CSV of races, all or nothing
+export type RaceImportResult = { imported: boolean; added: number; updated: number; errors: string[] };
+
+export async function importRaces(token: string, file: Blob): Promise<RaceImportResult> {
+  const form = new FormData();
+  form.append("file", file, "races.csv");
+  const res = await fetch(`${API_BASE_URL}/admin/races/import`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
+  return res.json() as Promise<RaceImportResult>;
+}
+
 export const getAdminRaces = (token: string, status: "pending" | "published" | "rejected" = "pending", offset = 0) =>
   apiPaged<RaceDetail>(`/admin/races?status=${status}&offset=${offset}&limit=30`, token);
 

@@ -1,8 +1,8 @@
-import { View, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Pressable, StyleSheet, ActivityIndicator, Platform } from "react-native";
 import { Text } from "../ui/Text";
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { ApiError, getAdminRaces, reviewRace } from "../../lib/api";
+import { ApiError, getAdminRaces, importRaces, reviewRace, type RaceImportResult } from "../../lib/api";
 import { formatDistance, formatRaceDates } from "../../lib/format";
 import type { RaceDetail } from "../../lib/types";
 import { useChat } from "../ChatProvider";
@@ -23,6 +23,33 @@ export function RaceAdmin() {
   const [races, setRaces] = useState<RaceDetail[] | null>(null);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<RaceImportResult | null>(null);
+
+  // Web only: pick a CSV file and send it
+  const chooseCsv = () => {
+    if (Platform.OS !== "web" || !token) return;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv,text/csv";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      setImporting(true);
+      setError(null);
+      setResult(null);
+      try {
+        const outcome = await importRaces(token, file);
+        setResult(outcome);
+        if (outcome.imported) load();
+      } catch (e) {
+        setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+      } finally {
+        setImporting(false);
+      }
+    };
+    input.click();
+  };
 
   const loadMore = async () => {
     if (!token || !races) return;
@@ -71,9 +98,35 @@ export function RaceAdmin() {
       <Pressable style={styles.addButton} onPress={() => edit()}>
         <Text style={styles.addText}>+ Add a race</Text>
       </Pressable>
-      <Text style={styles.hint}>
-        Adding many at once? Import a spreadsheet: docker compose exec api python -m app.race_import data/races.csv
-      </Text>
+      {Platform.OS === "web" ? (
+        <Pressable style={styles.importButton} onPress={chooseCsv} disabled={importing}>
+          {importing ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <Text style={styles.importText}>Import many from a CSV file</Text>
+          )}
+        </Pressable>
+      ) : (
+        <Text style={styles.hint}>To import many races from a spreadsheet, use the web admin (app.runstride.co.za).</Text>
+      )}
+      {result && (
+        <View style={styles.resultBox}>
+          {result.imported ? (
+            <Text style={styles.resultOk}>
+              Done: {result.added} added, {result.updated} updated.
+            </Text>
+          ) : (
+            <>
+              <Text style={styles.resultBad}>Nothing was saved. Fix these rows and upload again:</Text>
+              {result.errors.map((e) => (
+                <Text key={e} style={styles.resultLine}>
+                  {e}
+                </Text>
+              ))}
+            </>
+          )}
+        </View>
+      )}
       <ChoiceChips
         options={LISTS}
         selected={list}
@@ -136,6 +189,12 @@ export function RaceAdmin() {
 }
 
 const styles = StyleSheet.create({
+  importButton: { borderWidth: 1, borderColor: colors.primary, borderRadius: 999, paddingVertical: 11, alignItems: "center", marginBottom: 10 },
+  importText: { color: colors.primary, fontSize: 15, fontWeight: "700" },
+  resultBox: { backgroundColor: colors.surface, borderRadius: 12, padding: 12, marginBottom: 12 },
+  resultOk: { color: colors.primary, fontSize: 14, fontWeight: "700" },
+  resultBad: { color: colors.dangerText, fontSize: 14, fontWeight: "700", marginBottom: 6 },
+  resultLine: { color: colors.text, fontSize: 12, marginTop: 2 },
   more: { alignSelf: "center", padding: 14 },
   moreText: { color: colors.primary, fontSize: 14, fontWeight: "700" },
   distances: { color: colors.text, fontSize: 13, marginTop: 4 },
