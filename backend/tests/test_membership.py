@@ -396,6 +396,10 @@ def test_production_refuses_unsafe_settings():
         secret_key="x" * 40,
         photo_storage="s3",
         sms_provider="bulksms",
+        s3_bucket="photos",
+        s3_public_base_url="https://photos.example.com",
+        s3_access_key_id="id",
+        s3_secret_access_key="secret",
         require_id_verification=True,
     )
     assert Settings(**good).test_purchases is False  # forced off, never on in production

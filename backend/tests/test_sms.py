@@ -69,7 +69,8 @@ def test_bulksms_unreachable_raises_sms_error():
         ({"sms_provider": "bulksms", "bulksms_token_id": "a", "bulksms_token_secret": "b"}, BulkSmsSender),
         (
             {"sms_provider": "bulksms", "bulksms_token_id": "a", "bulksms_token_secret": "b", "environment": "production",
-             "secret_key": "x" * 40, "photo_storage": "s3"},
+             "secret_key": "x" * 40, "photo_storage": "s3", "s3_bucket": "b",
+             "s3_public_base_url": "https://p.example.com", "s3_access_key_id": "i", "s3_secret_access_key": "s"},
             BulkSmsSender,
         ),
     ],

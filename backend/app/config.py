@@ -120,6 +120,13 @@ class Settings(BaseSettings):
             raise ValueError("PHOTO_STORAGE must be s3 outside development")
         if not self.is_development and self.sms_provider != "bulksms":
             raise ValueError("SMS_PROVIDER must be bulksms outside development")
+        if not self.is_development and not (
+            self.s3_bucket and self.s3_public_base_url and self.s3_access_key_id and self.s3_secret_access_key
+        ):
+            # Better to refuse to start than to fail on every photo upload
+            raise ValueError(
+                "S3_BUCKET, S3_PUBLIC_BASE_URL, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY must be set outside development"
+            )
         if not self.is_development and self.test_purchases:
             # Free Plus for anyone who asks: never outside development
             self.test_purchases = False
