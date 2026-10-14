@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     s3_secret_access_key: str = ""
     # Where browsers fetch photos from, e.g. https://photos.runstride.app or an r2.dev URL
     s3_public_base_url: str = ""
+    # Manual ID checks: ID photos and selfies go in a separate, PRIVATE bucket (no public access, no
+    # custom domain). Same endpoint and region as the photo bucket, its own bucket and keys.
+    id_bucket: str = ""
+    id_access_key_id: str = ""
+    id_secret_access_key: str = ""
     max_photos: int = 6
     max_photo_bytes: int = 10 * 1024 * 1024
 
@@ -111,6 +116,10 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.environment == "development"
+
+    @property
+    def id_check_enabled(self) -> bool:
+        return bool(self.id_bucket and self.id_access_key_id and self.id_secret_access_key)
 
     def model_post_init(self, __context) -> None:
         if not self.is_development and self.secret_key == DEV_SECRET_KEY:

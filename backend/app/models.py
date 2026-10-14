@@ -295,6 +295,26 @@ class Message(Base):
     run_date: Mapped[RunDate | None] = relationship()
 
 
+class IdSubmission(Base):
+    """A request for the ID badge: an ID photo and a selfie that an admin compares with the profile.
+    The images and the typed number are deleted when a decision is made; only the one-way fingerprint
+    of the ID number stays, to stop one ID opening many accounts."""
+
+    __tablename__ = "id_submissions"
+    __table_args__ = (Index("ix_id_submissions_status_created_at", "status", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    id_hash: Mapped[str] = mapped_column(String(64), index=True)
+    id_number: Mapped[str | None] = mapped_column(String(13))  # cleared at decision
+    id_photo_key: Mapped[str | None] = mapped_column(String(100))  # cleared at decision
+    selfie_key: Mapped[str | None] = mapped_column(String(100))  # cleared at decision
+    status: Mapped[str] = mapped_column(String(10), default="pending")  # pending | approved | rejected
+    reject_reason: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class TrustedDevice(Base):
     """A phone that signed in with a text code and may sign back in without one until it expires.
     Only a hash of the device token is stored."""

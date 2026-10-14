@@ -27,6 +27,27 @@ export interface DiscoverCard {
   likesYou: boolean; // they've already liked you (only shown with Plus)
 }
 
+export interface IdCheckState {
+  available: boolean;
+  status: "none" | "pending" | "approved" | "rejected";
+  rejectReason: string | null;
+  attemptsLeft: number;
+}
+
+export interface IdReview {
+  id: string;
+  userId: string;
+  displayName: string;
+  age: number;
+  birthDate: string;
+  idNumber: string | null;
+  bornMatches: boolean;
+  idPhotoUrl: string | null;
+  selfieUrl: string | null;
+  profilePhotos: string[];
+  submittedAt: string;
+}
+
 export interface MatchSummary {
   id: string;
   userId: string; // the other person
@@ -98,6 +119,7 @@ export interface Me {
   hasGoogle: boolean;
   verificationStatus: VerificationStatus;
   verificationRequired: boolean; // true only if ID verification is a gate (it is optional by default)
+  idCheckAvailable: boolean; // manual ID checks (with admin review) are set up
   verificationAvailable: boolean; // ID verification is set up, so we can offer "Get verified"
   profileComplete: boolean;
   hasRunningProfile: boolean;

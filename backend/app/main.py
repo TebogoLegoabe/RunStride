@@ -18,6 +18,7 @@ from app.routers import (
     billing,
     chat_requests,
     discover,
+    id_check,
     matches,
     notifications,
     polls,
@@ -97,6 +98,7 @@ app.include_router(verification.router)
 app.include_router(billing.router)
 app.include_router(notifications.router)
 app.include_router(polls.router)
+app.include_router(id_check.router)
 
 media_dir = Path(get_settings().media_dir)
 media_dir.mkdir(parents=True, exist_ok=True)

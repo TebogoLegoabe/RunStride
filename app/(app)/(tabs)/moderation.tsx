@@ -9,6 +9,7 @@ import type { ReportSummary } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { ChoiceChips } from "../../../components/ChoiceChips";
 import { RaceAdmin } from "../../../components/admin/RaceAdmin";
+import { IdChecks } from "../../../components/admin/IdChecks";
 import { colors } from "../../../lib/theme";
 import { useTopPadding } from "../../../lib/responsive";
 
@@ -17,6 +18,7 @@ const VIEWS = [
   { value: "open", label: "Open" },
   { value: "resolved", label: "Resolved" },
   { value: "races", label: "Races" },
+  { value: "ids", label: "ID checks" },
 ] as const;
 
 // Admins only (the tab is hidden for everyone else, and the API refuses non-admins)
@@ -24,12 +26,12 @@ export default function ModerationQueue() {
   const topPadding = useTopPadding();
   const router = useRouter();
   const { token } = useChat();
-  const [view, setView] = useState<("open" | "resolved" | "races")[]>(["open"]);
+  const [view, setView] = useState<("open" | "resolved" | "races" | "ids")[]>(["open"]);
   const [reports, setReports] = useState<ReportSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!token || view[0] === "races") return;
+    if (!token || view[0] === "races" || view[0] === "ids") return;
     const status = view[0];
     try {
       setReports(await getReports(token, status));
@@ -64,6 +66,10 @@ export default function ModerationQueue() {
       {view[0] === "races" ? (
         <ScrollView>
           <RaceAdmin />
+        </ScrollView>
+      ) : view[0] === "ids" ? (
+        <ScrollView>
+          <IdChecks />
         </ScrollView>
       ) : reports === null ? (
         <ActivityIndicator color={colors.primary} style={styles.spinner} />

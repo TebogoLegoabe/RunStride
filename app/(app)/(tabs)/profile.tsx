@@ -144,8 +144,11 @@ export default function ProfileTab() {
         </Text>
         {verified ? (
           <Text style={[styles.badge, styles.badgeOn]}>✓ ID verified</Text>
-        ) : me.verificationAvailable ? (
-          <Pressable onPress={() => router.push("/verify-identity")} accessibilityRole="button">
+        ) : me.idCheckAvailable || me.verificationAvailable ? (
+          <Pressable
+            onPress={() => router.push(me.idCheckAvailable ? "/id-check" : "/verify-identity")}
+            accessibilityRole="button"
+          >
             <Text style={[styles.badge, styles.badgeOff]}>
               {me.verificationStatus === "pending" ? "ID check in progress" : "Get verified · earn a badge"}
             </Text>

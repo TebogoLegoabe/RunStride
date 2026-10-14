@@ -51,6 +51,7 @@ def test_verify_creates_user_and_returns_token(client, sms, db):
         "hasGoogle": False,
         "verificationStatus": "unverified",
         "verificationRequired": False,
+        "idCheckAvailable": False,
         "verificationAvailable": False,
         "profileComplete": False,
         "hasRunningProfile": False,

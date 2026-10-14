@@ -25,6 +25,7 @@ def _me(user: User, settings) -> MeResponse:
         has_google=user.google_sub is not None,
         verification_status=user.verification_status,
         verification_required=settings.require_id_verification,
+        id_check_available=settings.id_check_enabled,
         verification_available=bool(settings.persona_api_key and settings.persona_inquiry_template_id),
         profile_complete=user.profile_complete,
         has_running_profile=user.running_profile is not None,

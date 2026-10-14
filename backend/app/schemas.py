@@ -50,6 +50,7 @@ class MeResponse(CamelModel):
     verification_status: VerificationStatus
     # False only in development while ID verification is switched off
     verification_required: bool
+    id_check_available: bool = False  # manual ID checks are set up
     verification_available: bool = False  # Persona is set up, so the app can offer "Get verified"
     profile_complete: bool
     has_running_profile: bool
@@ -692,6 +693,31 @@ class DatingModeBody(CamelModel):
 class TestPurchaseBody(CamelModel):
     product_id: Literal["plus_weekly", "plus_monthly", "race_pass"]
     race_id: uuid.UUID | None = None  # race passes: use it on this race straight away
+
+
+class IdCheckState(CamelModel):
+    available: bool
+    status: str  # none | pending | approved | rejected
+    reject_reason: str | None = None
+    attempts_left: int = 0
+
+
+class IdReview(CamelModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    display_name: str
+    age: int
+    birth_date: date
+    id_number: str | None
+    born_matches: bool  # the ID number's birth date equals the profile's
+    id_photo_url: str | None
+    selfie_url: str | None
+    profile_photos: list[str]
+    submitted_at: datetime
+
+
+class IdRejectBody(CamelModel):
+    reason: str = Field(min_length=3, max_length=200)
 
 
 class PollOption(CamelModel):

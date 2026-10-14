@@ -39,6 +39,14 @@ curl localhost:8000/health      # {"status":"ok"}
 - Photos are re-encoded on upload, which strips EXIF metadata such as GPS location.
   In development they're stored in `backend/media/` (git-ignored); see *Photo storage* below.
 
+### Optional ID check (the verified badge)
+People can ask for a badge in the app: an SA ID number (checked for format and against their date of birth),
+a photo of the ID and a selfie. An admin compares them with the profile photos in the Moderation tab
+("ID checks") and approves or rejects. The photos and the typed number are deleted when a decision is made;
+only a keyed fingerprint of the ID number stays, so one ID can't verify two accounts or return after a ban.
+Needs a private R2 bucket: set `ID_BUCKET`, `ID_ACCESS_KEY_ID` and `ID_SECRET_ACCESS_KEY` (never a public
+domain on that bucket). Without them the feature is off and the app hides the button.
+
 ### ID verification (Persona)
 Fill in the `PERSONA_*` values in `backend/.env` (sandbox keys for development),
 then `docker compose up -d`. Without them, the verification endpoints return 503.

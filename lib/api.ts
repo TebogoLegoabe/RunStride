@@ -5,6 +5,8 @@
 import type { ReportReason } from "./options";
 import { photoFile } from "./photoFile";
 import type {
+  IdCheckState,
+  IdReview,
   NotificationSettings,
   ChatRequest,
   DatingMode,
@@ -169,6 +171,32 @@ export async function uploadPhoto(token: string, uri: string): Promise<Photo> {
   }
   return res.json() as Promise<Photo>;
 }
+
+// --- ID check (optional, for the verified badge) ---
+export const getIdCheck = (token: string) => apiRequest<IdCheckState>("/me/id-check", { token });
+
+export async function submitIdCheck(token: string, idNumber: string, idPhotoUri: string, selfieUri: string): Promise<IdCheckState> {
+  const form = new FormData();
+  form.append("id_number", idNumber);
+  form.append("id_photo", await photoFile(idPhotoUri), "id.jpg");
+  form.append("selfie", await photoFile(selfieUri), "selfie.jpg");
+  const res = await fetch(`${API_BASE_URL}/me/id-check`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
+  return res.json() as Promise<IdCheckState>;
+}
+
+export const getIdChecks = (token: string) => apiRequest<IdReview[]>("/admin/id-checks", { token });
+
+export const decideIdCheck = (token: string, id: string, approve: boolean, reason?: string) =>
+  apiRequest<void>(`/admin/id-checks/${id}/${approve ? "approve" : "reject"}`, {
+    method: "POST",
+    body: approve ? undefined : { reason },
+    token,
+  });
 
 export const deletePhoto = (token: string, photoId: string) =>
   apiRequest<void>(`/me/photos/${photoId}`, { method: "DELETE", token });

@@ -30,6 +30,13 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "RunStride uses your photos for your profile and, if you choose, to get verified.",
+          "cameraPermission": "RunStride uses the camera to take your selfie and a photo of your ID when you ask to get verified."
+        }
+      ],
       "expo-font",
       [
         "expo-splash-screen",

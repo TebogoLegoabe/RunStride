@@ -111,3 +111,48 @@ def get_photo_storage() -> PhotoStorage:
     if not settings.is_development:
         raise RuntimeError("Local photo storage is for development only: set PHOTO_STORAGE=s3")
     return LocalPhotoStorage(settings.media_dir)
+
+
+class IdStorage(Protocol):
+    def save(self, kind: str, data: bytes) -> str:
+        """Store a JPEG in the private bucket and return its key."""
+        ...
+
+    def link(self, key: str, seconds: int = 600) -> str:
+        """A short-lived address an admin can open to look at the file."""
+        ...
+
+    def delete(self, key: str) -> None: ...
+
+
+class S3IdStorage:
+    """Private bucket for ID photos and selfies: nothing here is ever publicly readable. Admins see a
+    file through a link that expires in minutes, and files are deleted once a decision is made."""
+
+    def __init__(self, client, bucket: str) -> None:
+        self.client = client
+        self.bucket = bucket
+
+    def save(self, kind: str, data: bytes) -> str:
+        key = f"{kind}/{uuid.uuid4()}.jpg"
+        self.client.put_object(Bucket=self.bucket, Key=key, Body=data, ContentType="image/jpeg", CacheControl="no-store")
+        return key
+
+    def link(self, key: str, seconds: int = 600) -> str:
+        return self.client.generate_presigned_url(
+            "get_object", Params={"Bucket": self.bucket, "Key": key}, ExpiresIn=seconds
+        )
+
+    def delete(self, key: str) -> None:
+        self.client.delete_object(Bucket=self.bucket, Key=key)
+
+
+def get_id_storage() -> IdStorage | None:
+    """None when ID checks aren't set up (no private bucket configured)."""
+    settings = get_settings()
+    if not settings.id_check_enabled:
+        return None
+    client = _s3_client(
+        settings.s3_endpoint_url, settings.s3_region, settings.id_access_key_id, settings.id_secret_access_key
+    )
+    return S3IdStorage(client, settings.id_bucket)
