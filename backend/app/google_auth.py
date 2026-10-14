@@ -43,6 +43,7 @@ class JwksGoogleVerifier:
                 key.key,
                 algorithms=["RS256"],
                 audience=client_ids,
+                leeway=60,  # Google issues tokens "just now"; a server clock a few seconds behind would reject them
                 options={"require": ["exp", "iat", "sub", "iss", "aud"]},
             )
         except jwt.PyJWTError as e:
