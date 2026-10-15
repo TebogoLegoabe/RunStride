@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     access_token_ttl_days: int = 30
     # A phone that signed in with a code can sign back in without a new text for this long
     trusted_device_days: int = 30
-    # Free RunStride Plus anyone can switch on once, during the beta. 0 turns the offer off.
-    beta_plus_days: int = 30
+    # Free RunStride Plus anyone can switch on once, during the beta (90 days). 0 turns the offer off.
+    beta_plus_days: int = 90
 
     otp_ttl_minutes: int = 10
     otp_max_attempts: int = 5
