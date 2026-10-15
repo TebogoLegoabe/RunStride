@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from sqlalchemy import text
 
 import app.membership as membership
 from tests.test_races import admin, buy, join, make_race, verification_off  # noqa: F401 (fixtures)
@@ -328,22 +329,26 @@ def wants(client, runner, race, *labels):
     return client.put(f"/races/{race['id']}/wants", json={"raceEventIds": ids}, headers=runner["headers"])
 
 
-def test_entry_alerts_can_be_set_before_the_window_opens(client, make_race, make_runner):
-    upcoming = make_race(starts_in=30, window=(5, 20))
-    no_transfers = make_race(name="Two Oceans")
+def test_entry_alerts_can_be_set_for_any_race_that_is_not_over(client, make_race, make_runner, db):
+    race = make_race(starts_in=30)  # no online transfer window: swaps still happen at number collection
+    finished = make_race(name="Two Oceans")
     runner = make_runner()
-    join(client, runner, upcoming)
-    join(client, runner, no_transfers)
+    join(client, runner, race)
+    join(client, runner, finished)
 
-    res = wants(client, runner, upcoming, "Half marathon", "Marathon")
+    res = wants(client, runner, race, "Half marathon", "Marathon")
     assert res.status_code == 200
     assert len(res.json()["raceEventIds"]) == 2 and res.json()["alerts"] is False
     # Changing them replaces the list
-    assert len(wants(client, runner, upcoming, "Marathon").json()["raceEventIds"]) == 1
-    # A race without an official transfer window has nothing to alert about
-    assert wants(client, runner, no_transfers, "Marathon").status_code == 409
-    other_race_event = no_transfers["events"][0]["id"]
-    bad = client.put(f"/races/{upcoming['id']}/wants", json={"raceEventIds": [other_race_event]}, headers=runner["headers"])
+    assert len(wants(client, runner, race, "Marathon").json()["raceEventIds"]) == 1
+    # Once a race is over there's nothing to alert about
+    db.execute(
+        text("UPDATE races SET starts_on = starts_on - 40, ends_on = ends_on - 40 WHERE id = :id"), {"id": finished["id"]}
+    )
+    db.commit()
+    assert wants(client, runner, finished, "Marathon").status_code == 409
+    other_race_event = finished["events"][0]["id"]
+    bad = client.put(f"/races/{race['id']}/wants", json={"raceEventIds": [other_race_event]}, headers=runner["headers"])
     assert bad.status_code == 422
 
 
