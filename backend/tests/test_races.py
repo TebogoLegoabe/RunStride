@@ -325,16 +325,11 @@ def test_reports_from_race_chat_keep_the_messages(client, make_race, make_runner
 # --- Entry swap board ---
 
 
-@pytest.mark.parametrize(
-    "window, message",
-    [
-        (None, "doesn't have an official entry transfer window"),
-        ((2, 5), "hasn't opened yet"),
-        ((-10, -1), "has closed"),
-    ],
-)
-def test_swaps_only_inside_the_official_window(client, make_race, make_runner, window, message):
+@pytest.mark.parametrize("window", [None, (2, 5), (-10, -1)])
+def test_swaps_open_for_any_race_that_is_not_over_whatever_the_online_window(client, make_race, make_runner, window):
+    # Most entries are swapped at race-number collection, so an online transfer window isn't needed
     race = make_race(starts_in=20, window=window)
+    assert race["swapWindow"] == "open"
     runner = make_runner()
     join(client, runner, race)
 
@@ -344,8 +339,23 @@ def test_swaps_only_inside_the_official_window(client, make_race, make_runner, w
         headers=runner["headers"],
     )
 
-    assert res.status_code == 409
-    assert message in res.json()["detail"]
+    assert res.status_code == 201
+
+
+def test_swaps_close_when_the_race_is_over(client, make_race, make_runner, db):
+    race = make_race(starts_in=2)
+    runner = make_runner()
+    join(client, runner, race)
+    db.execute(text("UPDATE races SET starts_on = starts_on - 10, ends_on = ends_on - 10 WHERE id = :id"), {"id": race["id"]})
+    db.commit()
+
+    res = client.post(
+        f"/races/{race['id']}/listings",
+        json={"kind": "offering", "raceEventId": event_id(race, "Half marathon")},
+        headers=runner["headers"],
+    )
+
+    assert res.status_code == 409 and "is over" in res.json()["detail"]
     assert client.get(f"/races/{race['id']}/listings", headers=runner["headers"]).json() == []
 
 

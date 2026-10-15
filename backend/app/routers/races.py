@@ -771,14 +771,8 @@ def list_listings(
 def create_listing(race_id: uuid.UUID, body: ListingBody, user: CurrentUser, db: DbSession) -> ListingOut:
     race = get_race(db, race_id, user)
     require_attending(db, race, user)
-    window = swap_window(race, sa_today())
-    if window != "open":
-        detail = {
-            "none": "This race doesn't have an official entry transfer window, so entries can't be swapped here.",
-            "upcoming": "The official entry transfer window hasn't opened yet.",
-            "closed": "The official entry transfer window has closed, so entries can't be swapped any more.",
-        }[window]
-        raise HTTPException(status.HTTP_409_CONFLICT, detail=detail)
+    if swap_window(race, sa_today()) != "open":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="This race is over, so entries can't be swapped any more.")
     if not any(e.id == body.race_event_id for e in race.events):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="That distance isn't part of this race.")
     open_count = db.scalar(
@@ -871,14 +865,11 @@ def get_entry_wants(race_id: uuid.UUID, user: CurrentUser, db: DbSession) -> Ent
 
 @router.put("/races/{race_id}/wants", response_model=EntryWantsOut)
 def set_entry_wants(race_id: uuid.UUID, body: EntryWantsBody, user: CurrentUser, db: DbSession) -> EntryWantsOut:
-    """Which distances you want an entry for. Works before the transfer window opens, so you're
-    first to know once entries are offered."""
+    """Which distances you want an entry for, so you're first to know when one is offered."""
     race = get_race(db, race_id, user)
     require_attending(db, race, user)
-    if swap_window(race, sa_today()) in ("none", "closed"):
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, detail="Entries for this race can't be transferred, so there's nothing to alert you to."
-        )
+    if swap_window(race, sa_today()) == "closed":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="This race is over, so there's nothing to alert you to.")
     distances = {e.id for e in race.events}
     wanted = set(body.race_event_ids)
     if not wanted <= distances:

@@ -23,15 +23,10 @@ def sa_today() -> date:
 
 
 def swap_window(race: Race, today: date) -> str:
-    """open / upcoming / closed, or none if the organiser has no transfer window."""
-    opens, closes = race.substitution_opens_on, race.substitution_closes_on
-    if opens is None or closes is None:
-        return "none"
-    if today < opens:
-        return "upcoming"
-    if today > closes:
-        return "closed"
-    return "open"
+    """The swap board is open until the race is over: most entries change hands at race-number collection,
+    so it doesn't depend on the organiser having an online transfer window. (The organiser's online window,
+    when we know it, is just information shown on the board.)  Returns "open" or "closed"."""
+    return "closed" if race.ends_on < today else "open"
 
 
 def get_race(db: Session, race_id: uuid.UUID, me: User) -> Race:

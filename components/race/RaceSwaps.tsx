@@ -195,16 +195,19 @@ export function RaceSwaps({ race }: Props) {
       : null;
 
   const status = {
-    open: `The official transfer window is open until ${windowDates?.split(" – ").pop() ?? "it closes"}.`,
-    upcoming: `The official transfer window opens ${race.substitutionOpensOn ? formatRaceDates(race.substitutionOpensOn, race.substitutionOpensOn) : "soon"}.`,
-    closed: "The official transfer window has closed, so entries can't change hands any more.",
-    none: "This race has no official entry transfer, so entries can't be swapped. Check with the organisers.",
+    open: "Swaps are open until race day. Agree it here, then swap at race-number collection.",
+    upcoming: "Swaps are open until race day.",
+    closed: "This race is over, so entries can't be swapped any more.",
+    none: "Swaps are open until race day.",
   }[race.swapWindow];
 
   const steps: { icon: keyof typeof Ionicons.glyphMap; text: string }[] = [
     { icon: "search", text: "Find someone here: post your entry, or set an alert for the one you want." },
     { icon: "chatbubbles", text: "Agree the details in a private chat." },
-    { icon: "document-text", text: "Do the transfer on the organiser's official site. That's what makes it valid." },
+    {
+      icon: "document-text",
+      text: "Swap at race-number collection: bring your ID and meet there. Most races change the name on the spot. Check the organiser's rules.",
+    },
   ];
 
   return (
@@ -222,12 +225,15 @@ export function RaceSwaps({ race }: Props) {
         {race.substitutionUrl && (
           <Pressable onPress={() => Linking.openURL(race.substitutionUrl!)} style={styles.officialLink}>
             <Ionicons name="open-outline" size={15} color={colors.primary} />
-            <Text style={styles.link}>Organiser's official transfer page</Text>
+            <Text style={styles.link}>Organiser's online transfer page</Text>
           </Pressable>
         )}
+        {windowDates && (
+          <Text style={styles.windowNote}>This race also has an online transfer window: {windowDates}.</Text>
+        )}
         <Text style={styles.payNote}>
-          RunStride doesn't handle payments. Only pay once the organiser confirms the transfer, and report anyone who
-          pressures you.
+          RunStride doesn't handle payments. Only pay once the organiser has put the entry in your name, and report
+          anyone who pressures you.
         </Text>
       </View>
 
@@ -458,6 +464,7 @@ const styles = StyleSheet.create({
   stepText: { color: colors.text, fontSize: 14, lineHeight: 20, flex: 1 },
   officialLink: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
   link: { color: colors.primary, fontSize: 14, fontWeight: "700" },
+  windowNote: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
   payNote: { color: colors.warningSoft, fontSize: 12, lineHeight: 17 },
   statusRow: {
     flexDirection: "row",

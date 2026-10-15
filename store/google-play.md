@@ -21,7 +21,7 @@ MEET AT RACES
 See who's going to the races you're entered for, say hello in the race chat, and meet at the start line, with a crowd around you, instead of a stranger on a first date.
 
 SWAP ENTRIES
-Can't run, or need an entry? Post it on the race's swap board during the organiser's official transfer window, and get an alert when the distance you want is offered. Transfers happen on the organiser's own site, so they stay valid.
+Can't run, or need an entry? Post it on the race's swap board and get an alert when the distance you want is offered. Meet at race-number collection to swap, the way most races do it, so it stays valid with the organiser.
 
 BUILT FOR SAFETY
 - Optional ID verification earns a verified badge, so you can see who's checked.

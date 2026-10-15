@@ -212,7 +212,7 @@ export default function RaceEdit() {
         <Text style={styles.addLink}>+ Add a distance</Text>
       </Pressable>
 
-      <Text style={styles.section}>Official entry transfer window</Text>
+      <Text style={styles.section}>Organiser's online transfer window (optional)</Text>
       <Text style={styles.hint}>
         The swap board only opens between these dates. Leave both empty if the race doesn't allow transfers.
       </Text>
