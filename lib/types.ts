@@ -249,6 +249,7 @@ export interface RaceSummary {
   myAttendance: MyAttendance | null;
   unreadMentions: number; // race chat messages mentioning you since you last opened it
   unreadSwapMatches: number; // swap posts answering yours since you last looked (Plus / race pass)
+  distanceKm: number | null; // how far from you, when we know where you both are
 }
 
 export interface RaceEvent {

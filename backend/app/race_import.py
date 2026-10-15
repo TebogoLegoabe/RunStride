@@ -26,7 +26,7 @@ from sqlalchemy import select
 
 from app.db import SessionLocal
 from app.models import Race, RaceEvent
-from app.races import SA_TZ
+from app.races import SA_TZ, set_position
 from app.schemas import RaceBody
 
 
@@ -58,6 +58,8 @@ def row_to_body(row: dict) -> RaceBody:
         substitution_opens_on=date.fromisoformat(opt("substitution_opens_on")) if opt("substitution_opens_on") else None,
         substitution_closes_on=date.fromisoformat(opt("substitution_closes_on")) if opt("substitution_closes_on") else None,
         substitution_url=opt("substitution_url"),
+        latitude=float(opt("latitude")) if opt("latitude") else None,
+        longitude=float(opt("longitude")) if opt("longitude") else None,
         events=parse_events(row.get("events", "")),
     )
 
@@ -72,6 +74,7 @@ def upsert(db, body: RaceBody) -> str:
     race.name, race.starts_on, race.ends_on = body.name, body.starts_on, body.ends_on
     race.venue, race.city, race.province = body.venue, body.city, body.province
     race.official_url = body.official_url
+    set_position(race, body)
     race.substitution_opens_on = body.substitution_opens_on
     race.substitution_closes_on = body.substitution_closes_on
     race.substitution_url = body.substitution_url

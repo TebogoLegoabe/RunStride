@@ -15,6 +15,7 @@ from app.realtime import hub
 from app.routers.races import race_detail
 from app.races import SA_TZ
 from app.race_import import import_csv
+from app.races import set_position
 from app.schemas import RaceImportResult, AdminPlusBody, AdminStats, AdminUserRow, DayCount, UserStatusBody, GrantPlusBody, PlusOut, SmsStatus, RaceBody, RaceDetail, ReportDetail, ReportedPerson, ReportPerson, ReportSummary, ResolveBody
 from app.security import utcnow
 
@@ -153,6 +154,7 @@ def _apply_race(db: DbSession, race: Race, body: RaceBody) -> None:
     race.city = body.city.strip()
     race.province = body.province
     race.official_url = body.official_url
+    set_position(race, body)
     race.substitution_opens_on = body.substitution_opens_on
     race.substitution_closes_on = body.substitution_closes_on
     race.substitution_url = body.substitution_url

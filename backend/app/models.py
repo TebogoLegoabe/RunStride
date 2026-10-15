@@ -404,6 +404,9 @@ class Race(Base):
     city: Mapped[str] = mapped_column(String(80))
     province: Mapped[str | None] = mapped_column(String(40))
     official_url: Mapped[str | None] = mapped_column(Text)
+    # Where it is, for "races near me" (from the town, or given exactly). Empty: not searchable by distance.
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
     # The organiser's official entry transfer window. The swap board only opens inside it.
     substitution_opens_on: Mapped[date | None] = mapped_column(Date)
     substitution_closes_on: Mapped[date | None] = mapped_column(Date)

@@ -120,3 +120,14 @@ def sender(db: Session, user_id: uuid.UUID) -> Sender:
         display_name=profile.display_name if profile else "RunStride runner",
         photo=photo,
     )
+
+
+def set_position(race, body) -> None:
+    """Give a race its position: the exact one if the admin or CSV gave it, else the town's."""
+    from app.places import place_coords
+
+    # Suggestions from people have no coordinates, only a town
+    exact = getattr(body, "latitude", None)
+    point = (exact, body.longitude) if exact is not None else place_coords(body.city, getattr(body, "province", None))
+    if point is not None:
+        race.latitude, race.longitude = point

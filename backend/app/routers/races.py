@@ -5,7 +5,8 @@ from datetime import date, timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
-from sqlalchemy import and_, exists, func, or_, select
+from geoalchemy2 import Geography
+from sqlalchemy import and_, cast, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, aliased
 
@@ -40,6 +41,7 @@ from app.races import (
     mention_ids,
     my_attendance,
     require_attending,
+    set_position,
     sa_today,
     sender,
     swap_window,
@@ -107,8 +109,23 @@ def _my_attendance_out(db: Session, race_id: uuid.UUID, me: User) -> MyAttendanc
     )
 
 
+def _race_point(longitude, latitude):
+    """A race's position as a PostGIS point, to measure from people's locations."""
+    return cast(func.ST_SetSRID(func.ST_MakePoint(longitude, latitude), 4326), Geography)
+
+
+def _distance_km(db: Session, race: Race, me: User) -> float | None:
+    if race.latitude is None or race.longitude is None or me.location is None:
+        return None
+    metres = db.scalar(
+        select(func.ST_Distance(_race_point(race.longitude, race.latitude), User.location)).where(User.id == me.id)
+    )
+    return None if metres is None else round(metres / 1000, 1)
+
+
 def _summary_fields(db: Session, race: Race, me: User) -> dict:
     return dict(
+        distance_km=_distance_km(db, race, me),
         id=race.id,
         name=race.name,
         starts_on=race.starts_on,
@@ -299,6 +316,7 @@ def list_races(
     date_from: date | None = None,
     date_to: date | None = None,
     distance: Annotated[list[DistanceBucket] | None, Query()] = None,
+    radius_km: Annotated[int | None, Query(ge=1, le=2000)] = None,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
 ) -> list[RaceSummary]:
@@ -307,7 +325,8 @@ def list_races(
     `mine`: only races you've joined. `date_from`/`date_to`: races happening on any day in
     that range. `distance` (repeatable): races with at least one distance in each bucket's
     range, e.g. ?distance=half&distance=marathon for races offering a half or a marathon.
-    A page shorter than `limit` is the last one. The X-Total-Count header holds how many
+    `radius_km`: only races within that many km of where you are (needs your location; races whose
+    town we don't know are left out). A page shorter than `limit` is the last one. The X-Total-Count header holds how many
     races match in all, for page numbers and "Showing 1-20 of 142".
     """
     stmt = select(Race).where(Race.status == "published", Race.ends_on >= max(sa_today(), date_from or sa_today()))
@@ -327,6 +346,14 @@ def list_races(
             )
         )
         stmt = stmt.where(exists().where(RaceEvent.race_id == Race.id, in_any_bucket))
+    if radius_km is not None:
+        if user.location is None:
+            raise HTTPException(status.HTTP_409_CONFLICT, detail="Share your location to see races near you.")
+        me_row = aliased(User)
+        my_location = select(me_row.location).where(me_row.id == user.id).scalar_subquery()
+        stmt = stmt.where(
+            Race.latitude.is_not(None), func.ST_DWithin(_race_point(Race.longitude, Race.latitude), my_location, radius_km * 1000)
+        )
     response.headers["X-Total-Count"] = str(db.scalar(select(func.count()).select_from(stmt.subquery())))
     races = db.scalars(stmt.order_by(Race.starts_on, Race.name, Race.id).offset(offset).limit(limit)).all()
     return [RaceSummary(**_summary_fields(db, r, user)) for r in races]
@@ -359,6 +386,7 @@ def suggest_race(body: RaceSuggestionBody, user: CurrentUser, db: DbSession) -> 
         status="pending",
         suggested_by_id=user.id,
     )
+    set_position(race, body)
     # The same distance picked twice (e.g. a preset and a custom row) is listed once
     seen: set[float] = set()
     for event in body.events:

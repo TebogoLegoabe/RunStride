@@ -380,6 +380,7 @@ export type RaceFilters = {
   dateFrom?: string; // YYYY-MM-DD
   dateTo?: string;
   distances?: RaceDistance[];
+  radiusKm?: number; // only races this far from you (needs your location)
   offset?: number;
   limit?: number;
 };
@@ -395,6 +396,7 @@ export const getRaces = async (token: string, filters: RaceFilters = {}): Promis
   if (filters.dateFrom) params.set("date_from", filters.dateFrom);
   if (filters.dateTo) params.set("date_to", filters.dateTo);
   filters.distances?.forEach((d) => params.append("distance", d));
+  if (filters.radiusKm) params.set("radius_km", String(filters.radiusKm));
   if (filters.offset) params.set("offset", String(filters.offset));
   if (filters.limit) params.set("limit", String(filters.limit));
   const query = params.toString();

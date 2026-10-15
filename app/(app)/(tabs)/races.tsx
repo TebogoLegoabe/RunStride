@@ -14,7 +14,7 @@ import { Text, TextInput } from "../../../components/ui/Text";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ApiError, getRaces, suggestRace, type RaceDistance, type RaceFilters, type RacePage } from "../../../lib/api";
+import { ApiError, getRaces, suggestRace, updateLocation, type RaceDistance, type RaceFilters, type RacePage } from "../../../lib/api";
 import { formatCountdown, formatDistance, formatRaceDates } from "../../../lib/format";
 import type { RaceSummary } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
@@ -25,6 +25,7 @@ import { Skeleton } from "../../../components/ui/Skeleton";
 import { IconButton } from "../../../components/ui/IconButton";
 import { Pagination } from "../../../components/ui/Pagination";
 import { Dropdown } from "../../../components/ui/Dropdown";
+import * as Location from "expo-location";
 import { ChoiceChips } from "../../../components/ChoiceChips";
 import { colors, gradient } from "../../../lib/theme";
 import { CONTENT_WIDTH, hoverable, useBreakpoint, useColumns, useTopPadding } from "../../../lib/responsive";
@@ -49,6 +50,15 @@ const WHEN_OPTIONS = [
   { value: "weekend", label: "This weekend" },
   { value: "month", label: "This month" },
   { value: "3months", label: "Next 3 months" },
+] as const;
+// "Races around me": how far from where you are
+const NEAR_OPTIONS = [
+  { value: "any", label: "Anywhere" },
+  { value: "25", label: "Within 25 km" },
+  { value: "50", label: "Within 50 km" },
+  { value: "100", label: "Within 100 km" },
+  { value: "200", label: "Within 200 km" },
+  { value: "500", label: "Within 500 km" },
 ] as const;
 const DISTANCE_OPTIONS = [
   { value: "5k", label: "5K" },
@@ -101,6 +111,7 @@ export default function Races() {
   const [province, setProvince] = useState<string[]>(["any"]);
   const [when, setWhen] = useState<When[]>(["any"]);
   const [distances, setDistances] = useState<RaceDistance[]>([]);
+  const [near, setNear] = useState<string[]>(["any"]);
   const [races, setRaces] = useState<RaceSummary[] | null>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -123,7 +134,8 @@ export default function Races() {
   const paged = !isPhone;
   const pageCount = Math.ceil(total / PAGE_SIZE);
 
-  const activeFilters = (province[0] !== "any" ? 1 : 0) + (when[0] !== "any" ? 1 : 0) + (distances.length ? 1 : 0);
+  const activeFilters =
+    (province[0] !== "any" ? 1 : 0) + (when[0] !== "any" ? 1 : 0) + (distances.length ? 1 : 0) + (near[0] !== "any" ? 1 : 0);
 
   useEffect(() => {
     const id = setTimeout(() => setSearch(query.trim()), 300);
@@ -136,10 +148,33 @@ export default function Races() {
       mine: view[0] === "mine",
       province: province[0] !== "any" ? province[0] : undefined,
       distances: distances.length ? distances : undefined,
+      radiusKm: near[0] !== "any" ? Number(near[0]) : undefined,
       ...dateRange(when[0]),
     }),
-    [search, view, province, when, distances]
+    [search, view, province, when, distances, near]
   );
+
+  // "Near me" needs to know where you are: ask once, tell the server, then search
+  const chooseNear = async (value: string[]) => {
+    const next = value.length ? value : ["any"];
+    if (next[0] === "any" || !token) {
+      setNear(next);
+      return;
+    }
+    setError(null);
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) {
+        setError("Allow location to see races near you. Your exact position is never shown to anyone.");
+        return;
+      }
+      const { coords } = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      await updateLocation(token, coords.latitude, coords.longitude);
+      setNear(next);
+    } catch {
+      setError("Couldn't find your location. Check that location is on, and try again.");
+    }
+  };
 
   // Shows races [start, start + count), fetched in chunks the API allows
   const show = useCallback(
@@ -231,6 +266,7 @@ export default function Races() {
     setProvince(["any"]);
     setWhen(["any"]);
     setDistances([]);
+    setNear(["any"]);
   };
 
   const hasMore = !!races && races.length < total;
@@ -272,6 +308,7 @@ export default function Races() {
           </View>
         </View>
         <View style={styles.dropRow}>
+          <Dropdown label="Near me" options={NEAR_OPTIONS} selected={near} onChange={chooseNear} />
           <Dropdown label="Where" options={PROVINCE_OPTIONS} selected={province} onChange={setProvince} />
           <Dropdown label="When" options={WHEN_OPTIONS} selected={when} onChange={setWhen} />
           <Dropdown
@@ -410,6 +447,7 @@ export default function Races() {
                 <Text style={styles.raceName}>{race.name}</Text>
                 <Text style={styles.meta}>
                   {race.venue}, {race.city}
+                  {race.distanceKm !== null ? ` · ${Math.round(race.distanceKm)} km away` : ""}
                 </Text>
                 <View style={styles.cardFooter}>
                   <View style={styles.goingRow}>

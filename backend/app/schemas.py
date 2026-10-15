@@ -445,12 +445,17 @@ class RaceBody(CamelModel):
     substitution_opens_on: date | None = None
     substitution_closes_on: date | None = None
     substitution_url: str | None = Field(default=None, max_length=500)
+    # Exact position, if known. Otherwise it's worked out from the town.
+    latitude: float | None = Field(default=None, ge=-35.5, le=-21.5)
+    longitude: float | None = Field(default=None, ge=16, le=33.5)
     events: list[RaceEventBody] = Field(default_factory=list, max_length=20)
 
     _blanks = field_validator("official_url", "substitution_url")(_blank_to_none)
 
     @model_validator(mode="after")
     def dates_in_order(self) -> "RaceBody":
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("Give both the latitude and the longitude, or neither.")
         if self.ends_on is None:
             self.ends_on = self.starts_on
         if self.ends_on < self.starts_on:
@@ -503,6 +508,8 @@ class RaceSummary(CamelModel):
     unread_mentions: int = 0
     # Swap board posts matching yours since you last looked (Plus or race pass only)
     unread_swap_matches: int = 0
+    # How far the race is from you, in km, when we know where you both are
+    distance_km: float | None = None
 
 
 class RaceDetail(RaceSummary):
