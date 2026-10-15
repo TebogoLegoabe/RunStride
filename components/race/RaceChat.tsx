@@ -1,5 +1,6 @@
 import { View, Pressable, StyleSheet, ActivityIndicator, Image, Modal } from "react-native";
 import { Text, TextInput } from "../ui/Text";
+import { EmojiPanel, EmojiToggle } from "../ui/EmojiPanel";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -40,6 +41,7 @@ export function RaceChat({ raceId, myId, isAdmin }: Props) {
   const [messages, setMessages] = useState<RaceMessage[] | null>(null);
   const [hasOlder, setHasOlder] = useState(false);
   const [draft, setDraft] = useState("");
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const [cursor, setCursor] = useState(0);
   // People picked from the @ suggestions: their "@Name" is sent as a real mention
   const [picked, setPicked] = useState<Person[]>([]);
@@ -258,7 +260,19 @@ export function RaceChat({ raceId, myId, isAdmin }: Props) {
         </View>
       )}
 
+      {emojiOpen && (
+        <EmojiPanel
+          onClose={() => setEmojiOpen(false)}
+          onPick={(emoji) => {
+            const at = Math.min(cursor, draft.length);
+            const next = (draft.slice(0, at) + emoji + draft.slice(at)).slice(0, 1000);
+            setDraft(next);
+            setCursor(at + emoji.length);
+          }}
+        />
+      )}
       <View style={styles.composer}>
+        <EmojiToggle open={emojiOpen} onPress={() => setEmojiOpen((o) => !o)} />
         <TextInput
           style={styles.input}
           placeholder="Message everyone at this race"

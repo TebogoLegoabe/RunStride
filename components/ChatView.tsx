@@ -12,6 +12,7 @@ import { SuggestRunSheet } from "./SuggestRunSheet";
 import { colors } from "../lib/theme";
 import { useTopPadding } from "../lib/responsive";
 import { dismissTip, tipDismissed } from "../lib/tips";
+import { EmojiPanel, EmojiToggle } from "./ui/EmojiPanel";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const PAGE_SIZE = 30; // matches the API's default page
@@ -52,6 +53,7 @@ export function ChatView({ matchId, userId, name, photo, verified = false, onClo
   const [safetyOpen, setSafetyOpen] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [showTip, setShowTip] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   // Latest state of each run, which changes after its card was first sent
   const [runs, setRuns] = useState<Record<string, RunDate>>({});
   const [error, setError] = useState<string | null>(null);
@@ -302,6 +304,15 @@ export function ChatView({ matchId, userId, name, photo, verified = false, onClo
           <Text style={styles.endedText}>This match has ended. You can no longer message each other.</Text>
         </View>
       ) : (
+        <>
+        {emojiOpen && (
+          <View style={styles.emojiWrap}>
+            <EmojiPanel
+              onClose={() => setEmojiOpen(false)}
+              onPick={(emoji) => setDraft((d) => (d + emoji).slice(0, MAX_LENGTH))}
+            />
+          </View>
+        )}
         <View style={styles.composer}>
           <Pressable
             style={styles.runButton}
@@ -310,6 +321,7 @@ export function ChatView({ matchId, userId, name, photo, verified = false, onClo
           >
             <Ionicons name="walk" size={22} color={colors.primary} />
           </Pressable>
+          <EmojiToggle open={emojiOpen} onPress={() => setEmojiOpen((o) => !o)} />
           <TextInput
             style={styles.input}
             placeholder="Message"
@@ -330,6 +342,7 @@ export function ChatView({ matchId, userId, name, photo, verified = false, onClo
             <Ionicons name="arrow-up" size={22} color={colors.onPrimary} />
           </Pressable>
         </View>
+        </>
       )}
 
       <SuggestRunSheet
@@ -408,6 +421,7 @@ const styles = StyleSheet.create({
   timeMine: { color: colors.onPrimaryMuted },
   seen: { color: colors.textFaint, fontSize: 11, marginTop: 2, marginRight: 4 },
   error: { color: colors.dangerText, fontSize: 13, textAlign: "center", paddingHorizontal: 16, paddingBottom: 6 },
+  emojiWrap: { paddingHorizontal: 10, width: "100%", maxWidth: 760, alignSelf: "center" },
   composer: {
     flexDirection: "row",
     alignItems: "flex-end",
