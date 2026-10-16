@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Location from "expo-location";
 import {
   ApiError,
+  getDatingPreferences,
   getDiscoverFeed,
   getMe,
   getMyProfile,
@@ -12,6 +13,7 @@ import {
   likeRunner,
   passRunner,
   setDatingMode,
+  setSearchDistance,
   updateLocation,
 } from "../../../lib/api";
 import { useMembership } from "../../../components/MembershipProvider";
@@ -28,6 +30,8 @@ import { Skeleton } from "../../../components/ui/Skeleton";
 import { BetaPoll } from "../../../components/BetaPoll";
 import { BetaPlusOffer } from "../../../components/BetaPlusOffer";
 import { SafetySheet } from "../../../components/SafetySheet";
+import { Dropdown } from "../../../components/ui/Dropdown";
+import { DISTANCES_KM, distanceLabel } from "../../../lib/options";
 import { colors } from "../../../lib/theme";
 import { useBreakpoint, useTopPadding } from "../../../lib/responsive";
 
@@ -60,6 +64,8 @@ export default function Discover() {
   // Swiping only one race's runners needs Plus or a race pass: why it's locked
   const [raceLocked, setRaceLocked] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
+  // How far you look for people, changeable right here
+  const [searchKm, setSearchKm] = useState<string[]>([]);
   const { height, isPhone } = useBreakpoint();
   const topPadding = useTopPadding();
   // The space between the header and the buttons: the card fills it, so nothing scrolls.
@@ -118,8 +124,14 @@ export default function Discover() {
       if (!t) return; // the (app) layout redirects signed-out users
       setToken(t);
       try {
-        const [me, running, profile] = await Promise.all([getMe(t), getRunningProfile(t), getMyProfile(t)]);
+        const [me, running, profile, prefs] = await Promise.all([
+          getMe(t),
+          getRunningProfile(t),
+          getMyProfile(t),
+          getDatingPreferences(t),
+        ]);
         setMyPhoto(profile?.photos[0]?.url ?? null);
+        if (prefs) setSearchKm([String(prefs.maxDistanceKm)]);
         setMine(running);
         if (!me.hasLocation) {
           setPhase("needs-location");
@@ -140,6 +152,22 @@ export default function Discover() {
       }
     })();
   }, [loadFeed]);
+
+  // Widen (or narrow) the search: save it, then start the feed again from the new distance
+  const changeDistance = async (value: string[]) => {
+    if (!token || !value.length || value[0] === searchKm[0]) return;
+    const before = searchKm;
+    setSearchKm(value);
+    setError(null);
+    try {
+      await setSearchDistance(token, Number(value[0]));
+      setCards([]);
+      await loadFeed(token);
+    } catch (e) {
+      setSearchKm(before);
+      setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+    }
+  };
 
   const enableLocation = async () => {
     if (!token) return;
@@ -287,6 +315,17 @@ export default function Discover() {
           </Pressable>
         </View>
       )}
+      {searchKm.length > 0 && (
+        <View style={styles.distanceRow}>
+          <Dropdown
+            label="Looking within"
+            options={DISTANCES_KM.map((km) => ({ value: String(km), label: distanceLabel(km) }))}
+            selected={searchKm}
+            onChange={changeDistance}
+            style={styles.distanceDrop}
+          />
+        </View>
+      )}
       {error && <Text style={styles.error}>{error}</Text>}
 
       {card ? (
@@ -364,7 +403,7 @@ export default function Discover() {
             body={
               raceId
                 ? "No more runners at this race match your preferences. Check back as more people join."
-                : "No more runners match your preferences nearby right now. Check back later, or widen your age range or distance."
+                : "No more runners match your preferences within your distance right now. Try a wider distance above, or check back later. You only see people whose own distance reaches you too."
             }
             action={{ title: "Edit preferences", icon: "options-outline", onPress: () => router.push("/dating-preferences") }}
           />
@@ -407,6 +446,8 @@ const styles = StyleSheet.create({
   empty: { flex: 1, justifyContent: "center" },
   sideAction: { alignItems: "center", gap: 10 },
   keyHint: { color: colors.textFaint, fontSize: 13, fontWeight: "700" },
+  distanceRow: { flexDirection: "row", marginBottom: 8 },
+  distanceDrop: { flexGrow: 0, flexBasis: 190, minWidth: 190, paddingVertical: 6 },
   raceFilter: {
     flexDirection: "row",
     alignItems: "center",

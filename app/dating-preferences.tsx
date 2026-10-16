@@ -3,7 +3,7 @@ import { Text, TextInput } from "../components/ui/Text";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { ApiError, getDatingPreferences, getMe, getMyProfile, saveDatingPreferences } from "../lib/api";
-import { DISTANCES_KM, GENDERS, SHOW_ME, type Gender } from "../lib/options";
+import { DISTANCES_KM, GENDERS, SHOW_ME, distanceLabel, type Gender } from "../lib/options";
 import { afterSave } from "../lib/routing";
 import { getToken } from "../lib/session";
 import { ChoiceChips } from "../components/ChoiceChips";
@@ -11,7 +11,7 @@ import { colors } from "../lib/theme";
 import { useTopPadding } from "../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
-const DISTANCE_OPTIONS = DISTANCES_KM.map((km) => ({ value: String(km), label: `${km} km` }));
+const DISTANCE_OPTIONS = DISTANCES_KM.map((km) => ({ value: String(km), label: distanceLabel(km) }));
 const digits = (t: string) => t.replace(/\D/g, "");
 
 export default function DatingPreferencesScreen() {

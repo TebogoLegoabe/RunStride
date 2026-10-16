@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.deps import CurrentUser, DbSession
 from app.models import DatingPreferences, RunningProfile
-from app.schemas import DatingPreferencesBody, RunningProfileBody
+from app.schemas import DatingPreferencesBody, RunningProfileBody, SearchDistanceBody
 
 router = APIRouter(prefix="/me", tags=["preferences"])
 
@@ -28,6 +28,16 @@ def upsert_running_profile(body: RunningProfileBody, user: CurrentUser, db: DbSe
 def get_dating_preferences(user: CurrentUser) -> DatingPreferencesBody:
     if user.dating_preferences is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No dating preferences yet.")
+    return DatingPreferencesBody.model_validate(user.dating_preferences, from_attributes=True)
+
+
+@router.put("/search-distance", response_model=DatingPreferencesBody)
+def set_search_distance(body: SearchDistanceBody, user: CurrentUser, db: DbSession) -> DatingPreferencesBody:
+    """Change only how far away you look for people (the quick control on Discover)."""
+    if user.dating_preferences is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Finish your dating preferences first.")
+    user.dating_preferences.max_distance_km = body.max_distance_km
+    db.commit()
     return DatingPreferencesBody.model_validate(user.dating_preferences, from_attributes=True)
 
 

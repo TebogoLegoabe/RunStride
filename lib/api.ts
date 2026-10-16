@@ -239,6 +239,10 @@ export const saveRunningProfile = (token: string, body: RunningProfile) =>
 export const getDatingPreferences = (token: string) =>
   apiRequest<DatingPreferences>("/me/dating-preferences", { token }).catch(nullIfMissing);
 
+// Just the distance, for the quick control on Discover
+export const setSearchDistance = (token: string, maxDistanceKm: number) =>
+  apiRequest<DatingPreferences>("/me/search-distance", { method: "PUT", body: { maxDistanceKm }, token });
+
 export const saveDatingPreferences = (token: string, body: DatingPreferences) =>
   apiRequest<DatingPreferences>("/me/dating-preferences", { method: "PUT", body, token });
 

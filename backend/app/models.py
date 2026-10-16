@@ -146,7 +146,7 @@ class DatingPreferences(Base):
     __tablename__ = "dating_preferences"
     __table_args__ = (
         CheckConstraint("age_min >= 18 AND age_max <= 99 AND age_min <= age_max", name="age_range"),
-        CheckConstraint("max_distance_km BETWEEN 1 AND 500", name="distance_range"),
+        CheckConstraint("max_distance_km BETWEEN 1 AND 2000", name="distance_range"),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)

@@ -142,12 +142,16 @@ class RunningProfileBody(CamelModel):
     _dedupe_lists = field_validator("terrains", "goals", "run_times")(_dedupe)
 
 
+class SearchDistanceBody(CamelModel):
+    max_distance_km: int = Field(ge=1, le=2000)
+
+
 class DatingPreferencesBody(CamelModel):
     gender: Gender
     interested_in: list[Gender] = Field(min_length=1)
     age_min: int = Field(ge=18, le=99)
     age_max: int = Field(ge=18, le=99)
-    max_distance_km: int = Field(ge=1, le=500)
+    max_distance_km: int = Field(ge=1, le=2000)  # 2000: anywhere in South Africa
 
     _dedupe_lists = field_validator("interested_in")(_dedupe)
 
