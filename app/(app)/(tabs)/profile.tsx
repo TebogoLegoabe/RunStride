@@ -11,6 +11,7 @@ import {
   disconnectGoogle,
   getMe,
   getMyProfile,
+  getRunningProfile,
   mediaUrl,
   setDatingMode,
 } from "../../../lib/api";
@@ -69,6 +70,8 @@ export default function ProfileTab() {
     }
   };
 
+  const [clubs, setClubs] = useState<string[]>([]);
+
   const activateBeta = async () => {
     if (!token) return;
     setError(null);
@@ -96,10 +99,11 @@ export default function ProfileTab() {
   useFocusEffect(
     useCallback(() => {
       if (!token) return;
-      Promise.all([getMe(token), getMyProfile(token)])
-        .then(([m, p]) => {
+      Promise.all([getMe(token), getMyProfile(token), getRunningProfile(token).catch(() => null)])
+        .then(([m, p, running]) => {
           setMe(m);
           setProfile(p);
+          setClubs(running?.clubs ?? []);
         })
         .catch((e) => setError(e instanceof ApiError ? e.message : NETWORK_ERROR));
     }, [token])
@@ -158,6 +162,11 @@ export default function ProfileTab() {
         <Text style={styles.name}>
           {profile.displayName}, {profile.age}
         </Text>
+        {clubs.length > 0 && (
+          <Text style={styles.clubs}>
+            <Ionicons name="people-outline" size={14} color={colors.textMuted} /> {clubs.join(" · ")}
+          </Text>
+        )}
         {verified ? (
           <Text style={[styles.badge, styles.badgeOn]}>✓ ID verified</Text>
         ) : me.idCheckAvailable || me.verificationAvailable ? (
@@ -330,6 +339,7 @@ const styles = StyleSheet.create({
   photo: { width: 110, height: 110, borderRadius: 55, backgroundColor: colors.surface, marginBottom: 12 },
   photoEmpty: { borderWidth: 1, borderColor: colors.borderStrong },
   name: { color: colors.heading, fontSize: 24, fontWeight: "700" },
+  clubs: { color: colors.textMuted, fontSize: 14, marginBottom: 8 },
   badge: {
     marginTop: 8,
     fontSize: 12,

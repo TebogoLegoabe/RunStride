@@ -23,6 +23,8 @@ export interface DiscoverCard {
   terrains: Terrain[];
   goals: Goal[];
   runTimes: RunTime[];
+  clubs: string[];
+  sharedClubs: string[]; // their clubs that you're in too
   sharedRaces: SharedRace[]; // upcoming races you're both going to
   likesYou: boolean; // they've already liked you (only shown with Plus)
 }
@@ -165,6 +167,7 @@ export interface RunningProfile {
   terrains: Terrain[];
   goals: Goal[];
   runTimes: RunTime[];
+  clubs: string[]; // running clubs or groups, up to 3
 }
 
 export interface DatingPreferences {

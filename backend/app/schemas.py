@@ -138,8 +138,30 @@ class RunningProfileBody(CamelModel):
     terrains: list[Terrain] = Field(min_length=1)
     goals: list[Goal] = Field(min_length=1)
     run_times: list[RunTime] = Field(default_factory=list)
+    # Running clubs or groups (optional, up to 3): a local club, parkrun, a company run club...
+    clubs: list[str] = Field(default_factory=list)
 
     _dedupe_lists = field_validator("terrains", "goals", "run_times")(_dedupe)
+
+    @field_validator("clubs")
+    @classmethod
+    def tidy_clubs(cls, value: list[str]) -> list[str]:
+        from app.clubs import MAX_CLUB_LENGTH, MAX_CLUBS, club_key, clean_club
+
+        seen: set[str] = set()
+        out: list[str] = []
+        for raw in value:
+            name = clean_club(raw)
+            if not name:
+                continue
+            if len(name) < 2 or len(name) > MAX_CLUB_LENGTH or "http" in name.casefold() or "@" in name:
+                raise ValueError("A club name should be 2 to 60 characters, with no links.")
+            if club_key(name) not in seen:
+                seen.add(club_key(name))
+                out.append(name)
+        if len(out) > MAX_CLUBS:
+            raise ValueError(f"You can add up to {MAX_CLUBS} clubs.")
+        return out
 
 
 class SearchDistanceBody(CamelModel):
@@ -182,6 +204,9 @@ class DiscoverCard(CamelModel):
     terrains: list[str]
     goals: list[str]
     run_times: list[str]
+    clubs: list[str] = Field(default_factory=list)
+    # Their clubs that you're in too: "you both run with..."
+    shared_clubs: list[str] = Field(default_factory=list)
     shared_races: list["SharedRace"] = Field(default_factory=list)
     # They've already liked you. Only shown to Plus members.
     likes_you: bool = False

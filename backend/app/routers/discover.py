@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, aliased, selectinload
 
 from app.config import Settings
 from app.deps import AppSettings, CurrentUser, DbSession
+from app.clubs import club_key, shared_clubs
 from app.matching import RunnerTraits, compatibility
 from app.membership import UpgradeRequired, check_like_allowed, has_plus, has_race_access, plus_condition
 from app.models import (
@@ -48,6 +49,7 @@ def _traits(running: RunningProfile) -> RunnerTraits:
         terrains=running.terrains,
         goals=running.goals,
         run_times=running.run_times,
+        clubs=tuple(club_key(c) for c in (running.clubs or [])),
     )
 
 
@@ -152,7 +154,7 @@ def _shared_races(db: Session, me: User, others: list[uuid.UUID]) -> dict[uuid.U
     return shared
 
 
-def _card(user: User, distance_m: float, my_traits: RunnerTraits) -> DiscoverCard:
+def _card(user: User, distance_m: float, my_traits: RunnerTraits, my_clubs: list[str]) -> DiscoverCard:
     running = user.running_profile
     return DiscoverCard(
         user_id=user.id,
@@ -168,6 +170,8 @@ def _card(user: User, distance_m: float, my_traits: RunnerTraits) -> DiscoverCar
         terrains=running.terrains,
         goals=running.goals,
         run_times=running.run_times,
+        clubs=running.clubs or [],
+        shared_clubs=shared_clubs(my_clubs, running.clubs or []),
     )
 
 
@@ -198,7 +202,7 @@ def discover(
     candidates = _candidates(db, user, settings, race_id=race_id)
     ids = [u.id for u, _ in candidates]
     shared = _shared_races(db, user, ids)
-    cards = [_card(u, d, my_traits) for u, d in candidates]
+    cards = [_card(u, d, my_traits, user.running_profile.clubs or []) for u, d in candidates]
 
     # Plus: people who already liked you come first, marked as such
     likers: set[uuid.UUID] = set()

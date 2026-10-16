@@ -1,5 +1,9 @@
-from fastapi import APIRouter, HTTPException, status
+from typing import Annotated
 
+from fastapi import APIRouter, HTTPException, Query, status
+from sqlalchemy import func, select
+
+from app.clubs import SEED_CLUBS, club_key
 from app.deps import CurrentUser, DbSession
 from app.models import DatingPreferences, RunningProfile
 from app.schemas import DatingPreferencesBody, RunningProfileBody, SearchDistanceBody
@@ -22,6 +26,23 @@ def upsert_running_profile(body: RunningProfileBody, user: CurrentUser, db: DbSe
         setattr(user.running_profile, field, value)
     db.commit()
     return body
+
+
+@router.get("/clubs/suggest", response_model=list[str])
+def suggest_clubs(
+    user: CurrentUser, db: DbSession, q: Annotated[str, Query(max_length=60)] = ""
+) -> list[str]:
+    """Club names to pick from while typing: the clubs other runners here have added, most popular first,
+    then a few well-known groups."""
+    club = func.unnest(RunningProfile.clubs).label("club")
+    names = select(club).subquery()
+    stmt = select(func.min(names.c.club), func.count()).group_by(func.lower(names.c.club)).order_by(func.count().desc())
+    if q.strip():
+        stmt = stmt.where(names.c.club.ilike(f"%{q.strip()}%"))
+    found = [name for name, _ in db.execute(stmt.limit(8)).all()]
+    keys = {club_key(n) for n in found}
+    extra = [s for s in SEED_CLUBS if club_key(s) not in keys and (not q.strip() or q.strip().lower() in s.lower())]
+    return (found + extra)[:8]
 
 
 @router.get("/dating-preferences", response_model=DatingPreferencesBody)

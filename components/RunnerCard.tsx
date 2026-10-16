@@ -88,6 +88,15 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
               <Ionicons name="location-outline" size={13} color={colors.textBright} /> {card.distanceKm} km ·{" "}
               {formatPace(card.paceSecondsPerKm)} /km · {card.weeklyKm} km/week
             </Text>
+            {card.sharedClubs.length > 0 ? (
+              <Text style={styles.club} numberOfLines={1}>
+                <Ionicons name="people" size={13} color={colors.primary} /> You both run with {card.sharedClubs[0]}
+              </Text>
+            ) : card.clubs.length > 0 ? (
+              <Text style={styles.clubPlain} numberOfLines={1}>
+                <Ionicons name="people-outline" size={13} color={colors.textBright} /> {card.clubs.join(" · ")}
+              </Text>
+            ) : null}
             {firstRace && (
               <Text style={styles.race} numberOfLines={1}>
                 <Ionicons name="flag" size={13} color={colors.pink} /> Also at {firstRace.name}
@@ -131,6 +140,23 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
                 <Ionicons name="location-outline" size={14} color={colors.textMuted} /> {card.distanceKm} km away
               </Text>
             </View>
+            {card.clubs.length > 0 && (
+              <View style={styles.infoSection}>
+                <Text style={styles.infoLabel}>Runs with</Text>
+                <View style={styles.tags}>
+                  {card.clubs.map((club) => {
+                    const shared = card.sharedClubs.includes(club);
+                    return (
+                      <View key={club} style={[styles.tag, shared && styles.tagShared]}>
+                        <Text style={[styles.tagText, shared && styles.tagTextShared]}>
+                          {shared ? `${club} · your club too` : club}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
             {card.sharedRaces.length > 0 && (
               <View style={styles.infoSection}>
                 <Text style={styles.infoLabel}>Races you're both going to</Text>
@@ -160,6 +186,8 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
 }
 
 const styles = StyleSheet.create({
+  club: { color: colors.heading, fontSize: 13, fontWeight: "700", marginTop: 2 },
+  clubPlain: { color: colors.textBright, fontSize: 13, marginTop: 2 },
   card: { flex: 1, width: "100%", borderRadius: 22, overflow: "hidden", backgroundColor: colors.border },
   photo: { width: "100%", height: "100%" },
   photoBars: { position: "absolute", top: 10, left: 10, right: 10, flexDirection: "row", gap: 4 },

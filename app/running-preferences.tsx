@@ -7,6 +7,7 @@ import { GOALS, RUN_TIMES, TERRAINS, type Goal, type RunTime, type Terrain } fro
 import { afterSave } from "../lib/routing";
 import { getToken } from "../lib/session";
 import { ChoiceChips } from "../components/ChoiceChips";
+import { ClubPicker } from "../components/ClubPicker";
 import { colors } from "../lib/theme";
 import { useTopPadding } from "../lib/responsive";
 
@@ -24,6 +25,7 @@ export default function RunningPreferences() {
   const [terrains, setTerrains] = useState<Terrain[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [runTimes, setRunTimes] = useState<RunTime[]>([]);
+  const [clubs, setClubs] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +46,7 @@ export default function RunningPreferences() {
           setTerrains(existing.terrains);
           setGoals(existing.goals);
           setRunTimes(existing.runTimes);
+          setClubs(existing.clubs ?? []);
         }
       } catch (e) {
         setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
@@ -81,6 +84,7 @@ export default function RunningPreferences() {
         terrains,
         goals,
         runTimes,
+        clubs,
       });
       afterSave(router, await getMe(token));
     } catch (e) {
@@ -157,6 +161,13 @@ export default function RunningPreferences() {
       <Text style={styles.label}>When you usually run</Text>
       <Text style={styles.hint}>Optional</Text>
       <ChoiceChips options={RUN_TIMES} selected={runTimes} onChange={setRunTimes} />
+
+      <Text style={styles.label}>Do you run with a club or group?</Text>
+      <Text style={styles.hint}>
+        Optional, up to 3. A local club, parkrun, Vitality, a company run club... You'll see when someone runs with
+        yours.
+      </Text>
+      <ClubPicker token={token} clubs={clubs} onChange={setClubs} />
 
       {error && <Text style={styles.error}>{error}</Text>}
 

@@ -136,6 +136,8 @@ class RunningProfile(Base):
     terrains: Mapped[list[str]] = mapped_column(ARRAY(String(20)))
     goals: Mapped[list[str]] = mapped_column(ARRAY(String(20)))
     run_times: Mapped[list[str]] = mapped_column(ARRAY(String(20)))
+    # Running clubs and groups they belong to (up to 3), as they wrote them
+    clubs: Mapped[list[str]] = mapped_column(ARRAY(String(60)), default=list, server_default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

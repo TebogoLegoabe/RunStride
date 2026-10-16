@@ -15,6 +15,8 @@ WEIGHTS = {
 }
 # Paces this many seconds/km apart (or more) score zero on pace
 PACE_TOLERANCE_SECONDS = 120
+# Points added to the score when two runners share a club
+SAME_CLUB_BONUS = 6
 
 
 @dataclass(frozen=True)
@@ -24,6 +26,7 @@ class RunnerTraits:
     terrains: list[str]
     goals: list[str]
     run_times: list[str]
+    clubs: tuple[str, ...] = ()  # club keys (see app/clubs.py)
 
 
 def _overlap(a: list[str], b: list[str]) -> float:
@@ -44,4 +47,7 @@ def compatibility(me: RunnerTraits, them: RunnerTraits) -> int:
         "run_times": _overlap(me.run_times, them.run_times),
         "weekly_km": 1 - abs(me.weekly_km - them.weekly_km) / km_high,
     }
-    return round(100 * sum(WEIGHTS[k] * v for k, v in parts.items()))
+    score = 100 * sum(WEIGHTS[k] * v for k, v in parts.items())
+    if set(me.clubs) & set(them.clubs):
+        score += SAME_CLUB_BONUS  # running with the same club is a real reason to say hello
+    return min(100, round(score))
