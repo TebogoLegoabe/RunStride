@@ -26,12 +26,12 @@ def test_save_and_update_running_profile(client, auth_headers):
     res = client.put("/me/running-profile", json=RUNNING, headers=auth_headers)
 
     assert res.status_code == 200
-    assert res.json() == RUNNING
+    assert res.json() == {**RUNNING, "clubs": []}  # clubs are optional
     assert me(client, auth_headers)["hasRunningProfile"] is True
 
     updated = {**RUNNING, "paceSecondsPerKm": 300, "runTimes": []}
     client.put("/me/running-profile", json=updated, headers=auth_headers).raise_for_status()
-    assert client.get("/me/running-profile", headers=auth_headers).json() == updated
+    assert client.get("/me/running-profile", headers=auth_headers).json() == {**updated, "clubs": []}
 
 
 def test_running_profile_dedupes_choices(client, auth_headers):
