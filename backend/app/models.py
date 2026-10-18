@@ -334,6 +334,22 @@ class TrustedDevice(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class Feedback(Base):
+    """Something a user told us from the app: a bug, an idea, a complaint. Read in the admin console."""
+
+    __tablename__ = "feedback"
+    __table_args__ = (Index("ix_feedback_status_created_at", "status", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    # Kept if they delete their account, so the feedback isn't lost (just no longer linked to them)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    body: Mapped[str] = mapped_column(Text)
+    platform: Mapped[str | None] = mapped_column(String(20))
+    screen: Mapped[str | None] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(10), default="open", server_default="open")  # open | done
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class PollAnswer(Base):
     """A beta tester's answer to a one-off question. One answer per person per poll."""
 

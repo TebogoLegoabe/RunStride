@@ -11,6 +11,18 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.deps import DbSession
 from app.persona import PersonaError, PersonaNotConfigured
+_settings = get_settings()
+if _settings.sentry_dsn:
+    import sentry_sdk
+
+    # Errors and a sample of slow requests; no personal data (no IPs, no request bodies)
+    sentry_sdk.init(
+        dsn=_settings.sentry_dsn,
+        environment=_settings.environment,
+        traces_sample_rate=0.05,
+        send_default_pii=False,
+    )
+
 from app.routers import (
     account,
     admin,
@@ -18,6 +30,7 @@ from app.routers import (
     billing,
     chat_requests,
     discover,
+    feedback,
     id_check,
     matches,
     notifications,
@@ -99,6 +112,7 @@ app.include_router(billing.router)
 app.include_router(notifications.router)
 app.include_router(polls.router)
 app.include_router(id_check.router)
+app.include_router(feedback.router)
 
 media_dir = Path(get_settings().media_dir)
 media_dir.mkdir(parents=True, exist_ok=True)

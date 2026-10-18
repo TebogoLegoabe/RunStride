@@ -378,6 +378,7 @@ export interface AdminStats {
   pendingRaces: number;
   openReports: number;
   pendingIdChecks: number;
+  openFeedback: number;
   signupsByDay: { day: string; count: number }[];
 }
 

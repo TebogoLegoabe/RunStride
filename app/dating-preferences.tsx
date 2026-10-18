@@ -23,7 +23,7 @@ export default function DatingPreferencesScreen() {
   const [interestedIn, setInterestedIn] = useState<Gender[]>([]);
   const [ageMin, setAgeMin] = useState("");
   const [ageMax, setAgeMax] = useState("");
-  const [distance, setDistance] = useState<string[]>(["25"]);
+  const [distance, setDistance] = useState<string[]>(["100"]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

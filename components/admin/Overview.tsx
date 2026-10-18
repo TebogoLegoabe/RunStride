@@ -9,7 +9,7 @@ import { colors, fonts, radius } from "../../lib/theme";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 
-type Go = (section: "open" | "races" | "ids" | "people") => void;
+type Go = (section: "open" | "races" | "ids" | "people" | "feedback") => void;
 
 function Stat({ label, value, hint, onPress }: { label: string; value: number; hint?: string; onPress?: () => void }) {
   const body = (
@@ -63,6 +63,7 @@ export function Overview({ go }: { go: Go }) {
         <Stat label="ID checks waiting" value={stats.pendingIdChecks} onPress={() => go("ids")} />
         <Stat label="Races to approve" value={stats.pendingRaces} onPress={() => go("races")} />
         <Stat label="Open reports" value={stats.openReports} onPress={() => go("open")} />
+        <Stat label="New feedback" value={stats.openFeedback} onPress={() => go("feedback")} />
       </View>
 
       <Text style={styles.section}>People</Text>

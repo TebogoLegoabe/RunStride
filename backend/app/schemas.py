@@ -759,6 +759,32 @@ class IdRejectBody(CamelModel):
     reason: str = Field(min_length=3, max_length=200)
 
 
+class FeedbackBody(CamelModel):
+    body: str = Field(min_length=3, max_length=2000)
+    platform: str | None = Field(default=None, max_length=20)
+    screen: str | None = Field(default=None, max_length=120)
+
+
+class FeedbackOut(CamelModel):
+    id: uuid.UUID
+    body: str
+    platform: str | None
+    screen: str | None
+    status: str
+    created_at: datetime
+    user_id: uuid.UUID | None
+    display_name: str | None
+    phone: str | None
+
+
+class ClientErrorBody(CamelModel):
+    message: str = Field(max_length=1000)
+    stack: str | None = Field(default=None, max_length=8000)
+    platform: str | None = Field(default=None, max_length=20)
+    screen: str | None = Field(default=None, max_length=200)
+    fatal: bool = False
+
+
 class PollOption(CamelModel):
     value: str
     label: str
@@ -806,6 +832,7 @@ class AdminStats(CamelModel):
     pending_races: int
     open_reports: int
     pending_id_checks: int
+    open_feedback: int = 0
     signups_by_day: list[DayCount]  # the last 14 days
 
 

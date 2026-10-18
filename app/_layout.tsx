@@ -11,10 +11,39 @@ import {
   PlusJakartaSans_700Bold,
   PlusJakartaSans_800ExtraBold,
 } from "@expo-google-fonts/plus-jakarta-sans";
+import { View, Pressable, StyleSheet } from "react-native";
+import { Text } from "../components/ui/Text";
 import { colors } from "../lib/theme";
+import { installErrorReporting, reportError } from "../lib/errorReporting";
+
+installErrorReporting();
 
 // Keep the splash screen up until the brand font is ready, so text never jumps fonts
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Shown instead of a blank or broken screen when something goes wrong while drawing a page
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  useEffect(() => {
+    reportError(error, true);
+  }, [error]);
+  return (
+    <View style={errorStyles.wrap}>
+      <Text style={errorStyles.title}>Something went wrong</Text>
+      <Text style={errorStyles.body}>Sorry about that. We've been told about it automatically.</Text>
+      <Pressable style={errorStyles.button} onPress={retry} accessibilityRole="button">
+        <Text style={errorStyles.buttonText}>Try again</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const errorStyles = StyleSheet.create({
+  wrap: { flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center", padding: 24, gap: 12 },
+  title: { color: colors.heading, fontSize: 22, fontWeight: "700" },
+  body: { color: colors.text, fontSize: 15, textAlign: "center" },
+  button: { backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 12, paddingHorizontal: 28, marginTop: 8 },
+  buttonText: { color: colors.onPrimary, fontSize: 16, fontWeight: "700" },
+});
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

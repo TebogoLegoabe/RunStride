@@ -9,7 +9,7 @@ from app.config import get_settings
 from app.deps import AdminUser, DbSession
 from app.membership import end_plus, grant_plus, plus_status
 from app.phone import InvalidPhoneNumber, normalize_phone
-from app.models import AccountStatus, Entitlement, IdSubmission, Match, Message, OtpCode, Profile, Race, RaceAttendance, RaceEvent, RaceMessage, Report, User
+from app.models import AccountStatus, Entitlement, Feedback, IdSubmission, Match, Message, OtpCode, Profile, Race, RaceAttendance, RaceEvent, RaceMessage, Report, User
 from app.moderation import end_all_matches, resolve_other_open_reports
 from app.realtime import hub
 from app.routers.races import race_detail
@@ -356,6 +356,7 @@ def stats(admin: AdminUser, db: DbSession) -> AdminStats:
         races_published=db.scalar(select(func.count()).select_from(Race).where(Race.status == "published")) or 0,
         pending_races=db.scalar(select(func.count()).select_from(Race).where(Race.status == "pending")) or 0,
         open_reports=db.scalar(select(func.count()).select_from(Report).where(Report.status == "open")) or 0,
+        open_feedback=db.scalar(select(func.count()).select_from(Feedback).where(Feedback.status == "open")) or 0,
         pending_id_checks=db.scalar(select(func.count()).select_from(IdSubmission).where(IdSubmission.status == "pending")) or 0,
         signups_by_day=signups,
     )

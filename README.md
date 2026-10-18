@@ -232,3 +232,28 @@ assets/         icons, images, fonts
 - ID documents encrypted at rest, deleted after verification completes
 - Only a verified/not-verified flag is retained long-term
 - POPIA (South Africa) / GDPR-aware handling of location + health-adjacent data
+
+### Backups (nightly, to a private R2 bucket)
+`backup/` is a small job that dumps the database and uploads it to R2. Railway runs it every night as a
+cron service (01:00 UTC, 03:00 in South Africa) and it exits when done.
+
+Set it up once:
+1. Cloudflare R2: create a bucket `runstride-backups` (no public access, no custom domain). Under its
+   Settings, add an **Object lifecycle rule** to delete objects after 30 days. Create an API token with
+   **Object Read & Write** on that bucket only.
+2. Railway: **+ New → GitHub repo → RunStride**, then in the new service's Settings set **Root directory**
+   `/backup`, **Config file** `/backup/railway.json` (it sets the cron schedule) and remove any public domain.
+3. Its Variables: `DATABASE_URL` (reference the PostGIS service's URL), `S3_ENDPOINT_URL` (same as the API's),
+   `BACKUP_BUCKET=runstride-backups`, `BACKUP_ACCESS_KEY_ID`, `BACKUP_SECRET_ACCESS_KEY`.
+4. Trigger it once by hand (Deployments → Run now / Redeploy) and check the log ends with "Backup done".
+
+Restore (into a new, empty database):
+```
+pg_restore --no-owner --no-privileges -d "<database url>" runstride-YYYY-MM-DD_HHMM.dump
+```
+Create the `postgis` extension in the new database first. Test a restore every few months.
+
+### Error tracking
+App crashes are sent to the API (`POST /client-errors`) and logged. Set `SENTRY_DSN` on the API service
+(from a free sentry.io project) to get them, and server errors, by email with the full details.
+

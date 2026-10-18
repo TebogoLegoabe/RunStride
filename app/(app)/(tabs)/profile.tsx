@@ -1,4 +1,4 @@
-import { View, StyleSheet, Pressable, ActivityIndicator, ScrollView, Image, Modal, Switch } from "react-native";
+import { View, StyleSheet, Pressable, ActivityIndicator, ScrollView, Image, Modal, Switch, Platform, Share } from "react-native";
 import { Text } from "../../../components/ui/Text";
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
@@ -18,6 +18,7 @@ import {
 import { unregisterPush } from "../../../lib/push";
 import { GoogleButton, googleAvailable } from "../../../components/GoogleButton";
 import { useMembership } from "../../../components/MembershipProvider";
+import { FeedbackSheet } from "../../../components/FeedbackSheet";
 import { formatRaceDates } from "../../../lib/format";
 import { openPlus } from "../../../lib/upsell";
 import { clearDeviceToken, clearToken } from "../../../lib/session";
@@ -71,6 +72,28 @@ export default function ProfileTab() {
   };
 
   const [clubs, setClubs] = useState<string[]>([]);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  // Invite a running friend: the phone's share sheet (WhatsApp etc.), or copy the link on a computer
+  const invite = async () => {
+    const message =
+      "I'm on RunStride: meet runners at your pace and at the races you're doing. Join me: https://app.runstride.co.za";
+    try {
+      if (Platform.OS === "web") {
+        const nav = navigator as Navigator & { share?: (data: { text: string }) => Promise<void> };
+        if (nav.share) await nav.share({ text: message });
+        else {
+          await navigator.clipboard.writeText(message);
+          setNotice("Invite copied. Paste it into WhatsApp or anywhere you like.");
+        }
+      } else {
+        await Share.share({ message });
+      }
+    } catch {
+      // they closed the share sheet: nothing to do
+    }
+  };
 
   const activateBeta = async () => {
     if (!token) return;
@@ -182,6 +205,8 @@ export default function ProfileTab() {
       </View>
 
       {error && <Text style={styles.error}>{error}</Text>}
+      {notice && <Text style={styles.notice}>{notice}</Text>}
+      <FeedbackSheet visible={feedbackOpen} token={token} onClose={() => setFeedbackOpen(false)} />
 
       {membership && (
         <>
@@ -259,6 +284,16 @@ export default function ProfileTab() {
       <Text style={styles.section}>Account</Text>
       <View style={styles.group}>
         {row("notifications-outline", "Notifications", "/notifications")}
+        <Pressable style={styles.row} onPress={invite}>
+          <Ionicons name="share-social-outline" size={20} color={colors.primary} />
+          <Text style={styles.rowText}>Invite a running friend</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+        </Pressable>
+        <Pressable style={styles.row} onPress={() => setFeedbackOpen(true)}>
+          <Ionicons name="chatbox-ellipses-outline" size={20} color={colors.primary} />
+          <Text style={styles.rowText}>Send feedback</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+        </Pressable>
         {me.hasGoogle ? (
           <View style={styles.row}>
             <Ionicons name="logo-google" size={20} color={colors.primary} />
@@ -339,6 +374,7 @@ const styles = StyleSheet.create({
   photo: { width: 110, height: 110, borderRadius: 55, backgroundColor: colors.surface, marginBottom: 12 },
   photoEmpty: { borderWidth: 1, borderColor: colors.borderStrong },
   name: { color: colors.heading, fontSize: 24, fontWeight: "700" },
+  notice: { color: colors.primary, fontSize: 14, textAlign: "center", marginBottom: 10 },
   clubs: { color: colors.textMuted, fontSize: 14, marginBottom: 8 },
   badge: {
     marginTop: 8,

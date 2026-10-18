@@ -12,6 +12,7 @@ import { RaceAdmin } from "../../../components/admin/RaceAdmin";
 import { IdChecks } from "../../../components/admin/IdChecks";
 import { Overview } from "../../../components/admin/Overview";
 import { People } from "../../../components/admin/People";
+import { FeedbackList } from "../../../components/admin/FeedbackList";
 import { colors } from "../../../lib/theme";
 import { useTopPadding } from "../../../lib/responsive";
 
@@ -20,6 +21,7 @@ const VIEWS = [
   { value: "overview", label: "Overview" },
   { value: "people", label: "People" },
   { value: "ids", label: "ID checks" },
+  { value: "feedback", label: "Feedback" },
   { value: "races", label: "Races" },
   { value: "open", label: "Reports: open" },
   { value: "resolved", label: "Reports: resolved" },
@@ -27,7 +29,7 @@ const VIEWS = [
 
 type Section = (typeof VIEWS)[number]["value"];
 // Sections that aren't a list of reports
-const NOT_REPORTS: Section[] = ["overview", "people", "ids", "races"];
+const NOT_REPORTS: Section[] = ["overview", "people", "ids", "races", "feedback"];
 
 // Admins only (the tab is hidden for everyone else, and the API refuses non-admins)
 export default function ModerationQueue() {
@@ -38,7 +40,7 @@ export default function ModerationQueue() {
   const params = useLocalSearchParams<{ view?: string }>();
   const [view, setView] = useState<Section[]>(["overview"]);
   useEffect(() => {
-    if (params.view === "ids" || params.view === "races") setView([params.view]);
+    if (params.view === "ids" || params.view === "races" || params.view === "feedback") setView([params.view]);
   }, [params.view]);
   const [reports, setReports] = useState<ReportSummary[] | null>(null);
   const [reportTotal, setReportTotal] = useState(0);
@@ -94,6 +96,10 @@ export default function ModerationQueue() {
       {view[0] === "overview" ? (
         <ScrollView>
           <Overview go={(section) => setView([section])} />
+        </ScrollView>
+      ) : view[0] === "feedback" ? (
+        <ScrollView>
+          <FeedbackList />
         </ScrollView>
       ) : view[0] === "people" ? (
         <ScrollView keyboardShouldPersistTaps="handled">

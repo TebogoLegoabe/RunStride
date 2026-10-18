@@ -217,6 +217,22 @@ export const giveUserPlus = (token: string, id: string, days?: number) =>
 export const takeUserPlus = (token: string, id: string) =>
   apiRequest<AdminUserRow>(`/admin/users/${id}/plus`, { method: "DELETE", token });
 
+// --- Admin: feedback from users ---
+export type FeedbackItem = {
+  id: string;
+  body: string;
+  platform: string | null;
+  screen: string | null;
+  status: "open" | "done";
+  createdAt: string;
+  userId: string | null;
+  displayName: string | null;
+  phone: string | null;
+};
+
+export const getFeedback = (token: string, status: "open" | "done" = "open", offset = 0) =>
+  apiPaged<FeedbackItem>(`/admin/feedback?status=${status}&offset=${offset}&limit=30`, token);
+
 export const getIdChecks = (token: string) => apiRequest<IdReview[]>("/admin/id-checks", { token });
 
 export const decideIdCheck = (token: string, id: string, approve: boolean, reason?: string) =>
