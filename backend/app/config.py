@@ -100,6 +100,11 @@ class Settings(BaseSettings):
     # if "enhanced push security" is turned on in the Expo account).
     push_provider: str = "console"
     expo_access_token: str = ""
+    # Browser notifications (Web Push). Make a key pair once with scripts/make_vapid_keys.py.
+    # Empty: the web app doesn't offer notifications.
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:support@runstride.co.za"
 
     # Google sign-in: the OAuth client IDs (web, iOS, Android) that ID tokens may be issued to.
     # Empty: Google sign-in is switched off.

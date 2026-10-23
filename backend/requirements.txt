@@ -13,3 +13,4 @@ geoalchemy2>=0.15,<1
 boto3>=1.35,<2
 tzdata>=2024.1
 sentry-sdk[fastapi]>=2.20,<3  # error tracking, only active when SENTRY_DSN is set
+pywebpush>=2.0,<3  # browser notifications (Web Push)

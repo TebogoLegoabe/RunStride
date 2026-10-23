@@ -1,4 +1,4 @@
-import { View, StyleSheet, Pressable, ScrollView, Switch, ActivityIndicator, Linking } from "react-native";
+import { View, StyleSheet, Pressable, ScrollView, Switch, ActivityIndicator, Linking, Platform } from "react-native";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,6 +6,7 @@ import { Text } from "../../components/ui/Text";
 import { useChat } from "../../components/ChatProvider";
 import { ApiError, getNotificationSettings, setNotificationSettings } from "../../lib/api";
 import { pushSupport, registerForPush } from "../../lib/push";
+import { WebPushCard } from "../../components/WebPushCard";
 import { useTopPadding } from "../../lib/responsive";
 import type { NotificationSettings } from "../../lib/types";
 import { colors, fonts, radius } from "../../lib/theme";
@@ -42,7 +43,7 @@ export default function NotificationsScreen() {
       .then(setSettings)
       .catch((e) => setError(e instanceof ApiError ? e.message : NETWORK_ERROR));
     const support = pushSupport();
-    if (support !== "ok") setDeviceIssue(support);
+    if (support !== "ok" && support !== "web") setDeviceIssue(support);
   }, [token]);
 
   const save = async (next: NotificationSettings) => {
@@ -100,6 +101,7 @@ export default function NotificationsScreen() {
             </View>
           </View>
 
+          {Platform.OS === "web" && settings.enabled && <WebPushCard token={token} persistent />}
           {deviceIssue && settings.enabled && (
             <View style={styles.notice}>
               <Ionicons name="information-circle" size={18} color={colors.warningText} />

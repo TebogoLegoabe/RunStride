@@ -137,6 +137,15 @@ export const disconnectGoogle = (token: string) =>
 export const registerPushToken = (token: string, pushToken: string, platform: "ios" | "android") =>
   apiRequest<void>("/me/push-tokens", { method: "PUT", body: { token: pushToken, platform }, token });
 
+// Browser notifications (the web app)
+export const getWebPushKey = () => apiRequest<{ publicKey: string }>("/push/web-key");
+
+export const saveWebPush = (token: string, sub: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
+  apiRequest<void>("/me/web-push", { method: "PUT", body: sub, token });
+
+export const removeWebPush = (token: string, endpoint: string) =>
+  apiRequest<void>(`/me/web-push?endpoint=${encodeURIComponent(endpoint)}`, { method: "DELETE", token });
+
 export const removePushToken = (token: string, pushToken: string) =>
   apiRequest<void>(`/me/push-tokens?token=${encodeURIComponent(pushToken)}`, { method: "DELETE", token });
 

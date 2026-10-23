@@ -19,7 +19,7 @@ from sqlalchemy import delete, select
 
 from app.config import get_settings
 from app.db import SessionLocal
-from app.models import Profile, PushToken, User
+from app.models import Profile, PushToken, User, WebPushSubscription
 
 log = logging.getLogger("runstride.push")
 
@@ -92,6 +92,72 @@ def unregistered_tokens(response: dict, batch: list[Push]) -> set[str]:
     return gone
 
 
+@dataclass(frozen=True)
+class WebPush:
+    endpoint: str
+    p256dh: str
+    auth: str
+    title: str
+    body: str
+    url: str
+
+
+class WebPushSender:
+    """Browser notifications, signed with the server's VAPID key."""
+
+    def __init__(self, private_key: str, subject: str):
+        self.private_key = private_key
+        self.subject = subject
+
+    def send(self, pushes: list[WebPush]) -> set[str]:
+        """Send; returns endpoints the browser's push service says are gone (unsubscribed)."""
+        import json
+
+        from pywebpush import WebPushException, webpush
+
+        gone: set[str] = set()
+        for p in pushes:
+            try:
+                webpush(
+                    subscription_info={"endpoint": p.endpoint, "keys": {"p256dh": p.p256dh, "auth": p.auth}},
+                    data=json.dumps({"title": p.title, "body": p.body, "url": p.url}),
+                    vapid_private_key=self.private_key,
+                    vapid_claims={"sub": self.subject},
+                    ttl=60 * 60 * 24,
+                    timeout=10,
+                )
+            except WebPushException as e:
+                status = getattr(e.response, "status_code", None)
+                if status in (404, 410):
+                    gone.add(p.endpoint)
+                else:
+                    log.warning("Web push to %s… failed: %s", p.endpoint[:40], e)
+            except Exception:
+                log.exception("Web push to %s… failed", p.endpoint[:40])
+        return gone
+
+
+class ConsoleWebPushSender:
+    def send(self, pushes: list[WebPush]) -> set[str]:
+        for p in pushes:
+            log.info("WEB PUSH to %s… | %s | %s | %s", p.endpoint[:40], p.title, p.body, p.url)
+        return set()
+
+
+def get_web_push_sender():
+    """None when browser notifications aren't set up (no VAPID keys)."""
+    settings = get_settings()
+    if not (settings.vapid_public_key and settings.vapid_private_key):
+        return None
+    if settings.push_provider != "expo":
+        return ConsoleWebPushSender()
+    return WebPushSender(settings.vapid_private_key, settings.vapid_subject)
+
+
+def web_sender():
+    return get_web_push_sender()
+
+
 def get_push_sender() -> PushSender:
     settings = get_settings()
     if settings.push_provider == "expo":
@@ -150,15 +216,28 @@ def _deliver(recipients, category, title, body, url, about) -> None:
             ]
             if not wanted:
                 return
-            tokens = db.scalars(select(PushToken.token).where(PushToken.user_id.in_(wanted))).all()
-            if not tokens:
-                return
             fill = lambda text: text.replace("{name}", name)  # noqa: E731
             link = url.replace("{name}", quote(name))
-            pushes = [Push(token=t, title=fill(title), body=fill(body), url=link) for t in tokens]
-            gone = sender().send(pushes)
-            if gone:
-                db.execute(delete(PushToken).where(PushToken.token.in_(gone)))
-                db.commit()
+
+            # Phones (the Android and iPhone apps)
+            tokens = db.scalars(select(PushToken.token).where(PushToken.user_id.in_(wanted))).all()
+            if tokens:
+                pushes = [Push(token=t, title=fill(title), body=fill(body), url=link) for t in tokens]
+                gone = sender().send(pushes)
+                if gone:
+                    db.execute(delete(PushToken).where(PushToken.token.in_(gone)))
+                    db.commit()
+
+            # Browsers (the web app)
+            web = web_sender()
+            subs = db.scalars(select(WebPushSubscription).where(WebPushSubscription.user_id.in_(wanted))).all()
+            if web is not None and subs:
+                gone_web = web.send([
+                    WebPush(endpoint=s.endpoint, p256dh=s.p256dh, auth=s.auth, title=fill(title), body=fill(body), url=link)
+                    for s in subs
+                ])
+                if gone_web:
+                    db.execute(delete(WebPushSubscription).where(WebPushSubscription.endpoint.in_(gone_web)))
+                    db.commit()
     except Exception:
         log.exception("Couldn't send %s notification", category)

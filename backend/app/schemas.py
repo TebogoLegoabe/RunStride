@@ -910,6 +910,20 @@ class NotificationSettings(CamelModel):
     swaps: bool = True  # entry alerts
 
 
+class WebPushKeys(CamelModel):
+    p256dh: str = Field(min_length=10, max_length=200)
+    auth: str = Field(min_length=4, max_length=100)
+
+
+class WebPushBody(CamelModel):
+    endpoint: str = Field(min_length=10, max_length=1000)
+    keys: WebPushKeys
+
+
+class WebPushKey(CamelModel):
+    public_key: str
+
+
 class PushTokenBody(CamelModel):
     token: str = Field(min_length=10, max_length=200)
     platform: Literal["ios", "android"]

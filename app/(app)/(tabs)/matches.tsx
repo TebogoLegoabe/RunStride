@@ -3,6 +3,7 @@ import { Text } from "../../../components/ui/Text";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ApiError, answerChatRequest, getChatRequests, getLikesYou, getMatches, getMe, mediaUrl } from "../../../lib/api";
+import { WebPushCard } from "../../../components/WebPushCard";
 import { LikesYouCard } from "../../../components/LikesYouCard";
 import { formatWhen } from "../../../lib/format";
 import type { ChatRequest, LikesYou, MatchSummary, RealtimeEvent } from "../../../lib/types";
@@ -138,6 +139,7 @@ export default function Matches() {
 
   const requestsHeader = (
     <View style={styles.requests}>
+      <WebPushCard token={token} />
       {likes && <LikesYouCard likes={likes} />}
       {incoming.length + outgoing.length > 0 && (
       <View>

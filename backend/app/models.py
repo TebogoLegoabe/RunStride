@@ -631,6 +631,19 @@ class BillingEvent(Base):
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class WebPushSubscription(Base):
+    """A browser that can receive push notifications for a user (the web app, via Web Push)."""
+
+    __tablename__ = "web_push_subscriptions"
+    __table_args__ = (Index("ix_web_push_subscriptions_user_id", "user_id"),)
+
+    endpoint: Mapped[str] = mapped_column(String(1000), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    p256dh: Mapped[str] = mapped_column(String(200))
+    auth: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class PushToken(Base):
     """A phone that can receive push notifications for a user (an Expo push token)."""
 
