@@ -115,7 +115,6 @@ const styles = StyleSheet.create({
     gap: 8,
     minWidth: 130,
     flexGrow: 1,
-    flexBasis: 130,
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
