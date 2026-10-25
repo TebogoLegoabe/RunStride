@@ -68,6 +68,8 @@ def send_otp(
         )
     now = utcnow()
     ip = _client_ip(request)
+    if _is_review_phone(phone, settings):
+        return _issue_review_code(db, phone, ip, settings, now)
 
     # Per number: a short cooldown between codes, and an hourly cap
     recent_sends = db.scalars(
@@ -128,6 +130,32 @@ def send_otp(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="We couldn't send your code just now. Please try again in a minute.",
         )
+    return OtpSendResponse(sent=True, phone=phone)
+
+
+def _is_review_phone(phone: str, settings: Settings) -> bool:
+    if not settings.review_phone:
+        return False
+    try:
+        return normalize_phone(settings.review_phone, settings.default_phone_region) == phone
+    except InvalidPhoneNumber:
+        return False
+
+
+def _issue_review_code(db, phone: str, ip: str | None, settings: Settings, now) -> OtpSendResponse:
+    """Google Play's reviewers: the fixed code works, nothing is texted, and the send limits don't
+    apply (reviewers retry a lot). Wrong guesses still lock the code after a few attempts."""
+    db.execute(update(OtpCode).where(OtpCode.phone == phone, OtpCode.consumed_at.is_(None)).values(consumed_at=now))
+    db.add(
+        OtpCode(
+            phone=phone,
+            code_hash=hash_otp(phone, settings.review_code),
+            request_ip=ip,
+            created_at=now,
+            expires_at=now + timedelta(minutes=settings.otp_ttl_minutes),
+        )
+    )
+    db.commit()
     return OtpSendResponse(sent=True, phone=phone)
 
 

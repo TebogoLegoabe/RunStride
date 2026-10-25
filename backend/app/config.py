@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     bulksms_token_secret: str = ""
     bulksms_base_url: str = "https://api.bulksms.com/v1"
 
+    # Google Play's reviewers can't get our texts: this one number signs in with this fixed code and
+    # no SMS is sent. Give both to Google in Play Console -> App content -> App access. Empty: off.
+    review_phone: str = ""
+    review_code: str = ""
+
     # Numbers typed without a country code ("082 123 4567") are read as South African.
     default_phone_region: str = "ZA"
 
@@ -145,6 +150,8 @@ class Settings(BaseSettings):
             raise ValueError(
                 "S3_BUCKET, S3_PUBLIC_BASE_URL, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY must be set outside development"
             )
+        if self.review_phone and not (len(self.review_code) == 6 and self.review_code.isdigit()):
+            raise ValueError("REVIEW_CODE must be 6 digits when REVIEW_PHONE is set")
         if not self.is_development and self.test_purchases:
             # Free Plus for anyone who asks: never outside development
             self.test_purchases = False
