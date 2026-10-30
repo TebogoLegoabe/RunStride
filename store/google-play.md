@@ -7,18 +7,21 @@ Everything to copy into the Play Console. Review each answer against what the ap
 **App name** (30 characters max): `RunStride: Run & Meet`
 
 **Short description** (80 max):
-`Find runners at your pace. Meet at races. Dating for South African runners.`
+`Meet runners at your pace, near you and at your races. Made in South Africa.`
 
 **Full description** (4000 max):
 
 ```
-RunStride is the dating and social app for runners in South Africa.
+Meet runners at your pace: for dates, run buddies and race day. Made in South Africa.
 
 MATCH ON PACE
 Tell us how you run: your pace, distances, trails or road, early mornings or evenings. We show you people who run like you do, near you.
 
 MEET AT RACES
 See who's going to the races you're entered for, say hello in the race chat, and meet at the start line, with a crowd around you, instead of a stranger on a first date.
+
+RUNNING CLUBS
+Add your club, from parkrun to your local road club, and see who runs with the same crew, near you or anywhere in the country.
 
 SWAP ENTRIES
 Can't run, or need an entry? Post it on the race's swap board and get an alert when the distance you want is offered. Meet at race-number collection to swap, the way most races do it, so it stays valid with the organiser.
@@ -31,7 +34,7 @@ BUILT FOR SAFETY
 - Nudges to meet somewhere open and busy, ideally at a race or with a group.
 
 FREE DURING THE BETA
-Activate RunStride Plus free while we're in beta: unlimited likes, see everyone going to your races, and instant swap alerts.
+Get RunStride Plus free for 90 days while we're in beta: unlimited likes, see everyone going to your races, and instant swap alerts.
 
 RunStride is for adults (18+).
 ```
@@ -43,11 +46,11 @@ RunStride is for adults (18+).
 **Privacy policy:** https://runstride.co.za/privacy
 **Account deletion URL** (required, Data safety): https://runstride.co.za/delete-account
 
-## Graphics you still need (not in the repo)
+## Graphics (in `store/play-graphics/`)
 
-- App icon 512×512 PNG (from `assets/icon.png`)
-- Feature graphic 1024×500 PNG
-- Phone screenshots: at least 2, ideally 6 to 8 (Discover, a race page, the swap board, chat, profile, safety)
+- App icon 512×512: `app-icon-512.png`
+- Feature graphic 1024×500: `feature-graphic.png`
+- Phone screenshots 1080×1920: `screenshot-1` to `screenshot-5`
 
 ## App content (Policy → App content)
 
