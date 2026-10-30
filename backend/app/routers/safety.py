@@ -3,8 +3,10 @@ import uuid
 from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import select
 
+from app import push
+
 from app.deps import CurrentUser, DbSession
-from app.models import Race, Report, User
+from app.models import Profile, Race, Report, User
 from app.moderation import block, capture_evidence, match_between
 from app.schemas import ReportBody, ReportCreated
 from app.security import utcnow
@@ -62,4 +64,11 @@ def create_report(body: ReportBody, user: CurrentUser, db: DbSession) -> ReportC
     # Reporting someone always blocks them too
     block(db, user, reported.id)
     db.commit()
+
+    name = db.scalar(select(Profile.display_name).where(Profile.user_id == reported.id)) or "Someone"
+    if body.reason == "underage":
+        # Possible child on the app: review straight away (Play's child safety standards)
+        push.notify_admins(db, "Urgent: possible under-18", f"{name} was reported as under 18. Review now.", "/moderation?view=open")
+    else:
+        push.notify_admins(db, "New report", f"{name} was reported: {body.reason.replace('_', ' ')}", "/moderation?view=open")
     return ReportCreated(id=report.id)

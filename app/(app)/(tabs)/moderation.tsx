@@ -40,7 +40,7 @@ export default function ModerationQueue() {
   const params = useLocalSearchParams<{ view?: string }>();
   const [view, setView] = useState<Section[]>(["overview"]);
   useEffect(() => {
-    if (params.view === "ids" || params.view === "races" || params.view === "feedback") setView([params.view]);
+    if (params.view === "ids" || params.view === "races" || params.view === "feedback" || params.view === "open") setView([params.view]);
   }, [params.view]);
   const [reports, setReports] = useState<ReportSummary[] | null>(null);
   const [reportTotal, setReportTotal] = useState(0);

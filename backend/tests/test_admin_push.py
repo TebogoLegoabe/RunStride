@@ -47,3 +47,25 @@ def test_admins_can_turn_all_push_off(client, admin, make_runner, pushes):
     )
     suggest(client, make_runner(gender="man", interested_in=["woman"]))
     assert pushes.sent == []
+
+
+def report(client, reporter, reported, reason):
+    return client.post(
+        "/reports",
+        json={"reportedUserId": reported["id"], "reason": reason, "details": "test"},
+        headers=reporter["headers"],
+    )
+
+
+def test_admins_are_told_about_reports(client, admin, make_runner, pushes):
+    phone(client, admin)
+    a, b = make_runner(gender="man", interested_in=["woman"]), make_runner()
+    assert report(client, a, b, "harassment").status_code == 201
+    assert [(p.title, p.url) for p in pushes.sent] == [("New report", "/moderation?view=open")]
+
+
+def test_an_under_18_report_is_urgent(client, admin, make_runner, pushes):
+    phone(client, admin)
+    a, b = make_runner(gender="man", interested_in=["woman"]), make_runner()
+    assert report(client, a, b, "underage").status_code == 201
+    assert pushes.sent[0].title == "Urgent: possible under-18"
