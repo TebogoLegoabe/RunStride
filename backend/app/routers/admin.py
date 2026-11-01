@@ -7,7 +7,8 @@ from sqlalchemy import func, or_, select
 
 from app.config import get_settings
 from app.deps import AdminUser, DbSession
-from app.membership import end_plus, grant_plus, plus_status
+from app import push
+from app.membership import end_plus, grant_plus, plus_condition, plus_status
 from app.phone import InvalidPhoneNumber, normalize_phone
 from app.models import AccountStatus, Entitlement, Feedback, IdSubmission, Match, Message, OtpCode, Profile, Race, RaceAttendance, RaceEvent, RaceMessage, Report, User
 from app.moderation import end_all_matches, resolve_other_open_reports
@@ -16,7 +17,7 @@ from app.routers.races import race_detail
 from app.races import SA_TZ
 from app.race_import import import_csv
 from app.races import set_position
-from app.schemas import RaceImportResult, AdminPlusBody, AdminStats, AdminUserRow, DayCount, UserStatusBody, GrantPlusBody, PlusOut, SmsStatus, RaceBody, RaceDetail, ReportDetail, ReportedPerson, ReportPerson, ReportSummary, ResolveBody
+from app.schemas import RemindResult, RaceImportResult, AdminPlusBody, AdminStats, AdminUserRow, DayCount, UserStatusBody, GrantPlusBody, PlusOut, SmsStatus, RaceBody, RaceDetail, ReportDetail, ReportedPerson, ReportPerson, ReportSummary, ResolveBody
 from app.security import utcnow
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -359,7 +360,38 @@ def stats(admin: AdminUser, db: DbSession) -> AdminStats:
         open_feedback=db.scalar(select(func.count()).select_from(Feedback).where(Feedback.status == "open")) or 0,
         pending_id_checks=db.scalar(select(func.count()).select_from(IdSubmission).where(IdSubmission.status == "pending")) or 0,
         signups_by_day=signups,
+        beta_plus_unclaimed=len(_beta_unclaimed(db)),
     )
+
+
+def _beta_unclaimed(db: DbSession) -> list[uuid.UUID]:
+    """Active accounts that haven't switched on their free beta Plus (and don't have Plus already)."""
+    if get_settings().beta_plus_days <= 0:
+        return []
+    return list(
+        db.scalars(
+            select(User.id).where(
+                User.beta_plus_claimed_at.is_(None),
+                User.account_status == AccountStatus.active,
+                ~plus_condition(User.id),
+            )
+        ).all()
+    )
+
+
+@router.post("/beta-plus/remind", response_model=RemindResult)
+def remind_beta_plus(admin: AdminUser, db: DbSession) -> RemindResult:
+    """Push everyone who hasn't activated their free Plus. Opens the Plus screen, where it's one tap."""
+    ids = [i for i in _beta_unclaimed(db) if i != admin.id]
+    days = get_settings().beta_plus_days
+    push.notify(
+        ids,
+        "news",
+        "Your free RunStride Plus is waiting 🎁",
+        f"Unlimited likes, Second look and everyone at your races. Free for {days} days, no card. Tap to switch it on.",
+        "/plus",
+    )
+    return RemindResult(sent=len(ids))
 
 
 def _user_row(db: DbSession, user: User) -> AdminUserRow:

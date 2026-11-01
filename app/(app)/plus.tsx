@@ -8,7 +8,7 @@ import { Text } from "../../components/ui/Text";
 import { Button } from "../../components/ui/Button";
 import { useChat } from "../../components/ChatProvider";
 import { useMembership } from "../../components/MembershipProvider";
-import { ApiError } from "../../lib/api";
+import { ApiError, activateBetaPlus } from "../../lib/api";
 import { formatRaceDates } from "../../lib/format";
 import { haptics } from "../../lib/haptics";
 import { PLUS_FEATURES, PLUS_PLANS, RACE_PASS, RACE_PASS_FEATURES } from "../../lib/plans";
@@ -37,6 +37,23 @@ export default function PlusScreen() {
   const close = () => (router.canGoBack() ? router.back() : router.replace("/discover"));
   const plus = membership?.plus;
   const hasPassHere = !!raceId && !!membership?.racePasses.some((p) => p.raceId === raceId);
+  // Beta: Plus is free to switch on, so that's the offer instead of the paid plans
+  const betaDays = !plus?.active ? membership?.betaOfferDays ?? 0 : 0;
+
+  const activateFree = async () => {
+    if (!token) return;
+    setBusy(true);
+    setError(null);
+    try {
+      update(await activateBetaPlus(token));
+      haptics.success();
+      setDone(`You're on RunStride Plus, free for ${betaDays} days.`);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const purchase = async () => {
     if (!token || !membership) return;
@@ -136,6 +153,15 @@ export default function PlusScreen() {
         </View>
       ) : null}
 
+      {betaDays > 0 ? (
+        <View style={styles.beta}>
+          <Text style={styles.betaKicker}>Free during the beta</Text>
+          <Text style={styles.betaTitle}>Switch on Plus for free</Text>
+          <Text style={styles.betaBody}>{betaDays} days of everything below. No card, nothing to pay.</Text>
+          <Button title="Activate free Plus" icon="flash" onPress={activateFree} loading={busy} style={styles.betaButton} />
+        </View>
+      ) : null}
+
       {plus?.active ? (
         <View style={styles.current}>
           <Ionicons name="checkmark-circle" size={20} color={colors.success} />
@@ -166,14 +192,14 @@ export default function PlusScreen() {
         ))}
       </View>
 
-      {!plus?.active && (
+      {!plus?.active && betaDays === 0 && (
         <>
           <Text style={styles.section}>Choose a plan</Text>
           <View style={styles.plans}>{PLUS_PLANS.map((p) => option(p.id, p.name, p.price, p.per, p.note))}</View>
         </>
       )}
 
-      {raceId && !plus?.active && !hasPassHere && (
+      {raceId && !plus?.active && !hasPassHere && betaDays === 0 && (
         <>
           <Text style={styles.section}>Just this race</Text>
           {option(
@@ -195,14 +221,14 @@ export default function PlusScreen() {
 
       {error && <Text style={styles.error}>{error}</Text>}
 
-      {!plus?.active && !(choice === "race_pass" && hasPassHere) && (
+      {!plus?.active && betaDays === 0 && !(choice === "race_pass" && hasPassHere) && (
         <Button title={actionTitle} icon="flash" onPress={purchase} loading={busy} style={styles.buy} />
       )}
       {membership?.testPurchases ? (
         <Text style={styles.testNote}>Test mode: purchases are granted straight away and nothing is charged.</Text>
-      ) : (
+      ) : betaDays === 0 ? (
         <Text style={styles.small}>Subscriptions renew until you cancel in your App Store or Google Play settings.</Text>
-      )}
+      ) : null}
       <Text style={styles.small}>
         ID verification, reporting, blocking and run-day safety are always free, for everyone.
       </Text>
@@ -219,6 +245,18 @@ const styles = StyleSheet.create({
   heroBadge: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   title: { color: colors.heading, fontSize: 28, fontFamily: fonts.extrabold },
   subtitle: { color: colors.textMuted, fontSize: 15, textAlign: "center", marginTop: 4 },
+  beta: {
+    backgroundColor: colors.primaryTintSoft,
+    borderColor: colors.primary,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: 18,
+    marginBottom: 18,
+  },
+  betaKicker: { color: colors.primary, fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase" },
+  betaTitle: { color: colors.heading, fontSize: 20, fontFamily: fonts.bold, marginTop: 4 },
+  betaBody: { color: colors.text, fontSize: 14, lineHeight: 20, marginTop: 4 },
+  betaButton: { marginTop: 14 },
   reason: {
     flexDirection: "row",
     gap: 8,

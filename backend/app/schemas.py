@@ -834,6 +834,11 @@ class AdminStats(CamelModel):
     pending_id_checks: int
     open_feedback: int = 0
     signups_by_day: list[DayCount]  # the last 14 days
+    beta_plus_unclaimed: int = 0  # can still activate the free beta Plus
+
+
+class RemindResult(CamelModel):
+    sent: int
 
 
 class AdminUserRow(CamelModel):

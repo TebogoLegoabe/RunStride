@@ -212,6 +212,10 @@ export async function submitIdCheck(token: string, idNumber: string, idPhotoUri:
 // --- Admin: overview and people ---
 export const getAdminStats = (token: string) => apiRequest<AdminStats>("/admin/stats", { token });
 
+// Push everyone who hasn't switched on their free beta Plus
+export const remindBetaPlus = (token: string) =>
+  apiRequest<{ sent: number }>("/admin/beta-plus/remind", { method: "POST", token });
+
 export const getAdminUsers = (
   token: string,
   { q = "", sort = "newest", offset = 0 }: { q?: string; sort?: "newest" | "active"; offset?: number } = {}

@@ -69,3 +69,24 @@ def test_an_under_18_report_is_urgent(client, admin, make_runner, pushes):
     a, b = make_runner(gender="man", interested_in=["woman"]), make_runner()
     assert report(client, a, b, "underage").status_code == 201
     assert pushes.sent[0].title == "Urgent: possible under-18"
+
+
+def test_admin_can_remind_people_to_activate_free_plus(client, admin, make_runner, pushes):
+    waiting = make_runner(gender="man", interested_in=["woman"])
+    claimed = make_runner()
+    phone(client, waiting, "ExponentPushToken[waiting00]")
+    phone(client, claimed, "ExponentPushToken[claimed00]")
+    client.post("/billing/activate-beta", headers=claimed["headers"]).raise_for_status()
+
+    stats = client.get("/admin/stats", headers=admin["headers"]).json()
+    res = client.post("/admin/beta-plus/remind", headers=admin["headers"])
+
+    assert res.status_code == 200 and res.json()["sent"] == stats["betaPlusUnclaimed"] - 1  # minus the admin
+    tokens = {p.token for p in pushes.sent if p.url == "/plus"}
+    assert tokens == {"ExponentPushToken[waiting00]"}
+    assert "free" in pushes.sent[0].title.lower()
+
+
+def test_only_admins_can_send_reminders(client, make_runner):
+    runner = make_runner()
+    assert client.post("/admin/beta-plus/remind", headers=runner["headers"]).status_code == 403

@@ -2,7 +2,7 @@ import { View, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { Text } from "../ui/Text";
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { ApiError, getAdminStats } from "../../lib/api";
+import { ApiError, getAdminStats, remindBetaPlus } from "../../lib/api";
 import type { AdminStats } from "../../lib/types";
 import { useChat } from "../ChatProvider";
 import { colors, fonts, radius } from "../../lib/theme";
@@ -33,6 +33,21 @@ export function Overview({ go }: { go: Go }) {
   const { token } = useChat();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reminding, setReminding] = useState(false);
+  const [reminded, setReminded] = useState<string | null>(null);
+
+  const remind = async () => {
+    if (!token) return;
+    setReminding(true);
+    try {
+      const { sent } = await remindBetaPlus(token);
+      setReminded(`Reminder sent to ${sent} ${sent === 1 ? "person" : "people"}.`);
+    } catch (e) {
+      setReminded(e instanceof ApiError ? e.message : NETWORK_ERROR);
+    } finally {
+      setReminding(false);
+    }
+  };
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -70,7 +85,7 @@ export function Overview({ go }: { go: Go }) {
       <View style={styles.grid}>
         <Stat label="Total users" value={stats.usersTotal} hint={`${stats.profilesComplete} with a profile`} onPress={() => go("people")} />
         <Stat label="New in 24 hours" value={stats.newToday} hint={`${stats.newWeek} this week`} />
-        <Stat label="Plus members" value={stats.plusActive} />
+        <Stat label="Plus members" value={stats.plusActive} hint={`${stats.betaPlusUnclaimed} haven't activated free Plus`} />
         <Stat label="ID verified" value={stats.verified} />
         <Stat label="Google linked" value={stats.withGoogle} />
         <Stat label="Suspended or banned" value={stats.suspendedOrBanned} />
@@ -90,6 +105,22 @@ export function Overview({ go }: { go: Go }) {
         <Stat label="Messages (24 hours)" value={stats.messagesDay} />
         <Stat label="Races published" value={stats.racesPublished} />
       </View>
+
+      {stats.betaPlusUnclaimed > 0 && (
+        <View style={styles.remind}>
+          <Text style={styles.remindText}>
+            {stats.betaPlusUnclaimed} {stats.betaPlusUnclaimed === 1 ? "person hasn't" : "people haven't"} switched on their
+            free Plus yet.
+          </Text>
+          {reminded ? (
+            <Text style={styles.remindDone}>{reminded}</Text>
+          ) : (
+            <Pressable style={styles.remindButton} onPress={remind} disabled={reminding} accessibilityRole="button">
+              {reminding ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.remindButtonText}>Send them a reminder</Text>}
+            </Pressable>
+          )}
+        </View>
+      )}
 
       <Text style={styles.section}>Sign-ups, last 14 days</Text>
       <View style={styles.chart}>
@@ -131,5 +162,18 @@ const styles = StyleSheet.create({
   bar: { width: "70%", borderRadius: 4, backgroundColor: colors.primary },
   barValue: { color: colors.textMuted, fontSize: 10, marginBottom: 2 },
   barDay: { color: colors.textFaint, fontSize: 10, marginTop: 3 },
+  remind: {
+    marginTop: 12,
+    padding: 14,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryTintSoft,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    gap: 10,
+  },
+  remindText: { color: colors.text, fontSize: 14 },
+  remindDone: { color: colors.success, fontSize: 14, fontFamily: fonts.bold },
+  remindButton: { alignSelf: "flex-start", backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 9, paddingHorizontal: 16 },
+  remindButtonText: { color: colors.onPrimary, fontSize: 14, fontFamily: fonts.bold },
   footnote: { color: colors.textFaint, fontSize: 12, marginTop: 10 },
 });

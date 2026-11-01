@@ -22,6 +22,7 @@ export const PLUS_FEATURES: { icon: Icon; title: string; body: string }[] = [
   { icon: "flag", title: "Swipe runners at a race", body: "Discover only the people running the races you are." },
   { icon: "notifications", title: "Swap alerts", body: "Hear the moment an entry you need comes up." },
   { icon: "heart", title: "Unlimited likes, and see who likes you", body: "They're shown first in Discover." },
+  { icon: "refresh", title: "Second look", body: "See the runners you passed on, and like them after all." },
   { icon: "trending-up", title: "Be seen first", body: "Shown first to people going to the same races." },
 ];
 

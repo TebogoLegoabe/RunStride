@@ -360,6 +360,7 @@ export interface Membership {
 }
 
 export interface AdminStats {
+  betaPlusUnclaimed: number;
   usersTotal: number;
   profilesComplete: number;
   newToday: number;
