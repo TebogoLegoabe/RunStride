@@ -6,7 +6,7 @@ import { useBreakpoint } from "../../lib/responsive";
 export function AuthCard({ children }: { children: React.ReactNode }) {
   const { isPhone } = useBreakpoint();
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "web" ? undefined : "padding"}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         {!isPhone && (
           <Image

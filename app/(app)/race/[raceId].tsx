@@ -105,7 +105,7 @@ export default function RacePage() {
   ];
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "web" ? undefined : "padding"}>
       <ScrollView
         contentContainerStyle={[
           styles.content,

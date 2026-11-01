@@ -186,7 +186,7 @@ export function ChatView({ matchId, userId, name, photo, verified = false, onClo
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "web" ? undefined : "padding"}
     >
       <View style={[styles.header, { paddingTop: embedded ? 14 : topPadding }, embedded && styles.headerEmbedded]}>
         {!embedded && (
