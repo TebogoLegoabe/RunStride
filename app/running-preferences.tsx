@@ -9,13 +9,14 @@ import { getToken } from "../lib/session";
 import { ChoiceChips } from "../components/ChoiceChips";
 import { ClubPicker } from "../components/ClubPicker";
 import { colors } from "../lib/theme";
-import { useTopPadding } from "../lib/responsive";
+import { useBottomPadding, useTopPadding } from "../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const digits = (t: string) => t.replace(/\D/g, "");
 
 export default function RunningPreferences() {
   const topPadding = useTopPadding();
+  const bottomPadding = useBottomPadding(48);
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
@@ -103,7 +104,7 @@ export default function RunningPreferences() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: topPadding }]}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: topPadding, paddingBottom: bottomPadding }]}>
       <Text style={styles.title}>How do you run?</Text>
       <Text style={styles.subtitle}>
         We use this to match you with people who'd enjoy running together. Strava sync is
@@ -189,7 +190,7 @@ export default function RunningPreferences() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
-  content: { padding: 24, paddingBottom: 48, width: "100%", maxWidth: 560, alignSelf: "center" },
+  content: { padding: 24, width: "100%", maxWidth: 560, alignSelf: "center" },
   title: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 8 },
   subtitle: { fontSize: 14, lineHeight: 20, color: colors.textMuted, marginBottom: 32 },
   label: { fontSize: 15, fontWeight: "600", color: colors.heading, marginBottom: 6 },

@@ -16,7 +16,7 @@ import { afterSave } from "../lib/routing";
 import { getToken } from "../lib/session";
 import type { Photo } from "../lib/types";
 import { colors } from "../lib/theme";
-import { useTopPadding } from "../lib/responsive";
+import { useBottomPadding, useTopPadding } from "../lib/responsive";
 
 const MAX_PHOTOS = 6;
 const MAX_BIO = 500;
@@ -45,6 +45,7 @@ function toIsoDate(day: string, month: string, year: string): string | null {
 
 export default function ProfileSetup() {
   const topPadding = useTopPadding();
+  const bottomPadding = useBottomPadding(48);
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
@@ -161,7 +162,7 @@ export default function ProfileSetup() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: topPadding }]}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: topPadding, paddingBottom: bottomPadding }]}>
       <Text style={styles.title}>Create your profile</Text>
       <Text style={styles.subtitle}>This is what other runners will see.</Text>
 
@@ -271,7 +272,7 @@ export default function ProfileSetup() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
-  content: { padding: 24, paddingBottom: 48, width: "100%", maxWidth: 560, alignSelf: "center" },
+  content: { padding: 24, width: "100%", maxWidth: 560, alignSelf: "center" },
   title: { fontSize: 26, fontWeight: "700", color: colors.heading, marginBottom: 8 },
   subtitle: { fontSize: 14, color: colors.textMuted, marginBottom: 32 },
   label: { fontSize: 15, fontWeight: "600", color: colors.heading, marginBottom: 6 },

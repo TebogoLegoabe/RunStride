@@ -3,7 +3,7 @@ import { View, Pressable, StyleSheet, Modal, ScrollView, type StyleProp, type Vi
 import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { Text } from "./Text";
-import { hoverable } from "../../lib/responsive";
+import { hoverable, useBottomPadding } from "../../lib/responsive";
 import { haptics } from "../../lib/haptics";
 import { colors, fonts, radius } from "../../lib/theme";
 
@@ -25,6 +25,7 @@ type Props<T extends string> = {
 // A filter field: shows the current choice, opens a list to change it. Replaces rows of chips where
 // there are more than a few options, so filters stay one tidy line.
 export function Dropdown<T extends string>({ label, options, selected, onChange, multiple, emptyLabel = "Any", style }: Props<T>) {
+  const bottomPadding = useBottomPadding(24);
   const [open, setOpen] = useState(false);
 
   const chosen = options.filter((o) => selected.includes(o.value));
@@ -69,7 +70,7 @@ export function Dropdown<T extends string>({ label, options, selected, onChange,
       <Modal visible={open} transparent animationType="none" onRequestClose={() => setOpen(false)}>
         <Animated.View entering={FadeIn.duration(150)} style={styles.backdrop}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} accessibilityLabel="Close" />
-          <Animated.View entering={SlideInDown.duration(220)} style={styles.sheet}>
+          <Animated.View entering={SlideInDown.duration(220)} style={[styles.sheet, { paddingBottom: bottomPadding }]}>
             <View style={styles.grab} />
             <Text style={styles.title}>{label}</Text>
             <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
@@ -137,7 +138,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     paddingTop: 10,
-    paddingBottom: 24,
     paddingHorizontal: 8,
   },
   grab: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: colors.borderStrong, marginBottom: 10 },

@@ -10,7 +10,7 @@ import type { ModerationAction, ReportDetail } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { ChoiceChips } from "../../../components/ChoiceChips";
 import { colors } from "../../../lib/theme";
-import { useTopPadding } from "../../../lib/responsive";
+import { useBottomPadding, useTopPadding } from "../../../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const SUSPEND_OPTIONS = [
@@ -21,6 +21,7 @@ const SUSPEND_OPTIONS = [
 
 export default function ReportReview() {
   const topPadding = useTopPadding();
+  const bottomPadding = useBottomPadding(48);
   const router = useRouter();
   const { reportId } = useLocalSearchParams<{ reportId: string }>();
   const { token } = useChat();
@@ -70,7 +71,7 @@ export default function ReportReview() {
   const open = report.status === "open";
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: topPadding }]}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: topPadding, paddingBottom: bottomPadding }]}>
       <Pressable onPress={() => router.back()} style={styles.back} accessibilityLabel="Back">
         <Ionicons name="chevron-back" size={24} color={colors.textBright} />
         <Text style={styles.backText}>Queue</Text>
@@ -175,7 +176,7 @@ export default function ReportReview() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
-  content: { padding: 16, paddingBottom: 48, maxWidth: 720, width: "100%", alignSelf: "center" },
+  content: { padding: 16, maxWidth: 720, width: "100%", alignSelf: "center" },
   back: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   backText: { color: colors.textBright, fontSize: 16 },
   title: { color: colors.heading, fontSize: 24, fontWeight: "700", marginBottom: 4 },

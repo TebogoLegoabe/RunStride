@@ -1,13 +1,15 @@
 // Layout for sign-in screens: full screen on phones, a centered card on tablets and computers.
 import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { colors, radius, shadow } from "../../lib/theme";
-import { useBreakpoint } from "../../lib/responsive";
+import { useBottomPadding, useBreakpoint, useTopPadding } from "../../lib/responsive";
 
 export function AuthCard({ children }: { children: React.ReactNode }) {
   const { isPhone } = useBreakpoint();
+  const topPadding = useTopPadding();
+  const bottomPadding = useBottomPadding(24, true);
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "web" ? undefined : "padding"}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: topPadding, paddingBottom: bottomPadding }]} keyboardShouldPersistTaps="handled">
         {!isPhone && (
           <Image
             source={require("../../assets/logo.png")}

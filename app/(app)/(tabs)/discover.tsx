@@ -487,11 +487,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingVertical: 8,
     paddingHorizontal: 12,
+    flexShrink: 0,
   },
   secondLookOn: { borderColor: colors.pink, backgroundColor: colors.pinkTint },
   secondLookText: { color: colors.textMuted, fontSize: 13 },
   secondLookTextOn: { color: colors.pink },
-  distanceDrop: { flexGrow: 0, flexBasis: 190, minWidth: 190, paddingVertical: 6 },
+  // Shrinks on small phones so Second look still fits beside it
+  distanceDrop: { flexGrow: 0, flexShrink: 1, flexBasis: 190, minWidth: 130, paddingVertical: 6 },
   raceFilter: {
     flexDirection: "row",
     alignItems: "center",

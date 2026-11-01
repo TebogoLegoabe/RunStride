@@ -1,5 +1,6 @@
 // Screen-size breakpoints, shared by every screen so layouts change at the same widths.
-import { useWindowDimensions, type PressableStateCallbackType, type StyleProp, type ViewStyle } from "react-native";
+import { useEffect, useState } from "react";
+import { Keyboard, Platform, useWindowDimensions, type PressableStateCallbackType, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export type Breakpoint = "phone" | "tablet" | "desktop";
@@ -37,6 +38,29 @@ export function useTopPadding(extra = 12) {
   const insets = useSafeAreaInsets();
   const { isPhone } = useBreakpoint();
   return Math.max(insets.top, isPhone ? 24 : 0) + extra + (isPhone ? 0 : 16);
+}
+
+// Space below a screen's last control: clears Android's navigation bar and the iPhone home
+// indicator, which the app draws behind now that it's edge to edge. Use instead of a fixed paddingBottom.
+// Pass keyboardAware for controls that ride on top of the keyboard: the keyboard covers the bar.
+export function useBottomPadding(extra = 12, keyboardAware = false) {
+  const inset = useSafeAreaInsets().bottom;
+  const keyboardOpen = useKeyboardOpen();
+  return (keyboardAware && keyboardOpen ? 0 : inset) + extra;
+}
+
+export function useKeyboardOpen() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const shown = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", () => setOpen(true));
+    const hidden = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide", () => setOpen(false));
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
+  return open;
 }
 
 // Pressable styles that react to the mouse on the web. react-native-web passes `hovered`

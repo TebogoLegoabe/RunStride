@@ -14,7 +14,7 @@ import { RaceSwaps } from "../../../components/race/RaceSwaps";
 import { colors } from "../../../lib/theme";
 import { useMembership } from "../../../components/MembershipProvider";
 import { openPlus } from "../../../lib/upsell";
-import { CONTENT_WIDTH, useBreakpoint, useTopPadding } from "../../../lib/responsive";
+import { CONTENT_WIDTH, useBreakpoint, useBottomPadding, useTopPadding } from "../../../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const SUPPORTING = "supporting";
@@ -27,6 +27,7 @@ type Section = (typeof SECTIONS)[number]["value"];
 
 export default function RacePage() {
   const topPadding = useTopPadding();
+  const bottomPadding = useBottomPadding(48);
   // Wide screens: race details on the left, chat / runners / swaps on the right
   const { isWide } = useBreakpoint();
   const router = useRouter();
@@ -109,7 +110,7 @@ export default function RacePage() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: topPadding, maxWidth: isWide && going ? CONTENT_WIDTH.wide : CONTENT_WIDTH.normal },
+          { paddingTop: topPadding, paddingBottom: bottomPadding, maxWidth: isWide && going ? CONTENT_WIDTH.wide : CONTENT_WIDTH.normal },
         ]}
         keyboardShouldPersistTaps="handled"
       >
@@ -223,7 +224,7 @@ export default function RacePage() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center" },
-  content: { padding: 16, paddingBottom: 48, width: "100%", alignSelf: "center" },
+  content: { padding: 16, width: "100%", alignSelf: "center" },
   columns: { flexDirection: "row", alignItems: "flex-start", gap: 32 },
   infoColumn: { width: 360 },
   sectionColumn: { flex: 1, minWidth: 0 },

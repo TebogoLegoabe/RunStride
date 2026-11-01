@@ -7,7 +7,7 @@ import { useChat } from "../../components/ChatProvider";
 import { ApiError, getNotificationSettings, setNotificationSettings } from "../../lib/api";
 import { pushSupport, registerForPush } from "../../lib/push";
 import { WebPushCard } from "../../components/WebPushCard";
-import { useTopPadding } from "../../lib/responsive";
+import { useBottomPadding, useTopPadding } from "../../lib/responsive";
 import type { NotificationSettings } from "../../lib/types";
 import { colors, fonts, radius } from "../../lib/theme";
 
@@ -32,6 +32,7 @@ const UNSUPPORTED: Record<string, string> = {
 export default function NotificationsScreen() {
   const router = useRouter();
   const topPadding = useTopPadding();
+  const bottomPadding = useBottomPadding(48);
   const { token } = useChat();
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const [deviceIssue, setDeviceIssue] = useState<string | null>(null);
@@ -65,7 +66,7 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: topPadding }]}>
+    <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: topPadding, paddingBottom: bottomPadding }]}>
       <Pressable
         onPress={() => (router.canGoBack() ? router.back() : router.replace("/profile"))}
         style={styles.back}
@@ -147,7 +148,7 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 16, paddingBottom: 48, maxWidth: 560, width: "100%", alignSelf: "center" },
+  content: { padding: 16, maxWidth: 560, width: "100%", alignSelf: "center" },
   back: { flexDirection: "row", alignItems: "center", marginBottom: 8, marginLeft: -6 },
   backText: { color: colors.textBright, fontSize: 16 },
   title: { color: colors.heading, fontSize: 26, fontFamily: fonts.extrabold, marginBottom: 16 },

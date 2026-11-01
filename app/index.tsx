@@ -22,6 +22,7 @@ import { ApiError, getMe } from "../lib/api";
 import { routeFor } from "../lib/routing";
 import { clearToken, getToken } from "../lib/session";
 import { colors, fonts, gradient } from "../lib/theme";
+import { useBottomPadding, useBreakpoint, useTopPadding } from "../lib/responsive";
 
 const FEATURES: { icon: keyof typeof Ionicons.glyphMap; title: string; body: string }[] = [
   { icon: "speedometer", title: "Match on pace", body: "Meet people who run like you do." },
@@ -36,6 +37,11 @@ export default function Welcome() {
   const float = useSharedValue(0);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { height } = useBreakpoint();
+  const topPadding = useTopPadding();
+  const bottomPadding = useBottomPadding(24);
+  // Short phones: a smaller logo and tighter gaps so the buttons still fit without scrolling
+  const short = height < 700;
 
   const withGoogle = async (idToken: string) => {
     setGoogleBusy(true);
@@ -85,22 +91,22 @@ export default function Welcome() {
   }));
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: topPadding, paddingBottom: bottomPadding }]}>
       <LinearGradient colors={gradient.glow} style={styles.glow} pointerEvents="none" />
       <View style={styles.content}>
         <Animated.View style={logoStyle}>
           <Image
             source={require("../assets/logo.png")}
-            style={styles.logo}
+            style={[styles.logo, short && styles.logoShort]}
             resizeMode="contain"
             accessibilityLabel="RunStride"
           />
         </Animated.View>
-        <Animated.Text entering={FadeInDown.delay(300).duration(500)} style={styles.tagline}>
+        <Animated.Text entering={FadeInDown.delay(300).duration(500)} style={[styles.tagline, short && styles.taglineShort]}>
           Find someone who runs at your pace.
         </Animated.Text>
 
-        <View style={styles.features}>
+        <View style={[styles.features, short && styles.featuresShort]}>
           {FEATURES.map((f, i) => (
             <Animated.View key={f.title} entering={FadeInDown.delay(500 + i * 120).duration(450)} style={styles.feature}>
               <LinearGradient colors={gradient.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.featureIcon}>
@@ -132,11 +138,12 @@ export default function Welcome() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, padding: 24, justifyContent: "space-between" },
+  container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 24, justifyContent: "space-between" },
   glow: { position: "absolute", top: 0, left: 0, right: 0, height: "55%" },
   content: { flex: 1, alignItems: "center", justifyContent: "center", width: "100%", maxWidth: 420, alignSelf: "center" },
   // The logo art is 364x343; keep that shape
   logo: { width: 210, height: 198 },
+  logoShort: { width: 120, height: 113 },
   tagline: {
     color: colors.textBright,
     fontSize: 18,
@@ -145,13 +152,15 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     fontFamily: fonts.semibold,
   },
+  taglineShort: { marginTop: 10, marginBottom: 18 },
   features: { alignSelf: "stretch", gap: 14 },
+  featuresShort: { gap: 10 },
   feature: { flexDirection: "row", alignItems: "center", gap: 14 },
   featureIcon: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   featureText: { flex: 1 },
   featureTitle: { color: colors.heading, fontSize: 15, fontWeight: "700" },
   featureBody: { color: colors.textMuted, fontSize: 13, marginTop: 1 },
-  bottom: { width: "100%", maxWidth: 420, alignSelf: "center", paddingBottom: 12 },
+  bottom: { width: "100%", maxWidth: 420, alignSelf: "center" },
   google: { marginTop: 12 },
   error: { color: colors.dangerText, fontSize: 13, textAlign: "center", marginTop: 10 },
   legal: { color: colors.textFaint, fontSize: 12, textAlign: "center", marginTop: 12 },

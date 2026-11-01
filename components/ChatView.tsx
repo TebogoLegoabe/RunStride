@@ -10,7 +10,7 @@ import { SafetySheet } from "./SafetySheet";
 import { RunDateCard } from "./RunDateCard";
 import { SuggestRunSheet } from "./SuggestRunSheet";
 import { colors } from "../lib/theme";
-import { useTopPadding } from "../lib/responsive";
+import { useBottomPadding, useTopPadding } from "../lib/responsive";
 import { dismissTip, tipDismissed } from "../lib/tips";
 import { EmojiPanel, EmojiToggle } from "./ui/EmojiPanel";
 
@@ -42,6 +42,7 @@ type Props = {
 // One conversation. Used full screen on phones and as the right-hand pane of Matches on wide screens.
 export function ChatView({ matchId, userId, name, photo, verified = false, onClose, embedded = false }: Props) {
   const topPadding = useTopPadding(0);
+  const bottomPadding = useBottomPadding(16, true);
   const { token, connected, subscribe, refreshUnread } = useChat();
   const [myId, setMyId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[] | null>(null);
@@ -300,7 +301,7 @@ export function ChatView({ matchId, userId, name, photo, verified = false, onClo
       {error && <Text style={styles.error}>{error}</Text>}
 
       {ended ? (
-        <View style={styles.endedBar}>
+        <View style={[styles.endedBar, { paddingBottom: bottomPadding }]}>
           <Text style={styles.endedText}>This match has ended. You can no longer message each other.</Text>
         </View>
       ) : (
@@ -313,7 +314,7 @@ export function ChatView({ matchId, userId, name, photo, verified = false, onClo
             />
           </View>
         )}
-        <View style={styles.composer}>
+        <View style={[styles.composer, { paddingBottom: embedded ? 16 : bottomPadding }]}>
           <Pressable
             style={styles.runButton}
             onPress={() => setSuggestOpen(true)}
@@ -427,7 +428,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     gap: 8,
     padding: 10,
-    paddingBottom: 16,
     width: "100%",
     maxWidth: 760,
     alignSelf: "center",

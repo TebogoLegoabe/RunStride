@@ -8,7 +8,7 @@ import { ApiError, getIdCheck, submitIdCheck } from "../lib/api";
 import { getToken } from "../lib/session";
 import type { IdCheckState } from "../lib/types";
 import { colors } from "../lib/theme";
-import { useTopPadding } from "../lib/responsive";
+import { useBottomPadding, useTopPadding } from "../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 
@@ -16,6 +16,7 @@ const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 export default function IdCheck() {
   const router = useRouter();
   const topPadding = useTopPadding();
+  const bottomPadding = useBottomPadding(40);
   const [token, setToken] = useState<string | null>(null);
   const [state, setState] = useState<IdCheckState | null>(null);
   const [idNumber, setIdNumber] = useState("");
@@ -90,7 +91,7 @@ export default function IdCheck() {
   }
 
   const done = (icon: keyof typeof Ionicons.glyphMap, title: string, body: string) => (
-    <View style={[styles.container, styles.center, { paddingTop: topPadding }]}>
+    <View style={[styles.container, styles.center, { paddingTop: topPadding, paddingBottom: bottomPadding }]}>
       <Ionicons name={icon} size={56} color={colors.primary} />
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.body}>{body}</Text>
@@ -110,7 +111,7 @@ export default function IdCheck() {
     );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: topPadding }]}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: topPadding, paddingBottom: bottomPadding }]}>
       <Text style={styles.title}>Get verified</Text>
       <Text style={styles.body}>
         Earn a ✓ badge so people know you're real. It's optional. Someone at RunStride compares your ID with your
@@ -175,7 +176,7 @@ function PickerRow({ uri, onCamera, onGallery }: { uri: string | null; onCamera:
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { alignItems: "center", justifyContent: "center", padding: 24, gap: 14 },
-  content: { padding: 20, paddingBottom: 40, maxWidth: 520, width: "100%", alignSelf: "center" },
+  content: { padding: 20, maxWidth: 520, width: "100%", alignSelf: "center" },
   title: { color: colors.heading, fontSize: 26, fontWeight: "700", marginBottom: 8 },
   body: { color: colors.text, fontSize: 15, lineHeight: 22, marginBottom: 14 },
   label: { color: colors.heading, fontSize: 15, fontWeight: "600", marginTop: 14, marginBottom: 8 },

@@ -13,7 +13,7 @@ import { formatRaceDates } from "../../lib/format";
 import { haptics } from "../../lib/haptics";
 import { PLUS_FEATURES, PLUS_PLANS, RACE_PASS, RACE_PASS_FEATURES } from "../../lib/plans";
 import { buy, getRacePass, PurchasesUnavailable } from "../../lib/purchases";
-import { hoverable, useTopPadding } from "../../lib/responsive";
+import { hoverable, useBottomPadding, useTopPadding } from "../../lib/responsive";
 import type { ProductId } from "../../lib/types";
 import { colors, fonts, gradient, radius } from "../../lib/theme";
 
@@ -26,6 +26,7 @@ const formatDate = (iso: string) => formatRaceDates(iso.slice(0, 10), iso.slice(
 export default function PlusScreen() {
   const router = useRouter();
   const topPadding = useTopPadding();
+  const bottomPadding = useBottomPadding(48);
   const { token } = useChat();
   const { membership, update } = useMembership();
   const { reason, raceId, raceName } = useLocalSearchParams<{ reason?: string; raceId?: string; raceName?: string }>();
@@ -132,7 +133,7 @@ export default function PlusScreen() {
       : `Get Plus · ${PLUS_PLANS.find((p) => p.id === choice)?.price}`;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: topPadding }]}>
+    <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: topPadding, paddingBottom: bottomPadding }]}>
       <Stack.Screen options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Pressable onPress={close} style={styles.close} accessibilityLabel="Close" hitSlop={10}>
         <Ionicons name="close" size={26} color={colors.textMuted} />
@@ -239,7 +240,7 @@ export default function PlusScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: "center", justifyContent: "center", padding: 24 },
-  content: { padding: 20, paddingBottom: 48, maxWidth: 520, width: "100%", alignSelf: "center" },
+  content: { padding: 20, maxWidth: 520, width: "100%", alignSelf: "center" },
   close: { alignSelf: "flex-end", padding: 4 },
   hero: { alignItems: "center", marginBottom: 18 },
   heroBadge: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", marginBottom: 12 },
