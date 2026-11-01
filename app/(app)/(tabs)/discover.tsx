@@ -66,6 +66,8 @@ export default function Discover() {
   const [switching, setSwitching] = useState(false);
   // How far you look for people, changeable right here
   const [searchKm, setSearchKm] = useState<string[]>([]);
+  // Plus "Second look": the runners you passed on, to reconsider
+  const [secondLook, setSecondLook] = useState(false);
   const { height, isPhone } = useBreakpoint();
   const topPadding = useTopPadding();
   // The space between the header and the buttons: the card fills it, so nothing scrolls.
@@ -79,7 +81,7 @@ export default function Discover() {
 
   const loadFeed = useCallback(async (t: string) => {
     try {
-      const feed = await getDiscoverFeed(t, raceId);
+      const feed = await getDiscoverFeed(t, raceId, secondLook);
       // Keep cards already on screen; add new ones after them
       setCards((current) => {
         const seen = new Set(current.map((c) => c.userId));
@@ -91,7 +93,7 @@ export default function Discover() {
       if (isUpgradeError(e)) setRaceLocked(e.message);
       else setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     }
-  }, [raceId]);
+  }, [raceId, secondLook]);
 
   // Bought a race pass or Plus while the race filter was locked: load it now
   const raceAccess = raceId ? hasRaceAccess(raceId) : false;
@@ -117,6 +119,18 @@ export default function Discover() {
   useEffect(() => {
     setCards([]);
   }, [raceId]);
+
+  // Second look: swap the deck for the people you passed on (or back)
+  const toggleSecondLook = async () => {
+    if (!token) return;
+    if (!membership?.plus.active) {
+      openPlus(router, { reason: "Second look comes with Plus: see the runners you passed on and like them after all." });
+      return;
+    }
+    setCards([]);
+    setSecondLook((on) => !on);
+  };
+  // (The set-up effect below reloads the feed when this changes, because loadFeed does)
 
   useEffect(() => {
     (async () => {
@@ -324,6 +338,21 @@ export default function Discover() {
             onChange={changeDistance}
             style={styles.distanceDrop}
           />
+          {!raceId && (
+            <Pressable
+              onPress={toggleSecondLook}
+              accessibilityRole="button"
+              accessibilityState={{ selected: secondLook }}
+              accessibilityLabel={secondLook ? "Back to new runners" : "Second look: runners you passed on"}
+              style={[styles.secondLook, secondLook && styles.secondLookOn]}
+            >
+              <Ionicons name={secondLook ? "arrow-undo" : "refresh"} size={16} color={secondLook ? colors.pink : colors.textMuted} />
+              <Text style={[styles.secondLookText, secondLook && styles.secondLookTextOn]}>
+                {secondLook ? "Back to new" : "Second look"}
+              </Text>
+              {!membership?.plus.active && <Ionicons name="lock-closed" size={12} color={colors.textMuted} />}
+            </Pressable>
+          )}
         </View>
       )}
       {error && <Text style={styles.error}>{error}</Text>}
@@ -399,11 +428,13 @@ export default function Discover() {
         <View style={styles.empty}>
           <EmptyState
             icon="sparkles"
-            title="You're all caught up"
+            title={secondLook ? "No one to revisit" : "You're all caught up"}
             body={
-              raceId
+              secondLook
+                ? "People you pass on show up here, so you can like them after all."
+                : raceId
                 ? "No more runners at this race match your preferences. Check back as more people join."
-                : "No more runners match your preferences within your distance right now. Try a wider distance above, or check back later. You only see people whose own distance reaches you too."
+                : "No more runners match your preferences within your distance right now. Try a wider distance above, check back later as new runners join, or take a second look at people you passed on."
             }
             action={{ title: "Edit preferences", icon: "options-outline", onPress: () => router.push("/dating-preferences") }}
           />
@@ -446,7 +477,20 @@ const styles = StyleSheet.create({
   empty: { flex: 1, justifyContent: "center" },
   sideAction: { alignItems: "center", gap: 10 },
   keyHint: { color: colors.textFaint, fontSize: 13, fontWeight: "700" },
-  distanceRow: { flexDirection: "row", marginBottom: 8 },
+  distanceRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  secondLook: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  secondLookOn: { borderColor: colors.pink, backgroundColor: colors.pinkTint },
+  secondLookText: { color: colors.textMuted, fontSize: 13 },
+  secondLookTextOn: { color: colors.pink },
   distanceDrop: { flexGrow: 0, flexBasis: 190, minWidth: 190, paddingVertical: 6 },
   raceFilter: {
     flexDirection: "row",

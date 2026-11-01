@@ -57,13 +57,15 @@ def test_age_range_must_match_both_ways(client, make_runner):
     assert feed_ids(client, thandi) == []
 
 
-def test_distance_uses_the_smaller_maximum(client, make_runner):
+def test_distance_is_the_viewers_own(client, make_runner):
     thandi = make_runner(max_km=50)
     near = make_runner(gender="man", interested_in=["woman"], km_north=8, max_km=10)
-    make_runner(gender="man", interested_in=["woman"], km_north=15, max_km=10)  # beyond his 10 km
+    small_radius = make_runner(gender="man", interested_in=["woman"], km_north=15, max_km=10)
     make_runner(gender="man", interested_in=["woman"], km_north=60, max_km=100)  # beyond her 50 km
 
-    assert feed_ids(client, thandi) == [near["id"]]
+    # His 10 km only limits who he sees; she still sees him within her 50 km
+    assert set(feed_ids(client, thandi)) == {near["id"], small_radius["id"]}
+    assert thandi["id"] not in feed_ids(client, small_radius)
 
 
 def test_unverified_users_hidden_when_verification_required(client, make_runner, settings, db):
@@ -160,3 +162,52 @@ def test_compatibility_scores():
     # Optional run times left empty are neutral, not a penalty to zero
     no_times = RunnerTraits(330, 30, ["road", "trail"], ["half_marathon"], [])
     assert compatibility(base, no_times) > 90
+
+
+def test_new_and_active_runners_rank_higher(client, make_runner, db):
+    thandi = make_runner()
+    older = make_runner(gender="man", interested_in=["woman"], km_north=1)
+    newer = make_runner(gender="man", interested_in=["woman"], km_north=10)
+    # Same running profile: only newness and activity differ
+    db.execute(
+        text("UPDATE users SET created_at = now() - interval '90 days', last_seen_at = now() - interval '60 days', "
+             "last_login_at = now() - interval '60 days' WHERE id = :id"),
+        {"id": older["id"]},
+    )
+    db.commit()
+
+    assert feed_ids(client, thandi) == [newer["id"], older["id"]]
+
+
+def test_second_look_is_plus_only(client, make_runner):
+    thandi = make_runner()
+    res = client.get("/discover?passed=true", headers=thandi["headers"])
+    assert res.status_code == 402
+
+
+def test_plus_second_look_shows_passes_and_can_like_them(client, make_runner):
+    from tests.test_races import buy
+
+    thandi = make_runner()
+    sipho = make_runner(gender="man", interested_in=["woman"])
+    client.post(f"/discover/{thandi['id']}/like", headers=sipho["headers"])
+    client.post(f"/discover/{sipho['id']}/pass", headers=thandi["headers"])
+    assert sipho["id"] not in feed_ids(client, thandi)
+
+    buy(client, thandi)
+    passed = client.get("/discover?passed=true", headers=thandi["headers"]).json()
+    assert [c["userId"] for c in passed] == [sipho["id"]]
+
+    res = client.post(f"/discover/{sipho['id']}/like", headers=thandi["headers"]).json()
+    assert res["matched"] is True
+    assert client.get("/discover?passed=true", headers=thandi["headers"]).json() == []
+
+
+def test_free_users_cannot_turn_a_pass_into_a_like(client, make_runner):
+    thandi = make_runner()
+    sipho = make_runner(gender="man", interested_in=["woman"])
+    client.post(f"/discover/{thandi['id']}/like", headers=sipho["headers"])
+    client.post(f"/discover/{sipho['id']}/pass", headers=thandi["headers"])
+
+    res = client.post(f"/discover/{sipho['id']}/like", headers=thandi["headers"]).json()
+    assert res["matched"] is False

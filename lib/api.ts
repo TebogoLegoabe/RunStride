@@ -292,8 +292,9 @@ export const updateLocation = (token: string, latitude: number, longitude: numbe
   apiRequest<void>("/me/location", { method: "PUT", body: { latitude, longitude }, token });
 
 // raceId: only people going to that race (you must be going too)
-export const getDiscoverFeed = (token: string, raceId?: string) =>
-  apiRequest<DiscoverCard[]>(`/discover${raceId ? `?race_id=${raceId}` : ""}`, { token });
+// passed: Plus "Second look", the runners you passed on
+export const getDiscoverFeed = (token: string, raceId?: string, passed = false) =>
+  apiRequest<DiscoverCard[]>(`/discover${raceId ? `?race_id=${raceId}` : passed ? "?passed=true" : ""}`, { token });
 
 export const likeRunner = (token: string, userId: string) =>
   apiRequest<SwipeResult>(`/discover/${userId}/like`, { method: "POST", token });

@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
@@ -40,6 +40,12 @@ router = APIRouter(tags=["discover"])
 LOCATION_DECIMALS = 2
 # Nearest eligible runners considered per feed request, before ranking by compatibility
 CANDIDATE_POOL = 200
+# Ranking nudges on top of compatibility (0-100): new people get seen, active people come before
+# people who've stopped opening the app
+NEW_DAYS, NEW_BONUS = 14, 15
+ACTIVE_RECENT_DAYS, ACTIVE_RECENT_BONUS = 3, 10
+ACTIVE_DAYS, ACTIVE_BONUS = 14, 5
+DORMANT_DAYS, DORMANT_PENALTY = 30, 10
 
 
 def _traits(running: RunningProfile) -> RunnerTraits:
@@ -72,9 +78,11 @@ def _candidates(
     *,
     only: uuid.UUID | None = None,
     exclude_swiped: bool = True,
+    passed_only: bool = False,
     race_id: uuid.UUID | None = None,
 ) -> list[tuple[User, float]]:
-    """Users who fit my preferences AND whose preferences I fit, nearest first, with distance in metres."""
+    """Users who fit my preferences AND whose gender and age preferences I fit, within my distance,
+    nearest first, with distance in metres."""
     prefs = me.dating_preferences
     my_age = age_on(me.profile.birth_date, date.today())
     me_row = aliased(User)
@@ -100,12 +108,9 @@ def _candidates(
             their_age.between(prefs.age_min, prefs.age_max),
             DatingPreferences.age_min <= my_age,
             DatingPreferences.age_max >= my_age,
-            # Within both people's maximum distance
-            func.ST_DWithin(
-                User.location,
-                my_location,
-                func.least(DatingPreferences.max_distance_km, prefs.max_distance_km) * 1000,
-            ),
+            # Within my distance. Their distance only decides who they see, not who sees them:
+            # two-way distance hid almost everyone from people who widened their search.
+            func.ST_DWithin(User.location, my_location, prefs.max_distance_km * 1000),
             # Don't show people who already passed on me
             ~exists().where(Swipe.swiper_id == User.id, Swipe.target_id == me.id, Swipe.liked.is_(False)),
             # Safety: blocks either way, suspended/banned accounts, and anyone several
@@ -120,7 +125,10 @@ def _candidates(
     )
     if settings.require_id_verification:
         stmt = stmt.where(User.verification_status == VerificationStatus.verified)
-    if exclude_swiped:
+    if passed_only:
+        # Plus "Second look": people I passed on, to reconsider
+        stmt = stmt.where(exists().where(Swipe.swiper_id == me.id, Swipe.target_id == User.id, Swipe.liked.is_(False)))
+    elif exclude_swiped:
         stmt = stmt.where(~exists().where(Swipe.swiper_id == me.id, Swipe.target_id == User.id))
     if race_id is not None:
         stmt = stmt.where(exists().where(RaceAttendance.race_id == race_id, RaceAttendance.user_id == User.id))
@@ -175,6 +183,21 @@ def _card(user: User, distance_m: float, my_traits: RunnerTraits, my_clubs: list
     )
 
 
+def _freshness(user: User, now: datetime) -> int:
+    """Bonus (or penalty) for being new or active, added to compatibility when ranking."""
+    score = 0
+    if user.created_at and now - user.created_at <= timedelta(days=NEW_DAYS):
+        score += NEW_BONUS
+    seen = user.last_seen_at or user.last_login_at
+    if seen is None or now - seen > timedelta(days=DORMANT_DAYS):
+        score -= DORMANT_PENALTY
+    elif now - seen <= timedelta(days=ACTIVE_RECENT_DAYS):
+        score += ACTIVE_RECENT_BONUS
+    elif now - seen <= timedelta(days=ACTIVE_DAYS):
+        score += ACTIVE_BONUS
+    return score
+
+
 @router.put("/me/location", status_code=status.HTTP_204_NO_CONTENT)
 def set_location(body: LocationBody, user: CurrentUser, db: DbSession) -> Response:
     lat = round(body.latitude, LOCATION_DECIMALS)
@@ -192,14 +215,17 @@ def discover(
     settings: AppSettings,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
     race_id: uuid.UUID | None = None,
+    passed: bool = False,
 ) -> list[DiscoverCard]:
     _require_ready(user)
+    if passed and not has_plus(db, user):
+        raise UpgradeRequired("Second look comes with Plus: see the runners you passed on and like them after all.")
     my_traits = _traits(user.running_profile)
     if race_id is not None and db.get(RaceAttendance, (race_id, user.id)) is None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Join this race to see who's going.")
     if race_id is not None and not has_race_access(db, user, race_id):
         raise UpgradeRequired("Swiping only runners at a race comes with Plus or a race pass for that race.")
-    candidates = _candidates(db, user, settings, race_id=race_id)
+    candidates = _candidates(db, user, settings, race_id=race_id, passed_only=passed)
     ids = [u.id for u, _ in candidates]
     shared = _shared_races(db, user, ids)
     cards = [_card(u, d, my_traits, user.running_profile.clubs or []) for u, d in candidates]
@@ -217,6 +243,8 @@ def discover(
     # Plus members going to the same races as you are shown to you first
     boosted = set(db.scalars(select(User.id).where(User.id.in_(ids), plus_condition(User.id))).all()) if ids else set()
 
+    now = utcnow()
+    freshness = {u.id: _freshness(u, now) for u, _ in candidates}
     for card in cards:
         card.shared_races = shared.get(card.user_id, [])
         card.likes_you = card.user_id in likers
@@ -224,7 +252,7 @@ def discover(
         key=lambda c: (
             not c.likes_you,
             not (c.user_id in boosted and c.shared_races),
-            -c.compatibility,
+            -(c.compatibility + freshness[c.user_id]),
             c.distance_km,
         )
     )
@@ -255,12 +283,20 @@ def _swipe(db: Session, me: User, settings: Settings, target_id: uuid.UUID, like
     a, b = sorted([me.id, target_id])
     # Serialise swipes between this pair, so two simultaneous likes can't both miss the match
     db.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"{a}:{b}"))))
-    db.execute(
-        pg_insert(Swipe).values(swiper_id=me.id, target_id=target_id, liked=liked).on_conflict_do_nothing()
-    )
+    insert = pg_insert(Swipe).values(swiper_id=me.id, target_id=target_id, liked=liked)
+    if liked and has_plus(db, me):
+        # Plus "Second look": a pass can be turned into a like (never the other way)
+        insert = insert.on_conflict_do_update(
+            index_elements=[Swipe.swiper_id, Swipe.target_id], set_={"liked": True}, where=Swipe.liked.is_(False)
+        )
+    else:
+        insert = insert.on_conflict_do_nothing()
+    db.execute(insert)
 
     match = None
-    if liked:
+    # What's actually recorded: a free user's earlier pass stays a pass
+    mine = db.scalar(select(Swipe.liked).where(Swipe.swiper_id == me.id, Swipe.target_id == target_id))
+    if liked and mine:
         reverse = db.get(Swipe, (target_id, me.id))
         if reverse is not None and reverse.liked:
             db.execute(pg_insert(Match).values(id=uuid.uuid4(), user_a_id=a, user_b_id=b).on_conflict_do_nothing())
