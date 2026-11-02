@@ -51,7 +51,7 @@ export default function ProfileSetup() {
   const [initializing, setInitializing] = useState(true);
   const [slots, setSlots] = useState<Slot[]>([]);
   // Signed up with Google: start with the name from their Google account
-  const { name: suggestedName } = useLocalSearchParams<{ name?: string }>();
+  const { name: suggestedName, edit } = useLocalSearchParams<{ name?: string; edit?: string }>();
   const [name, setName] = useState(suggestedName ?? "");
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
@@ -145,7 +145,7 @@ export default function ProfileSetup() {
         const photo = await uploadPhoto(token, slot.uri);
         setSlots((current) => current.map((s) => (s.key === slot.key ? { ...s, photo } : s)));
       }
-      afterSave(router, await getMe(token));
+      afterSave(router, await getMe(token), edit === "1");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     } finally {

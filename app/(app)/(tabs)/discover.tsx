@@ -34,6 +34,7 @@ import { Dropdown } from "../../../components/ui/Dropdown";
 import { DISTANCES_KM, distanceLabel } from "../../../lib/options";
 import { colors } from "../../../lib/theme";
 import { useBreakpoint, useTopPadding } from "../../../lib/responsive";
+import { editHref } from "../../../lib/routing";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 // Fetch more cards when this few are left
@@ -436,7 +437,7 @@ export default function Discover() {
                 ? "No more runners at this race match your preferences. Check back as more people join."
                 : "No more runners match your preferences within your distance right now. Try a wider distance above, check back later as new runners join, or take a second look at people you passed on."
             }
-            action={{ title: "Edit preferences", icon: "options-outline", onPress: () => router.push("/dating-preferences") }}
+            action={{ title: "Edit preferences", icon: "options-outline", onPress: () => router.push(editHref("/dating-preferences")) }}
           />
         </View>
       )}

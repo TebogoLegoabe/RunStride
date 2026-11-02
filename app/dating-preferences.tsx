@@ -1,7 +1,7 @@
 import { View, Pressable, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
 import { Text, TextInput } from "../components/ui/Text";
 import { useEffect, useState } from "react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { ApiError, getDatingPreferences, getMe, getMyProfile, saveDatingPreferences } from "../lib/api";
 import { DISTANCES_KM, GENDERS, SHOW_ME, distanceLabel, type Gender } from "../lib/options";
 import { afterSave } from "../lib/routing";
@@ -18,6 +18,7 @@ export default function DatingPreferencesScreen() {
   const topPadding = useTopPadding();
   const bottomPadding = useBottomPadding(48);
   const router = useRouter();
+  const { edit } = useLocalSearchParams<{ edit?: string }>();
   const [token, setToken] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [gender, setGender] = useState<Gender[]>([]);
@@ -87,7 +88,7 @@ export default function DatingPreferencesScreen() {
         ageMax: Number(ageMax),
         maxDistanceKm: Number(distance[0]),
       });
-      afterSave(router, await getMe(token));
+      afterSave(router, await getMe(token), edit === "1");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     } finally {

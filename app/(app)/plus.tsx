@@ -34,6 +34,7 @@ export default function PlusScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [free, setFree] = useState(false); // switched on the beta offer: nothing was bought
 
   const close = () => (router.canGoBack() ? router.back() : router.replace("/discover"));
   const plus = membership?.plus;
@@ -48,6 +49,7 @@ export default function PlusScreen() {
     try {
       update(await activateBetaPlus(token));
       haptics.success();
+      setFree(true);
       setDone(`You're on RunStride Plus, free for ${betaDays} days.`);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
@@ -91,7 +93,7 @@ export default function PlusScreen() {
           </LinearGradient>
         </Animated.View>
         <Text style={styles.doneTitle}>{done}</Text>
-        {membership?.testPurchases && <Text style={styles.testNote}>Test purchase: nothing was charged.</Text>}
+        {membership?.testPurchases && !free && <Text style={styles.testNote}>Test purchase: nothing was charged.</Text>}
         <View style={styles.doneButton}>
           <Button title="Done" onPress={close} />
         </View>

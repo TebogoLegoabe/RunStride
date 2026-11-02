@@ -26,6 +26,7 @@ import type { Me, MyProfile } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { colors } from "../../../lib/theme";
 import { useTopPadding } from "../../../lib/responsive";
+import { editHref } from "../../../lib/routing";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 
@@ -276,9 +277,9 @@ export default function ProfileTab() {
 
       <Text style={styles.section}>Your profile</Text>
       <View style={styles.group}>
-        {row("images-outline", "Photos, name and bio", "/profile-setup")}
-        {row("walk-outline", "Running preferences", "/running-preferences")}
-        {row("heart-outline", "Who you'd like to meet", "/dating-preferences")}
+        {row("images-outline", "Photos, name and bio", editHref("/profile-setup"))}
+        {row("walk-outline", "Running preferences", editHref("/running-preferences"))}
+        {row("heart-outline", "Who you'd like to meet", editHref("/dating-preferences"))}
       </View>
 
       <Text style={styles.section}>Account</Text>

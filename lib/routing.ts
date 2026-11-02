@@ -14,10 +14,15 @@ export function routeFor(me: Me): Href {
   return "/discover";
 }
 
-// After saving an onboarding screen: go back if the user came to edit it (e.g. from
-// Profile), otherwise carry on to whichever step is next.
-export function afterSave(router: ReturnType<typeof useRouter>, me: Me) {
+// After saving an onboarding screen: go back if the user opened it to edit (from Profile or
+// Discover, with ?edit=1), otherwise carry on to whichever step is next. "Can go back" alone
+// isn't enough: someone finishing sign-up can go back too, to the phone number screen.
+export function afterSave(router: ReturnType<typeof useRouter>, me: Me, editing = false) {
   const next = routeFor(me);
-  if (next === "/discover" && router.canGoBack()) router.back();
+  if (editing && next === "/discover" && router.canGoBack()) router.back();
   else router.replace(next);
 }
+
+// Opens an onboarding screen to change what was saved, coming back here afterwards
+export const editHref = (path: "/profile-setup" | "/running-preferences" | "/dating-preferences") =>
+  `${path}?edit=1` as Href;

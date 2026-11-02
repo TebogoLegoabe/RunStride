@@ -11,6 +11,8 @@
     "web": "expo start --web",
     "phone:tunnel": "node scripts/start-phone-tunnel.js",
     "web:build": "node scripts/build-web.js",
+    "test": "node --experimental-strip-types --no-warnings --test \"tests/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
     "web:deploy": "node scripts/build-web.js && npx wrangler pages deploy dist --project-name runstride-app --branch main"
   },
   "dependencies": {
