@@ -7,7 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { getMe } from "../../../lib/api";
 import { useChat } from "../../../components/ChatProvider";
 import { Sidebar } from "../../../components/ui/Sidebar";
-import { useBreakpoint } from "../../../lib/responsive";
+import { useBreakpoint, useKeyboardOpen } from "../../../lib/responsive";
 import { colors, fonts } from "../../../lib/theme";
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -39,6 +39,7 @@ export default function TabsLayout() {
   const [isAdmin, setIsAdmin] = useState(false);
   const { isTablet, isDesktop, isWide } = useBreakpoint();
   const insets = useSafeAreaInsets();
+  const keyboardOpen = useKeyboardOpen();
   // Bottom tabs on phones; a side rail on tablets and a full sidebar on laptops and desktops
   const side = isDesktop || isTablet;
 
@@ -55,7 +56,13 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textFaint,
         tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 11 },
+        // Without this, a phone with the keyboard up counts as landscape and the labels squeeze in beside the icons
+        tabBarLabelPosition: "below-icon",
+        // Typing gets the whole screen; the tabs come back when the keyboard goes down
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
+          // The web has no keyboard events for tabBarHideOnKeyboard, so hide the bar ourselves there
+          display: keyboardOpen && !side ? "none" : "flex",
           backgroundColor: colors.bg,
           borderTopColor: colors.surface,
           // Room for the home indicator on iPhones and gesture bar on Android

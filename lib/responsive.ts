@@ -52,7 +52,20 @@ export function useBottomPadding(extra = 12, keyboardAware = false) {
 export function useKeyboardOpen() {
   const [open, setOpen] = useState(false);
   useEffect(() => {
-    if (Platform.OS === "web") return;
+    if (Platform.OS === "web") {
+      // Browsers don't report the keyboard: on touch screens, a focused text box means it's up
+      if (typeof window === "undefined" || !window.matchMedia("(pointer: coarse)").matches) return;
+      const typing = () => {
+        const tag = document.activeElement?.tagName;
+        setOpen(tag === "INPUT" || tag === "TEXTAREA");
+      };
+      document.addEventListener("focusin", typing);
+      document.addEventListener("focusout", typing);
+      return () => {
+        document.removeEventListener("focusin", typing);
+        document.removeEventListener("focusout", typing);
+      };
+    }
     const shown = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", () => setOpen(true));
     const hidden = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide", () => setOpen(false));
     return () => {

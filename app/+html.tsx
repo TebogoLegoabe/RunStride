@@ -18,7 +18,15 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <ScrollViewStyleReset />
-        <style dangerouslySetInnerHTML={{ __html: "body{background-color:#2e0444}" }} />
+        {/* Text boxes sit inside rounded fields that already look focused, so the browser's square
+            outline only clashes. On phones, 16px text stops iOS zooming in when a box is tapped. */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html:
+              "body{background-color:#2e0444}input,textarea{outline:none}" +
+              "@media (pointer:coarse){input,textarea{font-size:16px!important}}",
+          }}
+        />
       </head>
       <body>{children}</body>
     </html>
