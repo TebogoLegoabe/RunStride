@@ -2,7 +2,7 @@ import { View, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { Text } from "../ui/Text";
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { ApiError, getAdminStats, remindBetaPlus } from "../../lib/api";
+import { ApiError, getAdminStats, remindBetaPlus, remindFinishSignup } from "../../lib/api";
 import type { AdminStats } from "../../lib/types";
 import { useChat } from "../ChatProvider";
 import { colors, fonts, radius } from "../../lib/theme";
@@ -28,26 +28,40 @@ function Stat({ label, value, hint, onPress }: { label: string; value: number; h
   );
 }
 
+// A count of people who need a nudge, and a button that pushes them one
+function Reminder({ text, send }: { text: string; send: () => Promise<{ sent: number }> }) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const go = async () => {
+    setBusy(true);
+    try {
+      const { sent } = await send();
+      setResult(`Reminder sent to ${sent} ${sent === 1 ? "person" : "people"}.`);
+    } catch (e) {
+      setResult(e instanceof ApiError ? e.message : NETWORK_ERROR);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <View style={styles.remind}>
+      <Text style={styles.remindText}>{text}</Text>
+      {result ? (
+        <Text style={styles.remindDone}>{result}</Text>
+      ) : (
+        <Pressable style={styles.remindButton} onPress={go} disabled={busy} accessibilityRole="button">
+          {busy ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.remindButtonText}>Send them a reminder</Text>}
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
 // The numbers behind RunStride: who's here, who's active, and what needs a decision
 export function Overview({ go }: { go: Go }) {
   const { token } = useChat();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [reminding, setReminding] = useState(false);
-  const [reminded, setReminded] = useState<string | null>(null);
-
-  const remind = async () => {
-    if (!token) return;
-    setReminding(true);
-    try {
-      const { sent } = await remindBetaPlus(token);
-      setReminded(`Reminder sent to ${sent} ${sent === 1 ? "person" : "people"}.`);
-    } catch (e) {
-      setReminded(e instanceof ApiError ? e.message : NETWORK_ERROR);
-    } finally {
-      setReminding(false);
-    }
-  };
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -106,20 +120,17 @@ export function Overview({ go }: { go: Go }) {
         <Stat label="Races published" value={stats.racesPublished} />
       </View>
 
-      {stats.betaPlusUnclaimed > 0 && (
-        <View style={styles.remind}>
-          <Text style={styles.remindText}>
-            {stats.betaPlusUnclaimed} {stats.betaPlusUnclaimed === 1 ? "person hasn't" : "people haven't"} switched on their
-            free Plus yet.
-          </Text>
-          {reminded ? (
-            <Text style={styles.remindDone}>{reminded}</Text>
-          ) : (
-            <Pressable style={styles.remindButton} onPress={remind} disabled={reminding} accessibilityRole="button">
-              {reminding ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.remindButtonText}>Send them a reminder</Text>}
-            </Pressable>
-          )}
-        </View>
+      {token && stats.hiddenFromDiscover > 0 && (
+        <Reminder
+          text={`${stats.hiddenFromDiscover} ${stats.hiddenFromDiscover === 1 ? "person signed up but isn't" : "people signed up but aren't"} in Discover yet: no location, photo or preferences.`}
+          send={() => remindFinishSignup(token)}
+        />
+      )}
+      {token && stats.betaPlusUnclaimed > 0 && (
+        <Reminder
+          text={`${stats.betaPlusUnclaimed} ${stats.betaPlusUnclaimed === 1 ? "person hasn't" : "people haven't"} switched on their free Plus yet.`}
+          send={() => remindBetaPlus(token)}
+        />
       )}
 
       <Text style={styles.section}>Sign-ups, last 14 days</Text>

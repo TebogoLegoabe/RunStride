@@ -361,6 +361,7 @@ export interface Membership {
 
 export interface AdminStats {
   betaPlusUnclaimed: number;
+  hiddenFromDiscover: number; // signed up, but no location, photo or preferences yet
   usersTotal: number;
   profilesComplete: number;
   newToday: number;

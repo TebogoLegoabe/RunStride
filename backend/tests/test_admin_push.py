@@ -90,3 +90,25 @@ def test_admin_can_remind_people_to_activate_free_plus(client, admin, make_runne
 def test_only_admins_can_send_reminders(client, make_runner):
     runner = make_runner()
     assert client.post("/admin/beta-plus/remind", headers=runner["headers"]).status_code == 403
+
+
+def test_admin_can_remind_people_who_cant_be_seen_yet(client, admin, make_runner, sms, pushes):
+    from tests.conftest import sign_in
+
+    ready = make_runner(gender="man", interested_in=["woman"])
+    halfway = {"headers": {"Authorization": f"Bearer {sign_in(client, sms, phone='082 555 9999')['token']}"}}
+    phone(client, ready, "ExponentPushToken[ready0000]")
+    phone(client, halfway, "ExponentPushToken[halfway00]")
+
+    stats = client.get("/admin/stats", headers=admin["headers"]).json()
+    res = client.post("/admin/finish-signup/remind", headers=admin["headers"])
+
+    assert stats["hiddenFromDiscover"] == 1
+    assert res.status_code == 200 and res.json()["sent"] == 1
+    assert {p.token for p in pushes.sent} == {"ExponentPushToken[halfway00]"}
+    assert pushes.sent[0].url == "/"
+
+
+def test_only_admins_can_remind_people_to_finish(client, make_runner):
+    runner = make_runner()
+    assert client.post("/admin/finish-signup/remind", headers=runner["headers"]).status_code == 403

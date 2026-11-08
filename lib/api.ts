@@ -213,6 +213,9 @@ export async function submitIdCheck(token: string, idNumber: string, idPhotoUri:
 export const getAdminStats = (token: string) => apiRequest<AdminStats>("/admin/stats", { token });
 
 // Push everyone who hasn't switched on their free beta Plus
+export const remindFinishSignup = (token: string) =>
+  apiRequest<{ sent: number }>("/admin/finish-signup/remind", { method: "POST", token });
+
 export const remindBetaPlus = (token: string) =>
   apiRequest<{ sent: number }>("/admin/beta-plus/remind", { method: "POST", token });
 
@@ -296,9 +299,8 @@ export const updateLocation = (token: string, latitude: number, longitude: numbe
   apiRequest<void>("/me/location", { method: "PUT", body: { latitude, longitude }, token });
 
 // raceId: only people going to that race (you must be going too)
-// passed: Plus "Second look", the runners you passed on
-export const getDiscoverFeed = (token: string, raceId?: string, passed = false) =>
-  apiRequest<DiscoverCard[]>(`/discover${raceId ? `?race_id=${raceId}` : passed ? "?passed=true" : ""}`, { token });
+export const getDiscoverFeed = (token: string, raceId?: string) =>
+  apiRequest<DiscoverCard[]>(`/discover${raceId ? `?race_id=${raceId}` : ""}`, { token });
 
 export const likeRunner = (token: string, userId: string) =>
   apiRequest<SwipeResult>(`/discover/${userId}/like`, { method: "POST", token });

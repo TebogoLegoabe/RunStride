@@ -1,7 +1,7 @@
-import { View, StyleSheet, Pressable, Platform } from "react-native";
+import { View, StyleSheet, Pressable, Platform, AppState } from "react-native";
 import { Text } from "../../../components/ui/Text";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import * as Location from "expo-location";
 import {
   ApiError,
@@ -12,14 +12,14 @@ import {
   getRunningProfile,
   likeRunner,
   passRunner,
+  saveDatingPreferences,
   setDatingMode,
-  setSearchDistance,
   updateLocation,
 } from "../../../lib/api";
 import { useMembership } from "../../../components/MembershipProvider";
 import { isUpgradeError, openPlus } from "../../../lib/upsell";
 import { getToken } from "../../../lib/session";
-import type { DiscoverCard, MatchSummary, RunningProfile } from "../../../lib/types";
+import type { DatingPreferences, DiscoverCard, MatchSummary, RunningProfile } from "../../../lib/types";
 import { Ionicons } from "@expo/vector-icons";
 import { SwipeDeck, type SwipeDeckHandle } from "../../../components/SwipeDeck";
 import { MatchCelebration } from "../../../components/MatchCelebration";
@@ -31,7 +31,7 @@ import { BetaPoll } from "../../../components/BetaPoll";
 import { BetaPlusOffer } from "../../../components/BetaPlusOffer";
 import { SafetySheet } from "../../../components/SafetySheet";
 import { Dropdown } from "../../../components/ui/Dropdown";
-import { DISTANCES_KM, distanceLabel } from "../../../lib/options";
+import { DISTANCES_KM, SHOW_ME, distanceLabel, type Gender } from "../../../lib/options";
 import { colors } from "../../../lib/theme";
 import { useBreakpoint, useTopPadding } from "../../../lib/responsive";
 import { editHref } from "../../../lib/routing";
@@ -39,6 +39,25 @@ import { editHref } from "../../../lib/routing";
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 // Fetch more cards when this few are left
 const REFILL_AT = 3;
+// While Discover is open, look for people who just joined this often
+const REFRESH_MS = 30_000;
+
+// Age filter choices; a custom range from Dating preferences joins the list when it isn't one of these
+const AGE_RANGES: [number, number][] = [[18, 99], [18, 25], [22, 30], [25, 35], [30, 40], [35, 45], [40, 55], [50, 99]];
+const ageValue = (min: number, max: number) => `${min}-${max}`;
+const ageLabel = (min: number, max: number) => (min === 18 && max === 99 ? "Any age" : max === 99 ? `${min}+` : `${min}–${max}`);
+
+function distanceOptions(current: number) {
+  const kms: number[] = (DISTANCES_KM as readonly number[]).includes(current)
+    ? [...DISTANCES_KM]
+    : [...DISTANCES_KM, current].sort((a, b) => a - b);
+  return kms.map((km) => ({ value: String(km), label: distanceLabel(km) }));
+}
+
+function ageOptions(min: number, max: number) {
+  const ranges = AGE_RANGES.some(([a, b]) => a === min && b === max) ? AGE_RANGES : [[min, max] as [number, number], ...AGE_RANGES];
+  return ranges.map(([a, b]) => ({ value: ageValue(a, b), label: ageLabel(a, b) }));
+}
 
 type Phase = "loading" | "needs-location" | "ready";
 
@@ -65,10 +84,10 @@ export default function Discover() {
   // Swiping only one race's runners needs Plus or a race pass: why it's locked
   const [raceLocked, setRaceLocked] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
-  // How far you look for people, changeable right here
-  const [searchKm, setSearchKm] = useState<string[]>([]);
-  // Plus "Second look": the runners you passed on, to reconsider
-  const [secondLook, setSecondLook] = useState(false);
+  // Distance, age and who you'd like to see, changeable right here (saved as your dating preferences)
+  const [prefs, setPrefs] = useState<DatingPreferences | null>(null);
+  // People swiped on this session: a refresh that lands before the swipe saves mustn't bring them back
+  const decided = useRef(new Set<string>());
   const { height, isPhone } = useBreakpoint();
   const topPadding = useTopPadding();
   // The space between the header and the buttons: the card fills it, so nothing scrolls.
@@ -82,10 +101,10 @@ export default function Discover() {
 
   const loadFeed = useCallback(async (t: string) => {
     try {
-      const feed = await getDiscoverFeed(t, raceId, secondLook);
+      const feed = await getDiscoverFeed(t, raceId);
       // Keep cards already on screen; add new ones after them
       setCards((current) => {
-        const seen = new Set(current.map((c) => c.userId));
+        const seen = new Set([...current.map((c) => c.userId), ...decided.current]);
         return [...current, ...feed.filter((c) => !seen.has(c.userId))];
       });
       setError(null);
@@ -94,7 +113,7 @@ export default function Discover() {
       if (isUpgradeError(e)) setRaceLocked(e.message);
       else setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     }
-  }, [raceId, secondLook]);
+  }, [raceId]);
 
   // Bought a race pass or Plus while the race filter was locked: load it now
   const raceAccess = raceId ? hasRaceAccess(raceId) : false;
@@ -121,17 +140,22 @@ export default function Discover() {
     setCards([]);
   }, [raceId]);
 
-  // Second look: swap the deck for the people you passed on (or back)
-  const toggleSecondLook = async () => {
-    if (!token) return;
-    if (!membership?.plus.active) {
-      openPlus(router, { reason: "Second look comes with Plus: see the runners you passed on and like them after all." });
-      return;
-    }
-    setCards([]);
-    setSecondLook((on) => !on);
-  };
-  // (The set-up effect below reloads the feed when this changes, because loadFeed does)
+  // New people join all the time: look again whenever Discover is shown, every 30 seconds while
+  // it's open, and when the app comes back to the front. New cards join the end of the deck.
+  useFocusEffect(
+    useCallback(() => {
+      if (!token || phase !== "ready") return;
+      loadFeed(token);
+      const id = setInterval(() => loadFeed(token), REFRESH_MS);
+      const sub = AppState.addEventListener("change", (state) => {
+        if (state === "active") loadFeed(token);
+      });
+      return () => {
+        clearInterval(id);
+        sub.remove();
+      };
+    }, [token, phase, loadFeed])
+  );
 
   useEffect(() => {
     (async () => {
@@ -146,7 +170,7 @@ export default function Discover() {
           getDatingPreferences(t),
         ]);
         setMyPhoto(profile?.photos[0]?.url ?? null);
-        if (prefs) setSearchKm([String(prefs.maxDistanceKm)]);
+        setPrefs(prefs);
         setMine(running);
         if (!me.hasLocation) {
           setPhase("needs-location");
@@ -168,18 +192,19 @@ export default function Discover() {
     })();
   }, [loadFeed]);
 
-  // Widen (or narrow) the search: save it, then start the feed again from the new distance
-  const changeDistance = async (value: string[]) => {
-    if (!token || !value.length || value[0] === searchKm[0]) return;
-    const before = searchKm;
-    setSearchKm(value);
+  // Change a filter: save it as your preferences, then start the feed again
+  const changePrefs = async (change: Partial<DatingPreferences>) => {
+    if (!token || !prefs) return;
+    const before = prefs;
+    const next = { ...prefs, ...change };
+    setPrefs(next);
     setError(null);
     try {
-      await setSearchDistance(token, Number(value[0]));
+      setPrefs(await saveDatingPreferences(token, next));
       setCards([]);
       await loadFeed(token);
     } catch (e) {
-      setSearchKm(before);
+      setPrefs(before);
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     }
   };
@@ -209,6 +234,7 @@ export default function Discover() {
   // saves in the background; if it fails, the card comes back to the top.
   const decide = async (card: DiscoverCard, liked: boolean) => {
     if (!token) return;
+    decided.current.add(card.userId);
     const remaining = cards.filter((c) => c.userId !== card.userId);
     setCards(remaining);
     if (remaining.length <= REFILL_AT) loadFeed(token);
@@ -219,6 +245,7 @@ export default function Discover() {
     } catch (e) {
       // Out of free likes for today: the card comes back, and the Plus screen says why
       if (isUpgradeError(e)) {
+        decided.current.delete(card.userId);
         setCards((current) => [card, ...current.filter((c) => c.userId !== card.userId)]);
         openPlus(router, { reason: e.message });
         return;
@@ -226,6 +253,7 @@ export default function Discover() {
       // 404 means they're no longer available (e.g. they changed preferences): just move on
       if (!(e instanceof ApiError && e.status === 404)) {
         setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
+        decided.current.delete(card.userId);
         setCards((current) => [card, ...current.filter((c) => c.userId !== card.userId)]);
       }
     }
@@ -330,30 +358,43 @@ export default function Discover() {
           </Pressable>
         </View>
       )}
-      {searchKm.length > 0 && (
-        <View style={styles.distanceRow}>
+      {prefs && !raceId && (
+        <View style={styles.filters}>
           <Dropdown
-            label="Looking within"
-            options={DISTANCES_KM.map((km) => ({ value: String(km), label: distanceLabel(km) }))}
-            selected={searchKm}
-            onChange={changeDistance}
-            style={styles.distanceDrop}
+            label="Within"
+            options={distanceOptions(prefs.maxDistanceKm)}
+            selected={[String(prefs.maxDistanceKm)]}
+            onChange={(v) => {
+              const km = Number(v[0]);
+              if (km && km !== prefs.maxDistanceKm) changePrefs({ maxDistanceKm: km });
+            }}
+            highlight={false}
+            style={styles.filter}
           />
-          {!raceId && (
-            <Pressable
-              onPress={toggleSecondLook}
-              accessibilityRole="button"
-              accessibilityState={{ selected: secondLook }}
-              accessibilityLabel={secondLook ? "Back to new runners" : "Second look: runners you passed on"}
-              style={[styles.secondLook, secondLook && styles.secondLookOn]}
-            >
-              <Ionicons name={secondLook ? "arrow-undo" : "refresh"} size={16} color={secondLook ? colors.pink : colors.textMuted} />
-              <Text style={[styles.secondLookText, secondLook && styles.secondLookTextOn]}>
-                {secondLook ? "Back to new" : "Second look"}
-              </Text>
-              {!membership?.plus.active && <Ionicons name="lock-closed" size={12} color={colors.textMuted} />}
-            </Pressable>
-          )}
+          <Dropdown
+            label="Age"
+            options={ageOptions(prefs.ageMin, prefs.ageMax)}
+            selected={[ageValue(prefs.ageMin, prefs.ageMax)]}
+            onChange={(v) => {
+              const [min, max] = (v[0] ?? "").split("-").map(Number);
+              if (min && max && (min !== prefs.ageMin || max !== prefs.ageMax)) changePrefs({ ageMin: min, ageMax: max });
+            }}
+            highlight={false}
+            style={styles.filter}
+          />
+          <Dropdown
+            label="Show"
+            options={SHOW_ME}
+            selected={prefs.interestedIn}
+            multiple
+            // At least one: clearing everything would show nobody
+            onChange={(v) => {
+              if (v.length > 0) changePrefs({ interestedIn: v as Gender[] });
+            }}
+            valueLabel={prefs.interestedIn.length === SHOW_ME.length ? "Everyone" : undefined}
+            highlight={false}
+            style={styles.filter}
+          />
         </View>
       )}
       {error && <Text style={styles.error}>{error}</Text>}
@@ -429,13 +470,11 @@ export default function Discover() {
         <View style={styles.empty}>
           <EmptyState
             icon="sparkles"
-            title={secondLook ? "No one to revisit" : "You're all caught up"}
+            title="You're all caught up"
             body={
-              secondLook
-                ? "People you pass on show up here, so you can like them after all."
-                : raceId
-                ? "No more runners at this race match your preferences. Check back as more people join."
-                : "No more runners match your preferences within your distance right now. Try a wider distance above, check back later as new runners join, or take a second look at people you passed on."
+              raceId
+                ? "No more runners at this race match your preferences. New people show up here as they join."
+                : "No more runners match your filters right now. Try a wider distance or age above. New runners show up here as they join."
             }
             action={{ title: "Edit preferences", icon: "options-outline", onPress: () => router.push(editHref("/dating-preferences")) }}
           />
@@ -478,23 +517,9 @@ const styles = StyleSheet.create({
   empty: { flex: 1, justifyContent: "center" },
   sideAction: { alignItems: "center", gap: 10 },
   keyHint: { color: colors.textFaint, fontSize: 13, fontWeight: "700" },
-  distanceRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  secondLook: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    flexShrink: 0,
-  },
-  secondLookOn: { borderColor: colors.pink, backgroundColor: colors.pinkTint },
-  secondLookText: { color: colors.textMuted, fontSize: 13 },
-  secondLookTextOn: { color: colors.pink },
-  // Shrinks on small phones so Second look still fits beside it
-  distanceDrop: { flexGrow: 0, flexShrink: 1, flexBasis: 190, minWidth: 130, paddingVertical: 6 },
+  // Three filters share one line, even on small phones
+  filters: { flexDirection: "row", gap: 6, marginBottom: 8, width: "100%", maxWidth: 560, alignSelf: "center" },
+  filter: { flex: 1, minWidth: 0, paddingVertical: 6, paddingHorizontal: 10, gap: 4 },
   raceFilter: {
     flexDirection: "row",
     alignItems: "center",

@@ -835,6 +835,7 @@ class AdminStats(CamelModel):
     open_feedback: int = 0
     signups_by_day: list[DayCount]  # the last 14 days
     beta_plus_unclaimed: int = 0  # can still activate the free beta Plus
+    hidden_from_discover: int = 0  # signed up, but nobody can see them yet (no location, photo or preferences)
 
 
 class RemindResult(CamelModel):

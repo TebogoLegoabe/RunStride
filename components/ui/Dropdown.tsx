@@ -19,18 +19,22 @@ type Props<T extends string> = {
   multiple?: boolean;
   // What the field says when nothing is chosen (multiple only)
   emptyLabel?: string;
+  // What the field says instead of the default summary, e.g. "Everyone" when all are picked
+  valueLabel?: string;
+  // Orange when changed from the first option (multiple: when anything is picked). false keeps it calm.
+  highlight?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
 // A filter field: shows the current choice, opens a list to change it. Replaces rows of chips where
 // there are more than a few options, so filters stay one tidy line.
-export function Dropdown<T extends string>({ label, options, selected, onChange, multiple, emptyLabel = "Any", style }: Props<T>) {
+export function Dropdown<T extends string>({ label, options, selected, onChange, multiple, emptyLabel = "Any", valueLabel, highlight, style }: Props<T>) {
   const bottomPadding = useBottomPadding(24);
   const [open, setOpen] = useState(false);
 
   const chosen = options.filter((o) => selected.includes(o.value));
-  const value = chosen.length === 0 ? emptyLabel : chosen.length === 1 ? chosen[0].label : `${chosen.length} selected`;
-  const active = multiple ? chosen.length > 0 : selected.length > 0 && chosen.length > 0 && options[0]?.value !== chosen[0]?.value;
+  const value = valueLabel ?? (chosen.length === 0 ? emptyLabel : chosen.length === 1 ? chosen[0].label : `${chosen.length} selected`);
+  const active = highlight !== undefined ? highlight : multiple ? chosen.length > 0 : selected.length > 0 && chosen.length > 0 && options[0]?.value !== chosen[0]?.value;
 
   const pick = (v: T) => {
     haptics.tap();
@@ -59,7 +63,9 @@ export function Dropdown<T extends string>({ label, options, selected, onChange,
         ])}
       >
         <View style={styles.fieldText}>
-          <Text style={styles.caption}>{label}</Text>
+          <Text style={styles.caption} numberOfLines={1}>
+            {label}
+          </Text>
           <Text style={[styles.value, active && styles.valueOn]} numberOfLines={1}>
             {value}
           </Text>

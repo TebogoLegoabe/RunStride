@@ -3,14 +3,14 @@ from datetime import timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Response, UploadFile, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import exists, func, or_, select
 
 from app.config import get_settings
 from app.deps import AdminUser, DbSession
 from app import push
 from app.membership import end_plus, grant_plus, plus_condition, plus_status
 from app.phone import InvalidPhoneNumber, normalize_phone
-from app.models import AccountStatus, Entitlement, Feedback, IdSubmission, Match, Message, OtpCode, Profile, Race, RaceAttendance, RaceEvent, RaceMessage, Report, User
+from app.models import AccountStatus, DatingPreferences, Entitlement, Feedback, IdSubmission, Match, Message, OtpCode, Profile, ProfilePhoto, Race, RaceAttendance, RaceEvent, RaceMessage, Report, RunningProfile, User
 from app.moderation import end_all_matches, resolve_other_open_reports
 from app.realtime import hub
 from app.routers.races import race_detail
@@ -361,6 +361,7 @@ def stats(admin: AdminUser, db: DbSession) -> AdminStats:
         pending_id_checks=db.scalar(select(func.count()).select_from(IdSubmission).where(IdSubmission.status == "pending")) or 0,
         signups_by_day=signups,
         beta_plus_unclaimed=len(_beta_unclaimed(db)),
+        hidden_from_discover=len(_hidden_from_discover(db)),
     )
 
 
@@ -388,8 +389,40 @@ def remind_beta_plus(admin: AdminUser, db: DbSession) -> RemindResult:
         ids,
         "news",
         "Your free RunStride Plus is waiting 🎁",
-        f"Unlimited likes, Second look and everyone at your races. Free for {days} days, no card. Tap to switch it on.",
+        f"Unlimited likes, see who likes you and everyone at your races. Free for {days} days, no card. Tap to switch it on.",
         "/plus",
+    )
+    return RemindResult(sent=len(ids))
+
+
+def _hidden_from_discover(db: DbSession) -> list[uuid.UUID]:
+    """Active accounts nobody can find in Discover because sign-up isn't finished: no location,
+    no photo, or no running or dating preferences."""
+    return list(
+        db.scalars(
+            select(User.id).where(
+                User.account_status == AccountStatus.active,
+                or_(
+                    User.location.is_(None),
+                    ~exists().where(ProfilePhoto.user_id == User.id),
+                    ~exists().where(RunningProfile.user_id == User.id),
+                    ~exists().where(DatingPreferences.user_id == User.id),
+                ),
+            )
+        ).all()
+    )
+
+
+@router.post("/finish-signup/remind", response_model=RemindResult)
+def remind_finish_signup(admin: AdminUser, db: DbSession) -> RemindResult:
+    """Push everyone who signed up but can't be seen yet. Opening the app takes them to the next step."""
+    ids = [i for i in _hidden_from_discover(db) if i != admin.id]
+    push.notify(
+        ids,
+        "news",
+        "Runners can't see you yet 👀",
+        "You're one step away. Open RunStride to finish setting up and turn on your location, so runners near you can find you.",
+        "/",
     )
     return RemindResult(sent=len(ids))
 
