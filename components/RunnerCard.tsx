@@ -9,6 +9,7 @@ import { formatPace, labelFor } from "../lib/format";
 import { GOALS, RUN_TIMES, TERRAINS } from "../lib/options";
 import type { DiscoverCard, RunningProfile } from "../lib/types";
 import { colors, fonts } from "../lib/theme";
+import { UserPhoto } from "./ui/UserPhoto";
 
 type Props = {
   card: DiscoverCard;
@@ -46,9 +47,10 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
         style={StyleSheet.absoluteFill}
         onPress={(e) => onPhotoPress(e.nativeEvent.locationX, photoWidth)}
         onLayout={(e) => setPhotoWidth(e.nativeEvent.layout.width)}
-        accessibilityLabel={`Photo ${photoIndex + 1} of ${photoCount}`}
+        accessibilityLabel={photoCount > 0 ? `Photo ${photoIndex + 1} of ${photoCount}` : `${card.displayName} has no photo`}
       >
-        <Image source={{ uri: mediaUrl(card.photos[photoIndex]) }} style={styles.photo} resizeMode="cover" />
+        {/* No photo: their avatar, or a plain placeholder, fills the card instead */}
+        <UserPhoto photo={card.photos[photoIndex]} style={styles.photo} resizeMode="cover" emojiSize={120} />
       </Pressable>
 
       {photoCount > 1 && (

@@ -9,6 +9,7 @@ from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
+from app.avatars import main_photo
 from app.config import Settings
 from app.db import SessionLocal
 from app.deps import AppSettings, CurrentUser, DbSession
@@ -26,12 +27,11 @@ WS_AUTH_TIMEOUT_SECONDS = 10
 
 def match_summary(db: Session, match: Match, me: User, *, with_chat: bool = False) -> MatchSummary:
     other = db.get(User, match.other_user_id(me.id))
-    photos = other.profile.photos if other.profile else []
     summary = MatchSummary(
         id=match.id,
         user_id=other.id,
         display_name=other.profile.display_name if other.profile else "RunStride runner",
-        photo=photos[0].url if photos else None,
+        photo=main_photo(other.profile),
         matched_at=match.created_at,
         kind=match.kind,
         verified=other.verification_status == VerificationStatus.verified,

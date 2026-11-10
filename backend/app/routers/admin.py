@@ -137,12 +137,13 @@ def admin_list_races(
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> list[RaceDetail]:
-    """Suggestions waiting for review (default), or the published/rejected lists."""
-    response.headers["X-Total-Count"] = str(
-        db.scalar(select(func.count()).select_from(Race).where(Race.status == status_filter))
-    )
+    """Suggestions waiting for review (default), or the published/rejected lists.
+
+    The weekly parkruns are generated (app/parkrun_import.py), not moderated, so they're left out."""
+    listed = (Race.status == status_filter, Race.kind == "race")
+    response.headers["X-Total-Count"] = str(db.scalar(select(func.count()).select_from(Race).where(*listed)))
     races = db.scalars(
-        select(Race).where(Race.status == status_filter).order_by(Race.starts_on, Race.id).offset(offset).limit(limit)
+        select(Race).where(*listed).order_by(Race.starts_on, Race.id).offset(offset).limit(limit)
     ).all()
     return [race_detail(db, r, admin) for r in races]
 
@@ -397,14 +398,13 @@ def remind_beta_plus(admin: AdminUser, db: DbSession) -> RemindResult:
 
 def _hidden_from_discover(db: DbSession) -> list[uuid.UUID]:
     """Active accounts nobody can find in Discover because sign-up isn't finished: no location,
-    no photo, or no running or dating preferences."""
+    or no running or dating preferences."""
     return list(
         db.scalars(
             select(User.id).where(
                 User.account_status == AccountStatus.active,
                 or_(
                     User.location.is_(None),
-                    ~exists().where(ProfilePhoto.user_id == User.id),
                     ~exists().where(RunningProfile.user_id == User.id),
                     ~exists().where(DatingPreferences.user_id == User.id),
                 ),

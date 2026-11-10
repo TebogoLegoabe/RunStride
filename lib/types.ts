@@ -190,6 +190,7 @@ export interface MyProfile {
   birthDate: string; // YYYY-MM-DD
   age: number;
   bio: string | null;
+  avatar: string | null; // shown as your picture when you have no photos (see lib/avatars.ts)
   photos: Photo[];
 }
 
@@ -239,9 +240,12 @@ export interface MyAttendance {
   eventLabel: string | null;
 }
 
+export type RaceKind = "race" | "parkrun";
+
 export interface RaceSummary {
   id: string;
   name: string;
+  kind: RaceKind; // a once-off race, or one Saturday of a weekly parkrun
   startsOn: string; // YYYY-MM-DD, South African date
   endsOn: string;
   venue: string;
@@ -289,6 +293,7 @@ export interface Attendee {
   connection: "none" | "requested" | "incoming" | "connected";
   matchId: string | null;
   requestId: string | null;
+  sharedClubs: string[]; // their clubs that you're in too
 }
 
 export interface RaceMessage {
@@ -405,6 +410,7 @@ export interface RaceRunners {
   runners: Attendee[];
   hiddenCount: number; // going, but only shown with Plus or a race pass
   fullAccess: boolean;
+  clubmateCount: number; // people going who run with one of your clubs
 }
 
 export interface RunnerFilters {

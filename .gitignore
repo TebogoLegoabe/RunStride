@@ -19,3 +19,7 @@ backend/media/
 
 # Cloudflare wrangler local state
 .wrangler/
+
+# Claude Code instructions stay local
+CLAUDE.md
+claude.md

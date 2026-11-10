@@ -10,6 +10,7 @@ import { SafetySheet } from "./SafetySheet";
 import { RunDateCard } from "./RunDateCard";
 import { SuggestRunSheet } from "./SuggestRunSheet";
 import { colors } from "../lib/theme";
+import { UserPhoto } from "./ui/UserPhoto";
 import { useBottomPadding, useTopPadding } from "../lib/responsive";
 import { dismissTip, tipDismissed } from "../lib/tips";
 import { EmojiPanel, EmojiToggle } from "./ui/EmojiPanel";
@@ -195,11 +196,7 @@ export function ChatView({ matchId, userId, name, photo, verified = false, onClo
             <Ionicons name="chevron-back" size={26} color={colors.textBright} />
           </Pressable>
         )}
-        {photo ? (
-          <Image source={{ uri: mediaUrl(photo) }} style={styles.headerPhoto} />
-        ) : (
-          <View style={[styles.headerPhoto, styles.headerPhotoEmpty]} />
-        )}
+        <UserPhoto photo={photo} style={styles.headerPhoto} />
         <Text style={styles.headerName} numberOfLines={1}>
           {name ?? "Chat"}
         </Text>

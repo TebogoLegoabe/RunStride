@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, aliased, selectinload
 
 from app.config import Settings
 from app.deps import AppSettings, CurrentUser, DbSession
+from app.avatars import all_photos
 from app.clubs import club_key, shared_clubs
 from app.matching import RunnerTraits, compatibility
 from app.membership import UpgradeRequired, check_like_allowed, has_plus, has_race_access, plus_condition
@@ -20,7 +21,6 @@ from app.models import (
     RaceEvent,
     Match,
     Profile,
-    ProfilePhoto,
     RunningProfile,
     Swipe,
     User,
@@ -40,6 +40,8 @@ router = APIRouter(tags=["discover"])
 LOCATION_DECIMALS = 2
 # Nearest eligible runners considered per feed request, before ranking by compatibility
 CANDIDATE_POOL = 200
+# The widest search distance means "anywhere": no distance limit at all
+ANYWHERE_KM = 2000
 # Ranking nudges on top of compatibility (0-100): new people get seen, active people come before
 # people who've stopped opening the app
 NEW_DAYS, NEW_BONUS = 14, 15
@@ -100,7 +102,6 @@ def _candidates(
             User.location.is_not(None),
             # Seeing someone: not in anyone's feed
             User.dating_mode == "looking",
-            exists().where(ProfilePhoto.user_id == User.id),
             # Gender, both ways
             DatingPreferences.gender.in_(prefs.interested_in),
             literal(prefs.gender) == any_(DatingPreferences.interested_in),
@@ -108,9 +109,6 @@ def _candidates(
             their_age.between(prefs.age_min, prefs.age_max),
             DatingPreferences.age_min <= my_age,
             DatingPreferences.age_max >= my_age,
-            # Within my distance. Their distance only decides who they see, not who sees them:
-            # two-way distance hid almost everyone from people who widened their search.
-            func.ST_DWithin(User.location, my_location, prefs.max_distance_km * 1000),
             # Don't show people who already passed on me
             ~exists().where(Swipe.swiper_id == User.id, Swipe.target_id == me.id, Swipe.liked.is_(False)),
             # Safety: blocks either way, suspended/banned accounts, and anyone several
@@ -123,6 +121,10 @@ def _candidates(
         .order_by(distance)
         .limit(CANDIDATE_POOL)
     )
+    if prefs.max_distance_km < ANYWHERE_KM:
+        # Within my distance. Their distance only decides who they see, not who sees them:
+        # two-way distance hid almost everyone from people who widened their search.
+        stmt = stmt.where(func.ST_DWithin(User.location, my_location, prefs.max_distance_km * 1000))
     if settings.require_id_verification:
         stmt = stmt.where(User.verification_status == VerificationStatus.verified)
     if passed_only:
@@ -169,7 +171,7 @@ def _card(user: User, distance_m: float, my_traits: RunnerTraits, my_clubs: list
         display_name=user.profile.display_name,
         age=age_on(user.profile.birth_date, date.today()),
         bio=user.profile.bio,
-        photos=[p.url for p in user.profile.photos],
+        photos=all_photos(user.profile),
         distance_km=max(1, round(distance_m / 1000)),
         verified=user.verification_status == VerificationStatus.verified,
         compatibility=compatibility(my_traits, _traits(running)),

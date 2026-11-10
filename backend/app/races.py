@@ -9,6 +9,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.orm import Session
 
+from app.avatars import main_photo
 from app.config import Settings
 from app.models import Block, Profile, ProfilePhoto, Race, RaceAttendance, RaceEvent, User, VerificationStatus
 from app.moderation import is_usable, not_blocked_with
@@ -107,13 +108,10 @@ def blocked_either_way(db: Session, a: uuid.UUID, b: uuid.UUID) -> bool:
 def sender(db: Session, user_id: uuid.UUID) -> Sender:
     user = db.get(User, user_id)
     profile = user.profile if user else None
-    photo = db.scalar(
-        select(ProfilePhoto.url).where(ProfilePhoto.user_id == user_id).order_by(ProfilePhoto.position).limit(1)
-    )
     return Sender(
         id=user_id,
         display_name=profile.display_name if profile else "RunStride runner",
-        photo=photo,
+        photo=main_photo(profile),
     )
 
 

@@ -123,12 +123,22 @@ def test_photo_limit(client, profile_headers, settings):
     assert res.status_code == 409
 
 
-def test_profile_complete_needs_a_photo(client, profile_headers):
-    assert client.get("/me", headers=profile_headers).json()["profileComplete"] is False
+def test_profile_is_complete_without_a_photo(client, auth_headers):
+    assert client.get("/me", headers=auth_headers).json()["profileComplete"] is False
 
-    upload(client, profile_headers).raise_for_status()
+    client.put("/me/profile", json=PROFILE, headers=auth_headers).raise_for_status()
 
-    assert client.get("/me", headers=profile_headers).json()["profileComplete"] is True
+    assert client.get("/me", headers=auth_headers).json()["profileComplete"] is True
+
+
+def test_avatar_is_saved_and_kept_by_apps_that_dont_send_it(client, profile_headers):
+    picked = client.put("/me/profile", json={**PROFILE, "avatar": "cheetah"}, headers=profile_headers)
+    assert picked.status_code == 200 and picked.json()["avatar"] == "cheetah"
+    # An older app saves the profile without the field: the avatar stays
+    assert client.put("/me/profile", json=PROFILE, headers=profile_headers).json()["avatar"] == "cheetah"
+    # Sending null removes it; made-up names are refused
+    assert client.put("/me/profile", json={**PROFILE, "avatar": None}, headers=profile_headers).json()["avatar"] is None
+    assert client.put("/me/profile", json={**PROFILE, "avatar": "dragon"}, headers=profile_headers).status_code == 422
 
 
 def test_delete_photo_renumbers_and_removes_file(client, profile_headers, storage):

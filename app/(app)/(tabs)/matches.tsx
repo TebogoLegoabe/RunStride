@@ -14,6 +14,7 @@ import { SkeletonRow } from "../../../components/ui/Skeleton";
 import { ChatView } from "../../../components/ChatView";
 import { hoverable, useBreakpoint, useTopPadding } from "../../../lib/responsive";
 import { colors } from "../../../lib/theme";
+import { UserPhoto } from "../../../components/ui/UserPhoto";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const OFFLINE_POLL_MS = 15_000;
@@ -147,11 +148,7 @@ export default function Matches() {
         {incoming.map((r) => (
           <View key={r.id} style={styles.requestCard}>
             <View style={styles.requestTop}>
-              {r.other.photo ? (
-                <Image source={{ uri: mediaUrl(r.other.photo) }} style={styles.requestAvatar} />
-              ) : (
-                <View style={[styles.requestAvatar, styles.avatarEmpty]} />
-              )}
+              <UserPhoto photo={r.other.photo} style={styles.requestAvatar} />
               <View style={styles.rowText}>
                 <Text style={styles.name}>{r.other.displayName}</Text>
                 <Text style={styles.requestVia}>
@@ -249,11 +246,7 @@ export default function Matches() {
               ])}
               onPress={() => openChat(m)}
             >
-              {m.photo ? (
-                <Image source={{ uri: mediaUrl(m.photo) }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatar, styles.avatarEmpty]} />
-              )}
+              <UserPhoto photo={m.photo} style={styles.avatar} />
               <View style={styles.rowText}>
                 <View style={styles.rowTop}>
                   <Text style={[styles.name, unread && styles.bold]} numberOfLines={1}>

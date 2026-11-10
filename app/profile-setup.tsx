@@ -15,6 +15,7 @@ import {
 import { afterSave } from "../lib/routing";
 import { getToken } from "../lib/session";
 import type { Photo } from "../lib/types";
+import { AVATARS } from "../lib/avatars";
 import { colors } from "../lib/theme";
 import { useBottomPadding, useTopPadding } from "../lib/responsive";
 
@@ -57,6 +58,8 @@ export default function ProfileSetup() {
   const [month, setMonth] = useState("");
   const [year, setYear] = useState("");
   const [bio, setBio] = useState("");
+  // Shown as your picture when you have no photos
+  const [avatar, setAvatar] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,6 +81,7 @@ export default function ProfileSetup() {
           setMonth(m);
           setYear(y);
           setBio(existing.bio ?? "");
+          setAvatar(existing.avatar);
           setSlots(existing.photos.map((p) => ({ key: p.id, uri: mediaUrl(p.url), photo: p })));
         }
       } catch (e) {
@@ -114,7 +118,6 @@ export default function ProfileSetup() {
   };
 
   const validate = (): string | null => {
-    if (slots.length === 0) return "Add at least one photo.";
     if (!name.trim()) return "Please enter your name.";
     const iso = toIsoDate(day, month, year);
     if (!iso) return "Please enter a valid date of birth.";
@@ -137,6 +140,7 @@ export default function ProfileSetup() {
         displayName: name.trim(),
         birthDate: toIsoDate(day, month, year)!,
         bio: bio.trim(),
+        avatar,
       });
       // Upload one at a time so photo order is kept. Already-uploaded photos are
       // skipped, so if one fails, tapping Continue again picks up where it stopped.
@@ -167,7 +171,9 @@ export default function ProfileSetup() {
       <Text style={styles.subtitle}>This is what other runners will see.</Text>
 
       <Text style={styles.label}>Photos</Text>
-      <Text style={styles.hint}>Add up to {MAX_PHOTOS}. The first one is your main photo.</Text>
+      <Text style={styles.hint}>
+        Optional. Add up to {MAX_PHOTOS}; the first one is your main photo. Profiles with a photo get more likes.
+      </Text>
       <View style={styles.photoGrid}>
         {slots.map((slot, index) => (
           <View key={slot.key} style={styles.photoSlot}>
@@ -193,6 +199,34 @@ export default function ProfileSetup() {
             <Text style={styles.addText}>+</Text>
           </Pressable>
         )}
+      </View>
+
+      <Text style={styles.label}>Avatar</Text>
+      <Text style={styles.hint}>
+        {slots.length > 0
+          ? "Your photos are shown instead. An avatar is used if you remove them all."
+          : "Rather not add a photo? Pick an avatar to show as your picture."}
+      </Text>
+      <View style={styles.avatarGrid}>
+        {AVATARS.map((a) => {
+          const on = avatar === a.name;
+          return (
+            <Pressable
+              key={a.name}
+              style={[styles.avatarTile, { backgroundColor: a.color }, on && styles.avatarOn]}
+              // Tap the chosen one again to go without
+              onPress={() => setAvatar(on ? null : a.name)}
+              disabled={saving}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: on }}
+              accessibilityLabel={`${a.label} avatar`}
+            >
+              <Text style={styles.avatarEmoji} allowFontScaling={false}>
+                {a.emoji}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <Text style={styles.label}>First name</Text>
@@ -319,6 +353,19 @@ const styles = StyleSheet.create({
     borderColor: colors.borderStrong,
   },
   addText: { color: colors.primary, fontSize: 32, fontWeight: "300" },
+  avatarGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 28 },
+  avatarTile: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "transparent",
+    opacity: 0.75,
+  },
+  avatarOn: { borderColor: colors.heading, opacity: 1 },
+  avatarEmoji: { fontSize: 28, lineHeight: 36 },
   input: {
     backgroundColor: colors.surface,
     color: colors.heading,

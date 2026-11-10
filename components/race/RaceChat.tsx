@@ -19,6 +19,7 @@ import { useChat } from "../ChatProvider";
 import { SafetySheet } from "../SafetySheet";
 import { hoverable } from "../../lib/responsive";
 import { colors } from "../../lib/theme";
+import { UserPhoto } from "../ui/UserPhoto";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const PAGE_SIZE = 50;
@@ -203,11 +204,7 @@ export function RaceChat({ raceId, myId, isAdmin }: Props) {
             delayLongPress={350}
           >
             {!mine &&
-              (m.sender.photo ? (
-                <Image source={{ uri: mediaUrl(m.sender.photo) }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatar, styles.avatarEmpty]} />
-              ))}
+              <UserPhoto photo={m.sender.photo} style={styles.avatar} />}
             <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs, forMe && styles.bubbleForMe]}>
               {!mine && <Text style={styles.name}>{m.sender.displayName}</Text>}
               <Text style={[styles.body, mine && styles.bodyMine]}>
@@ -246,11 +243,7 @@ export function RaceChat({ raceId, myId, isAdmin }: Props) {
               accessibilityLabel={`Mention ${person.displayName}`}
               style={hoverable(({ hovered, pressed }) => [styles.suggestion, (hovered || pressed) && styles.suggestionOn])}
             >
-              {person.photo ? (
-                <Image source={{ uri: mediaUrl(person.photo) }} style={styles.suggestionAvatar} />
-              ) : (
-                <View style={[styles.suggestionAvatar, styles.avatarEmpty]} />
-              )}
+              <UserPhoto photo={person.photo} style={styles.suggestionAvatar} />
               <View style={styles.suggestionText}>
                 <Text style={styles.suggestionName}>{person.displayName}</Text>
                 <Text style={styles.suggestionGoing}>{person.going}</Text>

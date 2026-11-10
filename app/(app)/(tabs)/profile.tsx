@@ -25,6 +25,8 @@ import { clearDeviceToken, clearToken } from "../../../lib/session";
 import type { Me, MyProfile } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
 import { colors } from "../../../lib/theme";
+import { UserPhoto } from "../../../components/ui/UserPhoto";
+import { avatarRef } from "../../../lib/avatars";
 import { useTopPadding } from "../../../lib/responsive";
 import { editHref } from "../../../lib/routing";
 
@@ -172,17 +174,13 @@ export default function ProfileTab() {
     );
   }
 
-  const photo = profile.photos[0]?.url;
+  const photo = profile.photos[0]?.url ?? (profile.avatar ? avatarRef(profile.avatar) : null);
   const verified = me.verificationStatus === "verified";
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: topPadding }]}>
       <View style={styles.header}>
-        {photo ? (
-          <Image source={{ uri: mediaUrl(photo) }} style={styles.photo} />
-        ) : (
-          <View style={[styles.photo, styles.photoEmpty]} />
-        )}
+        <UserPhoto photo={photo} style={styles.photo} />
         <Text style={styles.name}>
           {profile.displayName}, {profile.age}
         </Text>

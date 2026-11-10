@@ -1,17 +1,23 @@
 city,province,latitude,longitude
 Akasia,Gauteng,-25.6556,28.0969
+Albertinia,Western Cape,-34.2056,21.5803
 Alberton,Gauteng,-26.267,28.1221
 Barberton,Mpumalanga,-25.7822,31.0475
 Beacon Bay,Eastern Cape,-32.9694,27.9447
 Bellville,Western Cape,-33.9064,18.6271
 Benoni,Gauteng,-26.193,28.3082
+Bethal,Mpumalanga,-26.4620,29.4715
 Bethlehem,Free State,-28.2308,28.3089
 Bloemfontein,Free State,-29.1164,26.2155
+Bluewater Bay,Eastern Cape,-33.8501,25.6315
 Brackenfell,Western Cape,-33.8831,18.7
 Camps Bay,Western Cape,-33.9548,18.3819
 Cape Town,Western Cape,-33.9288,18.4172
+Cato Ridge,KwaZulu-Natal,-29.7368,30.5875
 Centurion,Gauteng,-25.8364,28.1803
+Clanwilliam,Western Cape,-32.4879,19.2701
 Claremont,Western Cape,-33.9847,18.4625
+Despatch,Eastern Cape,-33.7470,25.3901
 Durban,KwaZulu-Natal,-29.8618,31.0099
 Durbanville,Western Cape,-33.8403,18.6494
 East London,Eastern Cape,-33.0192,27.8999
@@ -22,15 +28,23 @@ Ga-Matlala,Limpopo,-24.6314,29.9486
 George,Western Cape,-33.9597,22.4587
 Germiston,Gauteng,-26.2294,28.1806
 Gqeberha,Eastern Cape,-33.9619,25.6187
+Graaff-Reinet,Eastern Cape,-32.2475,24.5258
 Grassy Park,Western Cape,-34.0451,18.5033
+Great Brak River,Western Cape,-34.0538,22.2261
 Gugulethu,Western Cape,-33.973,18.5742
 Harrismith,Free State,-28.2784,29.1332
 Hartenbos,Western Cape,-34.1252,22.1134
+Hazyview,Mpumalanga,-25.0320,31.1235
+Helderstroom,Western Cape,-34.0761,19.3656
+Hermanus,Western Cape,-34.4031,19.2551
+Hillcrest,KwaZulu-Natal,-29.7824,30.7628
 Himeville,KwaZulu-Natal,-29.7461,29.5144
+Hoekwil,Western Cape,-33.9377,22.6886
 Hogsback,Eastern Cape,-32.5952,26.938
 Jeffrey's Bay,Eastern Cape,-34.0536,24.9234
 Johannesburg,Gauteng,-26.205,28.0497
 Ka-Bungeni,Limpopo,-23.1829,30.1744
+KaNyamazane,Mpumalanga,-25.4650,31.1821
 Kariega,Eastern Cape,-33.7679,25.3978
 Katlehong,Gauteng,-26.3386,28.1511
 Kimberley,Northern Cape,-28.7383,24.7642
@@ -38,28 +52,40 @@ Kleinmond,Western Cape,-34.3389,19.0253
 Klerksdorp,North West,-26.8625,26.6657
 Knysna,Western Cape,-34.0357,23.0485
 Kokstad,KwaZulu-Natal,-30.5475,29.4244
+Krugersdorp,Gauteng,-26.0980,27.8085
 Kuils River,Western Cape,-34.0037,18.6646
 Langebaan,Western Cape,-33.0907,18.0349
 Lephalale,Limpopo,-23.6833,27.7333
 Letsitele,Limpopo,-23.8908,30.3865
 Lichtenburg,North West,-26.1499,26.1593
+Little Brak River,Western Cape,-34.0793,22.1404
+Loskop Dam,Mpumalanga,-25.4256,29.3858
 Louis Trichardt,Limpopo,-23.0383,29.9067
 Lusikisiki,Eastern Cape,-31.363,29.573
+Malelane,Mpumalanga,-25.4416,31.5348
 Mbizana,Eastern Cape,-30.9471,29.8473
 Mbombela,Mpumalanga,-25.4729,30.9773
+Mbonambi,KwaZulu-Natal,-28.5953,32.2479
 Mdantsane,Eastern Cape,-32.9323,27.7426
 Melkbosstrand,Western Cape,-33.7222,18.4458
 Middelburg,Mpumalanga,-25.7678,29.4555
 Midrand,Gauteng,-25.9993,28.1259
 Mitchells Plain,Western Cape,-34.0506,18.6181
 Mokopane,Limpopo,-24.1833,29.0167
+Mossel Bay,Western Cape,-34.1816,22.1425
+Motherwell,Eastern Cape,-33.8022,25.6100
+Mount Edgecombe,KwaZulu-Natal,-29.7129,31.0545
 Mthatha,Eastern Cape,-31.5896,28.7878
+Mzinti,Mpumalanga,-25.6853,31.7711
+Ngodwana,Mpumalanga,-25.5870,30.6425
 Onrus,Western Cape,-34.4122,19.17
 Orania,Northern Cape,-29.8178,24.4119
 Ottosdal,North West,-26.8089,26.0067
+Oudtshoorn,Western Cape,-33.5812,22.1915
 Paarl,Western Cape,-33.731,18.9642
 Phalaborwa,Limpopo,-23.9485,31.1376
 Pietermaritzburg,KwaZulu-Natal,-29.6,30.3789
+Piketberg,Western Cape,-32.9082,18.7517
 Polokwane,Limpopo,-23.9058,29.4614
 Potchefstroom,North West,-26.7078,27.0958
 Pretoria,Gauteng,-25.7459,28.1879
@@ -68,24 +94,39 @@ Pringle Bay,Western Cape,-34.3499,18.8337
 Qokolweni,Eastern Cape,-31.7166,28.7864
 Queenstown,Eastern Cape,-31.8959,26.871
 Randburg,Gauteng,-26.0914,28.0021
+Reitz,Free State,-27.7968,28.4283
 Richards Bay,KwaZulu-Natal,-28.7708,32.0578
+Robertson,Western Cape,-33.8259,19.9831
 Roodepoort,Gauteng,-26.1567,27.8856
+Sabie,Mpumalanga,-25.0943,30.7784
 Sandton,Gauteng,-26.0682,28.048
 Sasolburg,Free State,-26.8103,27.8214
+Scottburgh,KwaZulu-Natal,-30.2930,30.7516
+Sea Point,Western Cape,-33.9104,18.3904
 Secunda,Mpumalanga,-26.5161,29.2028
+Sedgefield,Western Cape,-34.0190,22.8089
+Simon's Town,Western Cape,-34.1936,18.4440
+Simondium,Western Cape,-33.9374,19.0765
 Soweto,Gauteng,-26.2228,27.89
 Springs,Gauteng,-26.255,28.4373
+St Francis Bay,Eastern Cape,-34.1992,24.8310
 Standerton,Mpumalanga,-26.9433,29.2436
 Stellenbosch,Western Cape,-33.9344,18.8692
 Table View,Western Cape,-33.8236,18.4903
+Tarkastad,Eastern Cape,-32.0906,26.2986
 Thabazimbi,Limpopo,-24.5888,27.4118
+Tulbagh,Western Cape,-33.3837,19.2195
 Tzaneen,Limpopo,-23.8319,30.1611
 Upington,Northern Cape,-28.4563,21.2419
 Vanderbijlpark,Gauteng,-26.7069,27.8363
 Vereeniging,Gauteng,-26.6747,27.9261
 Volksrust,Mpumalanga,-27.3628,29.8825
 Vosloorus,Gauteng,-26.3564,28.2083
+Wakkerstroom,Mpumalanga,-27.3542,30.1419
+Welkom,Free State,-27.9869,26.7559
 White River,Mpumalanga,-25.3264,31.0144
 Wilderness,Western Cape,-33.9932,22.5786
 Witsand,Western Cape,-34.3944,20.8461
+eMalahleni,Mpumalanga,-25.8845,29.2286
+eMkhondo,Mpumalanga,-26.9999,30.8107
 eQonce,Eastern Cape,-32.8833,27.4000

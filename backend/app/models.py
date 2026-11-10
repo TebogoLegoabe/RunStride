@@ -84,7 +84,8 @@ class User(Base):
 
     @property
     def profile_complete(self) -> bool:
-        return self.profile is not None and len(self.profile.photos) > 0
+        # Photos are optional: a name and date of birth are enough
+        return self.profile is not None
 
 
 class Profile(Base):
@@ -95,6 +96,8 @@ class Profile(Base):
     # Birth date rather than age, so age stays correct over time
     birth_date: Mapped[date] = mapped_column(Date)
     bio: Mapped[str | None] = mapped_column(Text)
+    # Shown as their picture when they have no photos (see app/avatars.py)
+    avatar: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -404,7 +407,9 @@ class Race(Base):
     __tablename__ = "races"
     __table_args__ = (
         Index("ix_races_status_starts_on", "status", "starts_on"),
+        Index("ix_races_kind_starts_on", "kind", "starts_on"),
         CheckConstraint("status IN ('published', 'pending', 'rejected')", name="race_status_values"),
+        CheckConstraint("kind IN ('race', 'parkrun')", name="race_kind_values"),
         CheckConstraint("ends_on >= starts_on", name="race_dates_in_order"),
         CheckConstraint(
             "substitution_closes_on IS NULL OR substitution_opens_on IS NULL "
@@ -415,6 +420,8 @@ class Race(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(120))
+    # A once-off race, or one Saturday of a weekly parkrun (listed apart, see app/parkrun_import.py)
+    kind: Mapped[str] = mapped_column(String(20), default="race", server_default="race")
     # Local (South African) dates; multi-day events have different start and end days
     starts_on: Mapped[date] = mapped_column(Date)
     ends_on: Mapped[date] = mapped_column(Date)

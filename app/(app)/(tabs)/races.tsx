@@ -33,6 +33,7 @@ import { CONTENT_WIDTH, hoverable, useBreakpoint, useColumns, useTopPadding } fr
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const VIEWS = [
   { value: "all", label: "Upcoming" },
+  { value: "parkruns", label: "parkruns" },
   { value: "mine", label: "My races" },
 ] as const;
 // Fills whole rows of the 2 and 3 column grids
@@ -104,7 +105,7 @@ function dateRange(when: When): { dateFrom?: string; dateTo?: string } {
 export default function Races() {
   const router = useRouter();
   const { token, subscribe } = useChat();
-  const [view, setView] = useState<("all" | "mine")[]>(["all"]);
+  const [view, setView] = useState<("all" | "parkruns" | "mine")[]>(["all"]);
   const [query, setQuery] = useState("");
   // The search box's text once typing pauses, so we don't search on every keystroke
   const [search, setSearch] = useState("");
@@ -146,6 +147,7 @@ export default function Races() {
     (): RaceFilters => ({
       q: search || undefined,
       mine: view[0] === "mine",
+      kind: view[0] === "parkruns" ? "parkrun" : undefined,
       province: province[0] !== "any" ? province[0] : undefined,
       distances: distances.length ? distances : undefined,
       radiusKm: near[0] !== "any" ? Number(near[0]) : undefined,
@@ -271,11 +273,12 @@ export default function Races() {
 
   const hasMore = !!races && races.length < total;
   const first = page * PAGE_SIZE;
-  const plural = (n: number) => `${n} ${n === 1 ? "race" : "races"}`;
+  const parkruns = view[0] === "parkruns";
+  const plural = (n: number) => `${n} ${parkruns ? (n === 1 ? "parkrun" : "parkruns") : n === 1 ? "race" : "races"}`;
   const countText = !races?.length
     ? null
     : paged && pageCount > 1
-      ? `Showing ${first + 1}–${first + races.length} of ${total} races`
+      ? `Showing ${first + 1}–${first + races.length} of ${plural(total)}`
       : view[0] === "mine"
         ? `${plural(total)} you've joined`
         : `${plural(total)}${search || activeFilters ? " found" : " coming up"}`;
@@ -372,6 +375,16 @@ export default function Races() {
                 title="No races yet"
                 body="Join a race to chat with other runners going, find a running buddy, and swap entries."
                 action={{ title: "Browse upcoming races", icon: "search", onPress: () => setView(["all"]) }}
+              />
+            ) : parkruns ? (
+              <EmptyState
+                icon="search"
+                title="No parkruns found"
+                body={
+                  search || activeFilters
+                    ? "Nothing matches your search. Try fewer filters."
+                    : "No parkruns are listed for the coming Saturdays yet."
+                }
               />
             ) : (
               <EmptyState

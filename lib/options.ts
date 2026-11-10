@@ -41,8 +41,8 @@ export const SHOW_ME = [
 ] as const satisfies readonly Option<string>[];
 
 export const DISTANCES_KM = [5, 10, 25, 50, 100, 250, 500, 2000] as const;
-// 2000 km is "anywhere in South Africa"
-export const distanceLabel = (km: number) => (km >= 2000 ? "Anywhere in SA" : `${km} km`);
+// 2000 km means "anywhere": the server applies no distance limit at all
+export const distanceLabel = (km: number) => (km >= 2000 ? "Anywhere" : `${km} km`);
 
 // Must match ReportReason in backend/app/schemas.py
 export const REPORT_REASONS = [

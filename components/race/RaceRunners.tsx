@@ -12,6 +12,7 @@ import { Button } from "../ui/Button";
 import { RACE_PASS } from "../../lib/plans";
 import { isUpgradeError, openPlus } from "../../lib/upsell";
 import { colors, fonts, radius } from "../../lib/theme";
+import { UserPhoto } from "../ui/UserPhoto";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 
@@ -157,6 +158,17 @@ export function RaceRunners({ raceId, raceName, events }: Props) {
         </View>
       )}
 
+      {list.clubmateCount > 0 && (
+        <View style={styles.clubBanner}>
+          <Ionicons name="people" size={15} color={colors.primary} />
+          <Text style={styles.clubBannerText}>
+            {list.clubmateCount === 1
+              ? "1 runner from your club is going"
+              : `${list.clubmateCount} runners from your clubs are going`}
+          </Text>
+        </View>
+      )}
+
       {error && <Text style={styles.error}>{error}</Text>}
       {people.length === 0 && list.hiddenCount === 0 && (
         <Text style={styles.empty}>
@@ -168,16 +180,17 @@ export function RaceRunners({ raceId, raceName, events }: Props) {
 
       {people.map((p) => (
         <View key={p.userId} style={styles.row}>
-          {p.photo ? (
-            <Image source={{ uri: mediaUrl(p.photo) }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarEmpty]} />
-          )}
+          <UserPhoto photo={p.photo} style={styles.avatar} />
           <View style={styles.info}>
             <Text style={styles.name}>
               {p.displayName}, {p.age} {p.verified && <Text style={styles.verified}>✓</Text>}
             </Text>
             <Text style={styles.meta}>{p.role === "running" ? `Running ${p.eventLabel ?? ""}` : "Supporting"}</Text>
+            {p.sharedClubs.length > 0 && (
+              <Text style={styles.club} numberOfLines={1}>
+                <Ionicons name="people" size={12} color={colors.primary} /> {p.sharedClubs[0]} · your club too
+              </Text>
+            )}
           </View>
           {p.connection === "connected" && p.matchId ? (
             <Pressable style={styles.outline} onPress={() => openChat(p, p.matchId!)}>
@@ -327,6 +340,18 @@ const styles = StyleSheet.create({
   name: { color: colors.heading, fontSize: 15, fontWeight: "600" },
   verified: { color: colors.primary },
   meta: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
+  club: { color: colors.primary, fontSize: 12, fontFamily: fonts.bold, marginTop: 2 },
+  clubBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.primaryTint,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 10,
+  },
+  clubBannerText: { color: colors.primary, fontSize: 13, fontFamily: fonts.bold, flex: 1 },
   outline: { borderColor: colors.primary, borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
   outlineText: { color: colors.primary, fontSize: 13, fontWeight: "700" },
   primary: { backgroundColor: colors.primary, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, alignItems: "center" },

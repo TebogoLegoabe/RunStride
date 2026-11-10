@@ -211,3 +211,31 @@ def test_free_users_cannot_turn_a_pass_into_a_like(client, make_runner):
 
     res = client.post(f"/discover/{sipho['id']}/like", headers=thandi["headers"]).json()
     assert res["matched"] is False
+
+
+def _remove_photos(client, runner) -> None:
+    for photo in client.get("/me/profile", headers=runner["headers"]).json()["photos"]:
+        client.delete(f"/me/photos/{photo['id']}", headers=runner["headers"]).raise_for_status()
+
+
+def test_people_without_photos_are_shown_with_their_avatar(client, make_runner):
+    thandi = make_runner()
+    sipho = make_runner(gender="man", interested_in=["woman"])
+    _remove_photos(client, sipho)
+
+    assert feed(client, thandi)[0]["photos"] == []  # no photo, no avatar: still shown
+
+    profile = client.get("/me/profile", headers=sipho["headers"]).json()
+    body = {"displayName": profile["displayName"], "birthDate": profile["birthDate"], "avatar": "cheetah"}
+    client.put("/me/profile", json=body, headers=sipho["headers"]).raise_for_status()
+
+    assert feed(client, thandi)[0]["photos"] == ["avatar:cheetah"]
+
+
+def test_the_widest_distance_has_no_limit(client, make_runner):
+    thandi = make_runner(max_km=500)
+    far = make_runner(gender="man", interested_in=["woman"], km_north=3000)  # further than 2,000 km
+
+    assert feed_ids(client, thandi) == []
+    client.put("/me/search-distance", json={"maxDistanceKm": 2000}, headers=thandi["headers"]).raise_for_status()
+    assert feed_ids(client, thandi) == [far["id"]]

@@ -21,6 +21,7 @@ import type {
   Listing,
   RaceDetail,
   RaceInput,
+  RaceKind,
   RaceMessage,
   RaceSummary,
   DiscoverCard,
@@ -162,7 +163,7 @@ export const getMe = (token: string) =>
 export const deleteAccount = (token: string) => apiRequest<void>("/me", { method: "DELETE", token });
 
 // --- Profile ---
-export type ProfileInput = { displayName: string; birthDate: string; bio: string };
+export type ProfileInput = { displayName: string; birthDate: string; bio: string; avatar?: string | null };
 
 // For "get my X" endpoints: null means the user hasn't saved one yet
 const nullIfMissing = (e: unknown) => {
@@ -412,6 +413,7 @@ export type RaceDistance = "5k" | "10k" | "half" | "marathon" | "ultra";
 export type RaceFilters = {
   q?: string;
   mine?: boolean;
+  kind?: RaceKind; // races (the default) or the weekly parkruns
   province?: string;
   dateFrom?: string; // YYYY-MM-DD
   dateTo?: string;
@@ -428,6 +430,7 @@ export const getRaces = async (token: string, filters: RaceFilters = {}): Promis
   const params = new URLSearchParams();
   if (filters.q) params.set("q", filters.q);
   if (filters.mine) params.set("mine", "true");
+  if (filters.kind && filters.kind !== "race") params.set("kind", filters.kind);
   if (filters.province) params.set("province", filters.province);
   if (filters.dateFrom) params.set("date_from", filters.dateFrom);
   if (filters.dateTo) params.set("date_to", filters.dateTo);

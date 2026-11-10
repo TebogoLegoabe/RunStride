@@ -1,6 +1,7 @@
 """Running clubs: saved on the profile, matched across spellings, flagged on Discover."""
 from app.clubs import club_key, shared_clubs
 from tests.test_discover import feed  # noqa: F401
+from tests.test_races import admin, join, make_race, verification_off  # noqa: F401 (fixtures)
 
 RUNNING = {"paceSecondsPerKm": 330, "weeklyKm": 40, "terrains": ["road"], "goals": ["10k"], "runTimes": ["morning"]}
 
@@ -50,3 +51,23 @@ def test_club_suggestions_include_popular_and_well_known_ones(client, make_runne
     names = client.get("/me/clubs/suggest", headers=a["headers"]).json()
     assert names[0] == "Hout Bay Harriers" and "parkrun" in names
     assert client.get("/me/clubs/suggest", params={"q": "hout"}, headers=a["headers"]).json() == ["Hout Bay Harriers"]
+
+
+def test_race_runners_list_puts_clubmates_first(client, make_race, make_runner):
+    race = make_race()
+    thandi = make_runner()
+    clubmate = make_runner(gender="man", interested_in=["woman"])
+    stranger = make_runner(gender="man", interested_in=["woman"])
+    client.put("/me/running-profile", json={**RUNNING, "clubs": ["Hout Bay Harriers"]}, headers=thandi["headers"]).raise_for_status()
+    client.put("/me/running-profile", json={**RUNNING, "clubs": ["Hout Bay Harriers AC"]}, headers=clubmate["headers"]).raise_for_status()
+    # The stranger joins last, so without the club they'd be listed first
+    for runner in (thandi, clubmate, stranger):
+        join(client, runner, race)
+
+    res = client.get(f"/races/{race['id']}/attendees", headers=thandi["headers"]).json()
+
+    assert [(a["userId"], a["sharedClubs"]) for a in res["runners"]] == [
+        (clubmate["id"], ["Hout Bay Harriers AC"]),
+        (stranger["id"], []),
+    ]
+    assert res["clubmateCount"] == 1

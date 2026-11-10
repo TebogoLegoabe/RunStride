@@ -31,6 +31,6 @@ test("search distances fit the server's limit", () => {
   const max = Number(/max_distance_km: int = Field\(ge=1, le=(\d+)\)/.exec(schemas)?.[1]);
   assert.ok(max > 0);
   for (const km of DISTANCES_KM) assert.ok(km >= 1 && km <= max, `${km} km is outside 1–${max}`);
-  assert.equal(distanceLabel(max), "Anywhere in SA");
+  assert.equal(distanceLabel(max), "Anywhere");
   assert.equal(distanceLabel(50), "50 km");
 });

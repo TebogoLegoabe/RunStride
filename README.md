@@ -72,6 +72,13 @@ The column format is described at the top of `backend/app/race_import.py`, and
 `backend/data/races.example.csv` is a working example. Re-importing a file updates
 races with the same name and date rather than duplicating them.
 
+The weekly parkruns (`backend/data/za_parkruns.csv`) are listed apart from the races, under
+the "parkruns" view of the Races tab. Each one gets an entry per Saturday; run this every few
+weeks to add the following Saturdays:
+```bash
+docker compose exec api python -m app.parkrun_import            # the next 4 Saturdays
+```
+
 The entry swap board for a race only opens inside its official substitution window
 (`substitution_opens_on` to `substitution_closes_on`). Races without a window never
 allow swaps. For testing, `python -m app.dev_seed --races` makes seed runners join

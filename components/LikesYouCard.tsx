@@ -10,6 +10,7 @@ import { hoverable } from "../lib/responsive";
 import { openPlus } from "../lib/upsell";
 import type { LikesYou } from "../lib/types";
 import { colors, fonts, gradient, radius } from "../lib/theme";
+import { UserPhoto } from "./ui/UserPhoto";
 
 export function LikesYouCard({ likes }: { likes: LikesYou }) {
   const router = useRouter();
@@ -33,7 +34,7 @@ export function LikesYouCard({ likes }: { likes: LikesYou }) {
           return (
             <View key={i} style={[styles.face, { marginLeft: i === 0 ? 0 : -14, zIndex: shown - i }]}>
               {person?.photo ? (
-                <Image source={{ uri: mediaUrl(person.photo) }} style={styles.photo} />
+                <UserPhoto photo={person.photo} style={styles.photo} />
               ) : (
                 // Without Plus: a heart where the face would be
                 <LinearGradient colors={gradient.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.photo}>

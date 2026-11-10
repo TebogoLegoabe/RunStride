@@ -33,6 +33,7 @@ import { SafetySheet } from "../../../components/SafetySheet";
 import { Dropdown } from "../../../components/ui/Dropdown";
 import { DISTANCES_KM, SHOW_ME, distanceLabel, type Gender } from "../../../lib/options";
 import { colors } from "../../../lib/theme";
+import { avatarRef } from "../../../lib/avatars";
 import { useBreakpoint, useTopPadding } from "../../../lib/responsive";
 import { editHref } from "../../../lib/routing";
 
@@ -88,6 +89,9 @@ export default function Discover() {
   const [prefs, setPrefs] = useState<DatingPreferences | null>(null);
   // People swiped on this session: a refresh that lands before the swipe saves mustn't bring them back
   const decided = useRef(new Set<string>());
+  // Goes up whenever the deck is emptied (a filter changed, or another race was chosen): a feed
+  // asked for before that mustn't add people who no longer fit
+  const generation = useRef(0);
   const { height, isPhone } = useBreakpoint();
   const topPadding = useTopPadding();
   // The space between the header and the buttons: the card fills it, so nothing scrolls.
@@ -100,8 +104,10 @@ export default function Discover() {
   const keyboard = Platform.OS === "web" && !isPhone;
 
   const loadFeed = useCallback(async (t: string) => {
+    const asked = generation.current;
     try {
       const feed = await getDiscoverFeed(t, raceId);
+      if (asked !== generation.current) return; // the filters changed while this was loading
       // Keep cards already on screen; add new ones after them
       setCards((current) => {
         const seen = new Set([...current.map((c) => c.userId), ...decided.current]);
@@ -110,6 +116,7 @@ export default function Discover() {
       setError(null);
       setRaceLocked(null);
     } catch (e) {
+      if (asked !== generation.current) return;
       if (isUpgradeError(e)) setRaceLocked(e.message);
       else setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     }
@@ -137,6 +144,7 @@ export default function Discover() {
 
   // Switching between everyone and one race starts the feed afresh
   useEffect(() => {
+    generation.current += 1;
     setCards([]);
   }, [raceId]);
 
@@ -169,7 +177,7 @@ export default function Discover() {
           getMyProfile(t),
           getDatingPreferences(t),
         ]);
-        setMyPhoto(profile?.photos[0]?.url ?? null);
+        setMyPhoto(profile?.photos[0]?.url ?? (profile?.avatar ? avatarRef(profile.avatar) : null));
         setPrefs(prefs);
         setMine(running);
         if (!me.hasLocation) {
@@ -200,7 +208,9 @@ export default function Discover() {
     setPrefs(next);
     setError(null);
     try {
-      setPrefs(await saveDatingPreferences(token, next));
+      const saved = await saveDatingPreferences(token, next);
+      generation.current += 1;
+      setPrefs(saved);
       setCards([]);
       await loadFeed(token);
     } catch (e) {

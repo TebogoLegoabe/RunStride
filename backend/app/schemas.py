@@ -71,6 +71,17 @@ class ProfileUpsertRequest(CamelModel):
     display_name: str = Field(max_length=50)
     birth_date: date
     bio: str | None = Field(default=None, max_length=500)
+    # An avatar to show instead of photos; left as it is when not sent
+    avatar: str | None = None
+
+    @field_validator("avatar")
+    @classmethod
+    def known_avatar(cls, v: str | None) -> str | None:
+        from app.avatars import AVATARS
+
+        if v is not None and v not in AVATARS:
+            raise ValueError("Pick one of the avatars.")
+        return v
 
     @field_validator("display_name")
     @classmethod
@@ -107,6 +118,7 @@ class ProfileResponse(CamelModel):
     birth_date: date
     age: int
     bio: str | None
+    avatar: str | None = None
     photos: list[PhotoResponse]
 
 
@@ -173,7 +185,7 @@ class DatingPreferencesBody(CamelModel):
     interested_in: list[Gender] = Field(min_length=1)
     age_min: int = Field(ge=18, le=99)
     age_max: int = Field(ge=18, le=99)
-    max_distance_km: int = Field(ge=1, le=2000)  # 2000: anywhere in South Africa
+    max_distance_km: int = Field(ge=1, le=2000)  # 2000: anywhere, no distance limit
 
     _dedupe_lists = field_validator("interested_in")(_dedupe)
 
@@ -439,6 +451,8 @@ Province = Literal[
     "Mpumalanga", "Northern Cape", "North West", "Western Cape",
 ]
 AttendanceRole = Literal["running", "supporting"]
+# A once-off race, or one Saturday of a weekly parkrun
+RaceKind = Literal["race", "parkrun"]
 # Swap board state for a race: open (inside the official window), upcoming, closed,
 # or none (the organiser hasn't published a transfer window, so no swaps)
 SwapWindow = Literal["open", "upcoming", "closed", "none"]
@@ -525,6 +539,7 @@ class MyAttendance(CamelModel):
 class RaceSummary(CamelModel):
     id: uuid.UUID
     name: str
+    kind: RaceKind = "race"
     starts_on: date
     ends_on: date
     venue: str
@@ -576,6 +591,8 @@ class Attendee(CamelModel):
     connection: Connection
     match_id: uuid.UUID | None = None
     request_id: uuid.UUID | None = None
+    # Their clubs that you're in too: spot your clubmates at the race
+    shared_clubs: list[str] = Field(default_factory=list)
 
 
 class Sender(CamelModel):
@@ -835,7 +852,7 @@ class AdminStats(CamelModel):
     open_feedback: int = 0
     signups_by_day: list[DayCount]  # the last 14 days
     beta_plus_unclaimed: int = 0  # can still activate the free beta Plus
-    hidden_from_discover: int = 0  # signed up, but nobody can see them yet (no location, photo or preferences)
+    hidden_from_discover: int = 0  # signed up, but nobody can see them yet (no location or preferences)
 
 
 class RemindResult(CamelModel):
@@ -903,6 +920,8 @@ class RaceRunnersOut(CamelModel):
     # Going, but not shown without Plus or a race pass
     hidden_count: int
     full_access: bool
+    # How many people going run with one of your clubs (shown or not)
+    clubmate_count: int = 0
 
 
 # --- Push notifications ---

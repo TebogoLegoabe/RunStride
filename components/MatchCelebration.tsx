@@ -17,6 +17,7 @@ import { Button } from "./ui/Button";
 import { mediaUrl } from "../lib/api";
 import { haptics } from "../lib/haptics";
 import { colors, gradient, shadow } from "../lib/theme";
+import { UserPhoto } from "./ui/UserPhoto";
 import type { MatchSummary } from "../lib/types";
 
 type Props = {
@@ -39,7 +40,7 @@ function Photo({ uri, side }: { uri: string | null; side: "left" | "right" }) {
   }));
   return (
     <Animated.View style={[styles.photoFrame, shadow.card, style]}>
-      {uri ? <Image source={{ uri: mediaUrl(uri) }} style={styles.photo} /> : <View style={[styles.photo, styles.photoEmpty]} />}
+      <UserPhoto photo={uri} style={styles.photo} emojiSize={64} />
     </Animated.View>
   );
 }

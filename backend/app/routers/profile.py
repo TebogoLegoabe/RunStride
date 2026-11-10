@@ -21,6 +21,7 @@ def _to_response(profile: Profile) -> ProfileResponse:
         birth_date=profile.birth_date,
         age=age_on(profile.birth_date, date.today()),
         bio=profile.bio,
+        avatar=profile.avatar,
         photos=[PhotoResponse(id=p.id, url=p.url, position=p.position) for p in profile.photos],
     )
 
@@ -41,6 +42,8 @@ def upsert_profile(body: ProfileUpsertRequest, user: CurrentUser, db: DbSession)
     profile.display_name = body.display_name
     profile.birth_date = body.birth_date
     profile.bio = body.bio
+    if "avatar" in body.model_fields_set:  # older apps don't send it: keep what's there
+        profile.avatar = body.avatar
     db.commit()
     return _to_response(profile)
 

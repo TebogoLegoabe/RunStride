@@ -10,6 +10,8 @@ from sqlalchemy import and_, cast, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, aliased
 
+from app.avatars import main_photo
+from app.clubs import shared_clubs
 from app.config import Settings
 from app.deps import AppSettings, CurrentUser, DbSession
 from app.models import (
@@ -61,6 +63,7 @@ from app.schemas import (
     MessageBody,
     MyAttendance,
     RaceDetail,
+    RaceKind,
     RaceEventOut,
     RaceAlerts,
     RaceMessageOut,
@@ -128,6 +131,7 @@ def _summary_fields(db: Session, race: Race, me: User) -> dict:
         distance_km=_distance_km(db, race, me),
         id=race.id,
         name=race.name,
+        kind=race.kind,
         starts_on=race.starts_on,
         ends_on=race.ends_on,
         venue=race.venue,
@@ -313,6 +317,7 @@ def list_races(
     q: Annotated[str | None, Query(max_length=80)] = None,
     province: Annotated[str | None, Query(max_length=40)] = None,
     mine: bool = False,
+    kind: RaceKind = "race",
     date_from: date | None = None,
     date_to: date | None = None,
     distance: Annotated[list[DistanceBucket] | None, Query()] = None,
@@ -322,7 +327,8 @@ def list_races(
 ) -> list[RaceSummary]:
     """Upcoming published races, soonest first, a page at a time.
 
-    `mine`: only races you've joined. `date_from`/`date_to`: races happening on any day in
+    `mine`: only races you've joined, parkruns included. `kind`: races (the default) or the
+    weekly parkruns, which are listed apart so they don't bury the races. `date_from`/`date_to`: races happening on any day in
     that range. `distance` (repeatable): races with at least one distance in each bucket's
     range, e.g. ?distance=half&distance=marathon for races offering a half or a marathon.
     `radius_km`: only races within that many km of where you are (needs your location; races whose
@@ -338,6 +344,8 @@ def list_races(
         stmt = stmt.where(Race.province == province)
     if mine:
         stmt = stmt.where(exists().where(RaceAttendance.race_id == Race.id, RaceAttendance.user_id == user.id))
+    else:
+        stmt = stmt.where(Race.kind == kind)
     if distance:
         in_any_bucket = or_(
             *(
@@ -500,6 +508,7 @@ def list_attendees(
     incoming = {r.from_user_id: r for r in pending if r.to_user_id == user.id}
     labels = {e.id: e.label for e in race.events}
     today = sa_today()
+    my_clubs = (user.running_profile.clubs or []) if user.running_profile is not None else []
 
     attendees = []
     for other, attendance in rows:
@@ -514,29 +523,34 @@ def list_attendees(
             connection, request = "requested", outgoing[other.id]
         else:
             connection, request = "none", None
-        photo = db.scalar(
-            select(ProfilePhoto.url).where(ProfilePhoto.user_id == other.id).order_by(ProfilePhoto.position).limit(1)
-        )
         attendees.append(
             Attendee(
                 user_id=other.id,
                 display_name=other.profile.display_name,
                 age=age_on(other.profile.birth_date, today),
-                photo=photo,
+                photo=main_photo(other.profile),
                 verified=other.verification_status == VerificationStatus.verified,
                 role=attendance.role,
                 event_label=labels.get(attendance.race_event_id),
                 connection=connection,
                 match_id=match.id if match else None,
                 request_id=request.id if request else None,
+                shared_clubs=shared_clubs(
+                    my_clubs, (other.running_profile.clubs or []) if other.running_profile is not None else []
+                ),
             )
         )
+    clubmates = sum(bool(a.shared_clubs) for a in attendees)
+    # Clubmates first (the sort is stable, so newest joiners still lead within each group)
+    attendees.sort(key=lambda a: not a.shared_clubs)
     if full_access:
-        return RaceRunnersOut(runners=attendees, hidden_count=0, full_access=True)
+        return RaceRunnersOut(runners=attendees, hidden_count=0, full_access=True, clubmate_count=clubmates)
     # Free: people you're already talking to, then the first few; the rest are a count
     attendees.sort(key=lambda a: a.connection == "none")
     shown = attendees[: max(FREE_RUNNERS_VISIBLE, sum(a.connection != "none" for a in attendees))]
-    return RaceRunnersOut(runners=shown, hidden_count=len(attendees) - len(shown), full_access=False)
+    return RaceRunnersOut(
+        runners=shown, hidden_count=len(attendees) - len(shown), full_access=False, clubmate_count=clubmates
+    )
 
 
 # --- Race group chat ---
