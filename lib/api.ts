@@ -22,6 +22,7 @@ import type {
   RaceDetail,
   RaceInput,
   RaceKind,
+  Reaction,
   RaceMessage,
   RaceSummary,
   DiscoverCard,
@@ -337,8 +338,44 @@ export const getMessages = (
   return apiRequest<Message[]>(`/matches/${matchId}/messages${params ? `?${params}` : ""}`, { token });
 };
 
-export const sendMessage = (token: string, matchId: string, body: string) =>
-  apiRequest<Message>(`/matches/${matchId}/messages`, { method: "POST", body: { body }, token });
+export const sendMessage = (token: string, matchId: string, body: string, replyToId?: string) =>
+  apiRequest<Message>(`/matches/${matchId}/messages`, { method: "POST", body: { body, replyToId }, token });
+
+async function postForm<T>(token: string, path: string, form: FormData): Promise<T> {
+  // No Content-Type header: fetch sets the multipart boundary itself
+  const res = await fetch(`${API_BASE_URL}${path}`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
+  if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
+  return res.json() as Promise<T>;
+}
+
+// A photo in a chat, with an optional caption
+export async function sendChatPhoto(token: string, matchId: string, uri: string, caption: string, replyToId?: string) {
+  const form = new FormData();
+  form.append("file", await photoFile(uri), "photo.jpg");
+  if (caption.trim()) form.append("caption", caption.trim());
+  if (replyToId) form.append("reply_to_id", replyToId);
+  return postForm<Message>(token, `/matches/${matchId}/messages/photo`, form);
+}
+
+// A voice note. `file` comes from lib/recorder (a recording on disk, or a browser Blob).
+export async function sendVoiceNote(
+  token: string,
+  matchId: string,
+  file: Blob,
+  fileName: string,
+  durationMs: number,
+  replyToId?: string
+) {
+  const form = new FormData();
+  form.append("file", file, fileName);
+  form.append("duration_ms", String(Math.round(durationMs)));
+  if (replyToId) form.append("reply_to_id", replyToId);
+  return postForm<Message>(token, `/matches/${matchId}/messages/voice`, form);
+}
+
+// Your reaction to a message (one each); null removes it. Returns everyone's reactions to it.
+export const reactToMessage = (token: string, matchId: string, messageId: string, emoji: string | null) =>
+  apiRequest<Reaction[]>(`/matches/${matchId}/messages/${messageId}/reaction`, { method: "PUT", body: { emoji }, token });
 
 export const markRead = (token: string, matchId: string) =>
   apiRequest<void>(`/matches/${matchId}/read`, { method: "POST", token });

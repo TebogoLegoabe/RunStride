@@ -13,7 +13,8 @@ export function PushManager() {
   useEffect(() => {
     if (!token) return;
     getNotificationSettings(token)
-      .then((settings) => (settings.enabled ? registerForPush(token) : null))
+      // Never asks here: components/NotificationPrompt.tsx asks, with an explanation
+      .then((settings) => (settings.enabled ? registerForPush(token, false) : null))
       .catch(() => {}); // no push this time; the app still shows everything while open
   }, [token]);
 

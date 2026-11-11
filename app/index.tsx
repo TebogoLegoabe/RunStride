@@ -110,7 +110,7 @@ export default function Welcome() {
           {FEATURES.map((f, i) => (
             <Animated.View key={f.title} entering={FadeInDown.delay(500 + i * 120).duration(450)} style={styles.feature}>
               <LinearGradient colors={gradient.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.featureIcon}>
-                <Ionicons name={f.icon} size={18} color={colors.heading} />
+                <Ionicons name={f.icon} size={18} color={colors.onAccent} />
               </LinearGradient>
               <View style={styles.featureText}>
                 <Text style={styles.featureTitle}>{f.title}</Text>

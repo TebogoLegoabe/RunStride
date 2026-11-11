@@ -28,6 +28,7 @@ from app.routers import (
     admin,
     auth,
     billing,
+    chat_media,
     chat_requests,
     discover,
     feedback,
@@ -100,6 +101,7 @@ app.include_router(profile.router)
 app.include_router(preferences.router)
 app.include_router(discover.router)
 app.include_router(matches.router)
+app.include_router(chat_media.router)
 app.include_router(races.router)
 app.include_router(chat_requests.router)
 app.include_router(run_dates.router)

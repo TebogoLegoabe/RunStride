@@ -13,7 +13,8 @@ import {
 } from "@expo-google-fonts/plus-jakarta-sans";
 import { View, Pressable, StyleSheet } from "react-native";
 import { Text } from "../components/ui/Text";
-import { colors } from "../lib/theme";
+import * as SystemUI from "expo-system-ui";
+import { colors, scheme } from "../lib/theme";
 import { installErrorReporting, reportError } from "../lib/errorReporting";
 
 installErrorReporting();
@@ -59,11 +60,16 @@ export default function RootLayout() {
     if (ready) SplashScreen.hideAsync().catch(() => {});
   }, [ready]);
 
+  // The native root view shows behind the keyboard and screen transitions: match the theme
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(colors.bg).catch(() => {});
+  }, []);
+
   if (!ready) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <StatusBar style="light" />
+      <StatusBar style={scheme === "light" ? "dark" : "light"} />
       <Stack
         screenOptions={{
           headerShown: false,

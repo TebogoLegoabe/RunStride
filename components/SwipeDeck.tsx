@@ -119,12 +119,12 @@ const SwipeCard = forwardRef<CardHandle, SwipeCardProps>(function SwipeCard(
       >
         <RunnerCard card={card} mine={mine} onOptions={onOptions} />
         <Animated.View style={[styles.stamp, styles.likeStamp, likeStamp]} pointerEvents="none">
-          <Ionicons name="heart" size={22} color={colors.pink} />
-          <Text style={[styles.stampText, { color: colors.pink }]}>LIKE</Text>
+          <Ionicons name="heart" size={22} color={colors.pinkOnPhoto} />
+          <Text style={[styles.stampText, { color: colors.pinkOnPhoto }]}>LIKE</Text>
         </Animated.View>
         <Animated.View style={[styles.stamp, styles.passStamp, passStamp]} pointerEvents="none">
-          <Ionicons name="close" size={22} color={colors.textBright} />
-          <Text style={[styles.stampText, { color: colors.textBright }]}>NOPE</Text>
+          <Ionicons name="close" size={22} color={colors.onPhoto} />
+          <Text style={[styles.stampText, { color: colors.onPhoto }]}>NOPE</Text>
         </Animated.View>
       </Animated.View>
     </GestureDetector>
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: colors.scrimStrong,
   },
-  likeStamp: { left: 18, borderColor: colors.pink, transform: [{ rotate: "-14deg" }] },
-  passStamp: { right: 18, borderColor: colors.textBright, transform: [{ rotate: "14deg" }] },
+  likeStamp: { left: 18, borderColor: colors.pinkOnPhoto, transform: [{ rotate: "-14deg" }] },
+  passStamp: { right: 18, borderColor: colors.onPhoto, transform: [{ rotate: "14deg" }] },
   stampText: { fontSize: 24, fontWeight: "800", letterSpacing: 2 },
 });

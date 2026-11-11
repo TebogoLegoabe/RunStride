@@ -9,6 +9,7 @@ import { ChatProvider } from "../../components/ChatProvider";
 import { MembershipProvider } from "../../components/MembershipProvider";
 import { SwapAlertBanner } from "../../components/SwapAlertBanner";
 import { PushManager } from "../../components/PushManager";
+import { NotificationPrompt } from "../../components/NotificationPrompt";
 import { colors } from "../../lib/theme";
 
 // Layout for signed-in screens. Only users who finished onboarding get in; everyone
@@ -74,6 +75,7 @@ export default function AppLayout() {
         <Stack screenOptions={{ headerShown: false }} />
         <SwapAlertBanner />
         <PushManager />
+        <NotificationPrompt />
       </MembershipProvider>
     </ChatProvider>
   );

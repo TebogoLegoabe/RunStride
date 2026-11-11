@@ -62,7 +62,7 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
       )}
       {onOptions && (
         <Pressable style={styles.optionsButton} onPress={onOptions} accessibilityLabel={`Report or block ${card.displayName}`}>
-          <Ionicons name="ellipsis-horizontal" size={20} color={colors.heading} />
+          <Ionicons name="ellipsis-horizontal" size={20} color={colors.onPhoto} />
         </Pressable>
       )}
 
@@ -73,12 +73,12 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
               <Text style={styles.name} numberOfLines={1}>
                 {card.displayName}, {card.age}
               </Text>
-              {card.verified && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+              {card.verified && <Ionicons name="checkmark-circle" size={20} color={colors.primaryOnPhoto} />}
             </View>
             <View style={styles.badges}>
               {card.likesYou && (
                 <View style={[styles.badge, styles.likesYou]}>
-                  <Ionicons name="heart" size={12} color={colors.heading} />
+                  <Ionicons name="heart" size={12} color={colors.onAccent} />
                   <Text style={styles.badgeText}>Likes you</Text>
                 </View>
               )}
@@ -87,21 +87,21 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
               </View>
             </View>
             <Text style={styles.facts} numberOfLines={1}>
-              <Ionicons name="location-outline" size={13} color={colors.textBright} /> {card.distanceKm} km ·{" "}
+              <Ionicons name="location-outline" size={13} color={colors.onPhotoMuted} /> {card.distanceKm} km ·{" "}
               {formatPace(card.paceSecondsPerKm)} /km · {card.weeklyKm} km/week
             </Text>
             {card.sharedClubs.length > 0 ? (
               <Text style={styles.club} numberOfLines={1}>
-                <Ionicons name="people" size={13} color={colors.primary} /> You both run with {card.sharedClubs[0]}
+                <Ionicons name="people" size={13} color={colors.primaryOnPhoto} /> You both run with {card.sharedClubs[0]}
               </Text>
             ) : card.clubs.length > 0 ? (
               <Text style={styles.clubPlain} numberOfLines={1}>
-                <Ionicons name="people-outline" size={13} color={colors.textBright} /> {card.clubs.join(" · ")}
+                <Ionicons name="people-outline" size={13} color={colors.onPhotoMuted} /> {card.clubs.join(" · ")}
               </Text>
             ) : null}
             {firstRace && (
               <Text style={styles.race} numberOfLines={1}>
-                <Ionicons name="flag" size={13} color={colors.pink} /> Also at {firstRace.name}
+                <Ionicons name="flag" size={13} color={colors.pinkOnPhoto} /> Also at {firstRace.name}
                 {firstRace.eventLabel ? ` · ${firstRace.eventLabel}` : ""}
                 {moreRaces > 0 ? ` +${moreRaces} more` : ""}
               </Text>
@@ -113,7 +113,7 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
             accessibilityLabel={`More about ${card.displayName}`}
             hitSlop={8}
           >
-            <Ionicons name="information" size={20} color={colors.heading} />
+            <Ionicons name="information" size={20} color={colors.onPhoto} />
           </Pressable>
         </View>
       </LinearGradient>
@@ -188,13 +188,13 @@ export function RunnerCard({ card, mine, onOptions }: Props) {
 }
 
 const styles = StyleSheet.create({
-  club: { color: colors.heading, fontSize: 13, fontWeight: "700", marginTop: 2 },
-  clubPlain: { color: colors.textBright, fontSize: 13, marginTop: 2 },
+  club: { color: colors.onPhoto, fontSize: 13, fontWeight: "700", marginTop: 2 },
+  clubPlain: { color: colors.onPhotoMuted, fontSize: 13, marginTop: 2 },
   card: { flex: 1, width: "100%", borderRadius: 22, overflow: "hidden", backgroundColor: colors.border },
   photo: { width: "100%", height: "100%" },
   photoBars: { position: "absolute", top: 10, left: 10, right: 10, flexDirection: "row", gap: 4 },
   photoBar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.photoBarDim },
-  photoBarOn: { backgroundColor: colors.heading },
+  photoBarOn: { backgroundColor: colors.onPhoto },
   optionsButton: {
     position: "absolute",
     top: 22,
@@ -210,15 +210,15 @@ const styles = StyleSheet.create({
   footerRow: { flexDirection: "row", alignItems: "flex-end", gap: 10 },
   footerText: { flex: 1, minWidth: 0, gap: 6 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  name: { color: colors.heading, fontSize: 26, fontFamily: fonts.extrabold, flexShrink: 1 },
+  name: { color: colors.onPhoto, fontSize: 26, fontFamily: fonts.extrabold, flexShrink: 1 },
   badges: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   badge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
   match: { backgroundColor: colors.primary },
   // Only Plus members see who already likes them
   likesYou: { backgroundColor: colors.pink },
-  badgeText: { color: colors.heading, fontSize: 12, fontFamily: fonts.bold },
-  facts: { color: colors.textBright, fontSize: 14 },
-  race: { color: colors.pink, fontSize: 13, fontFamily: fonts.bold },
+  badgeText: { color: colors.onAccent, fontSize: 12, fontFamily: fonts.bold },
+  facts: { color: colors.onPhotoMuted, fontSize: 14 },
+  race: { color: colors.pinkOnPhoto, fontSize: 13, fontFamily: fonts.bold },
   infoButton: {
     width: 36,
     height: 36,
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  infoPanel: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.backdropStrong, padding: 18 },
+  infoPanel: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.overlay, padding: 18 },
   infoHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
   infoName: { color: colors.heading, fontSize: 22, fontFamily: fonts.extrabold, flexShrink: 1 },
   infoBody: { gap: 16, paddingBottom: 12 },

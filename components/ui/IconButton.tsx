@@ -21,7 +21,7 @@ const SPRING = { damping: 12, stiffness: 320 };
 export function IconButton({ icon, onPress, size = 64, filled, color, disabled, accessibilityLabel }: Props) {
   const scale = useSharedValue(1);
   const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  const iconColor = color ?? (filled ? colors.heading : colors.textBright);
+  const iconColor = color ?? (filled ? colors.onAccent : colors.textBright);
   const circle = { width: size, height: size, borderRadius: size / 2 };
 
   return (

@@ -1,6 +1,6 @@
 // Layout for sign-in screens: full screen on phones, a centered card on tablets and computers.
 import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
-import { colors, radius, shadow } from "../../lib/theme";
+import { colors, radius, scheme, shadow } from "../../lib/theme";
 import { useBottomPadding, useBreakpoint, useTopPadding } from "../../lib/responsive";
 
 export function AuthCard({ children }: { children: React.ReactNode }) {
@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 24 },
   column: { width: "100%", maxWidth: 440 },
   card: {
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: scheme === "light" ? colors.surface : "rgba(255,255,255,0.04)",
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.xl,

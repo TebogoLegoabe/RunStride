@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  badgeText: { color: colors.heading, fontSize: 11, fontFamily: fonts.bold },
+  badgeText: { color: colors.onAccent, fontSize: 11, fontFamily: fonts.bold },
   dot: {
     position: "absolute",
     top: -2,

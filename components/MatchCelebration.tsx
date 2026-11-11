@@ -71,7 +71,7 @@ export function MatchCelebration({ match, myPhoto, onMessage, onClose }: Props) 
               <Photo uri={match.photo} side="right" />
               <Animated.View style={[styles.heartWrap, heartStyle]}>
                 <LinearGradient colors={gradient.brand} style={styles.heart}>
-                  <Ionicons name="heart" size={30} color={colors.heading} />
+                  <Ionicons name="heart" size={30} color={colors.onAccent} />
                 </LinearGradient>
               </Animated.View>
             </View>
@@ -90,7 +90,7 @@ export function MatchCelebration({ match, myPhoto, onMessage, onClose }: Props) 
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: colors.backdropStrong, alignItems: "center", justifyContent: "center", padding: 24 },
+  backdrop: { flex: 1, backgroundColor: colors.overlay, alignItems: "center", justifyContent: "center", padding: 24 },
   glow: { position: "absolute", top: 0, left: 0, right: 0, height: "60%" },
   title: { color: colors.heading, fontSize: 38, fontWeight: "800", textAlign: "center", marginBottom: 28, letterSpacing: -0.5 },
   photos: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 32 },

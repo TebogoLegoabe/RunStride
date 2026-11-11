@@ -38,7 +38,7 @@ export function LikesYouCard({ likes }: { likes: LikesYou }) {
               ) : (
                 // Without Plus: a heart where the face would be
                 <LinearGradient colors={gradient.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.photo}>
-                  <Ionicons name="heart" size={18} color={colors.heading} />
+                  <Ionicons name="heart" size={18} color={colors.onAccent} />
                 </LinearGradient>
               )}
             </View>

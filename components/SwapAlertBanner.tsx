@@ -57,7 +57,7 @@ export function SwapAlertBanner() {
         }}
       >
         <View style={styles.icon}>
-          <Ionicons name="swap-horizontal" size={20} color={colors.heading} />
+          <Ionicons name="swap-horizontal" size={20} color={colors.onAccent} />
         </View>
         <View style={styles.text}>
           <Text style={styles.title}>{title}</Text>

@@ -81,7 +81,7 @@ export default function TabsLayout() {
           tabBarIcon: icon("flag"),
           // Someone @mentioned you in a race chat, or an entry you want came up
           tabBarBadge: raceAlertTotal > 0 ? raceAlertTotal : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.pink, color: colors.heading, fontFamily: fonts.bold, fontSize: 11 },
+          tabBarBadgeStyle: { backgroundColor: colors.pink, color: colors.onAccent, fontFamily: fonts.bold, fontSize: 11 },
         }}
       />
       <Tabs.Screen
@@ -90,7 +90,7 @@ export default function TabsLayout() {
           title: "Matches",
           tabBarIcon: icon("chatbubbles"),
           tabBarBadge: unreadTotal > 0 ? unreadTotal : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.pink, color: colors.heading, fontFamily: fonts.bold, fontSize: 11 },
+          tabBarBadgeStyle: { backgroundColor: colors.pink, color: colors.onAccent, fontFamily: fonts.bold, fontSize: 11 },
         }}
       />
       <Tabs.Screen name="profile" options={{ title: "Profile", tabBarIcon: icon("person-circle") }} />

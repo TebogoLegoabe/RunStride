@@ -18,7 +18,7 @@ export function EmptyState({ icon, title, body, action }: Props) {
   return (
     <Animated.View entering={FadeInUp.duration(400)} style={styles.wrap}>
       <LinearGradient colors={gradient.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.badge}>
-        <Ionicons name={icon} size={34} color={colors.heading} />
+        <Ionicons name={icon} size={34} color={colors.onAccent} />
       </LinearGradient>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.body}>{body}</Text>

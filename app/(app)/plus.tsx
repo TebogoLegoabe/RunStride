@@ -89,7 +89,7 @@ export default function PlusScreen() {
         <Stack.Screen options={{ presentation: "modal", animation: "slide_from_bottom" }} />
         <Animated.View entering={ZoomIn.springify()}>
           <LinearGradient colors={gradient.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.doneBadge}>
-            <Ionicons name="checkmark" size={44} color={colors.heading} />
+            <Ionicons name="checkmark" size={44} color={colors.onAccent} />
           </LinearGradient>
         </Animated.View>
         <Text style={styles.doneTitle}>{done}</Text>
@@ -116,7 +116,7 @@ export default function PlusScreen() {
       >
         {note ? (
           <View style={[styles.planNote, selected && styles.planNoteSelected]}>
-            <Text style={styles.planNoteText}>{note}</Text>
+            <Text style={[styles.planNoteText, selected && styles.planNoteTextSelected]}>{note}</Text>
           </View>
         ) : null}
         <Text style={styles.planName}>{name}</Text>
@@ -143,7 +143,7 @@ export default function PlusScreen() {
 
       <Animated.View entering={FadeInDown.duration(400)} style={styles.hero}>
         <LinearGradient colors={gradient.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroBadge}>
-          <Ionicons name="flash" size={30} color={colors.heading} />
+          <Ionicons name="flash" size={30} color={colors.onAccent} />
         </LinearGradient>
         <Text style={styles.title}>RunStride Plus</Text>
         <Text style={styles.subtitle}>Meet more of the runners at your races, sooner.</Text>
@@ -318,6 +318,7 @@ const styles = StyleSheet.create({
   },
   planNoteSelected: { backgroundColor: colors.primary },
   planNoteText: { color: colors.heading, fontSize: 11, fontFamily: fonts.bold },
+  planNoteTextSelected: { color: colors.onAccent },
   planName: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.semibold, textAlign: "center" },
   planPrice: { color: colors.heading, fontSize: 26, fontFamily: fonts.extrabold, marginTop: 4 },
   planPer: { color: colors.textFaint, fontSize: 12 },

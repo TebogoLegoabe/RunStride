@@ -2,7 +2,7 @@ import { ScrollViewStyleReset } from "expo-router/html";
 import type { PropsWithChildren } from "react";
 
 // The web page around the app: makes "Add to Home Screen" open it like an app (full screen, RunStride icon),
-// and stops a white flash before the dark app loads.
+// and stops a white flash before the app loads.
 export default function Root({ children }: PropsWithChildren) {
   return (
     <html lang="en-ZA">
@@ -23,8 +23,19 @@ export default function Root({ children }: PropsWithChildren) {
         <style
           dangerouslySetInnerHTML={{
             __html:
-              "body{background-color:#2e0444}input,textarea{outline:none}" +
+              "body{background-color:#2e0444}html.light body{background-color:#f6f1fa}input,textarea{outline:none}" +
               "@media (pointer:coarse){input,textarea{font-size:16px!important}}",
+          }}
+        />
+        {/* Light theme (chosen on the profile tab, see lib/theme.ts): switch the page color before
+            the app loads so there's no purple flash, and tint the browser bar to match. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'try{var t=localStorage.getItem("runstride.theme");' +
+              'if(t==="system")t=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";' +
+              'if(t==="light"){document.documentElement.classList.add("light");' +
+              'var m=document.querySelector("meta[name=theme-color]");if(m)m.setAttribute("content","#f6f1fa")}}catch(e){}',
           }}
         />
       </head>

@@ -85,7 +85,7 @@ export function SafetySheet({ visible, token, person, matchId, raceId, onClose, 
       disabled={busy}
     >
       {busy && style !== "plain" ? (
-        <ActivityIndicator color={style === "danger" ? colors.heading : colors.onPrimary} />
+        <ActivityIndicator color={style === "danger" ? colors.onAccent : colors.onPrimary} />
       ) : (
         <Text
           style={[
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   primary: { backgroundColor: colors.primary },
   primaryText: { color: colors.onPrimary, fontWeight: "600" },
   danger: { backgroundColor: colors.danger },
-  dangerText: { color: colors.heading, fontWeight: "600" },
+  dangerText: { color: colors.onAccent, fontWeight: "600" },
   emergency: {
     borderColor: colors.warning,
     borderWidth: 1,

@@ -63,6 +63,16 @@ def active_match(db: Session, me: User, match_id: uuid.UUID) -> Match:
     return match
 
 
+def reply_target(db: Session, match: Match, reply_to_id: uuid.UUID | None) -> Message | None:
+    """The message being replied to, which must be in the same conversation."""
+    if reply_to_id is None:
+        return None
+    target = db.get(Message, reply_to_id)
+    if target is None or target.match_id != match.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="The message you're replying to isn't in this chat.")
+    return target
+
+
 def check_rate_limits(db: Session, me: User, settings: Settings) -> None:
     now = utcnow()
 
@@ -165,7 +175,10 @@ def send_message(
 ) -> MessageOut:
     match = active_match(db, user, match_id)
     check_rate_limits(db, user, settings)
-    message = Message(match_id=match.id, sender_id=user.id, body=body.body, created_at=utcnow())
+    reply = reply_target(db, match, body.reply_to_id)
+    message = Message(
+        match_id=match.id, sender_id=user.id, body=body.body, created_at=utcnow(), reply_to_id=reply.id if reply else None
+    )
     db.add(message)
     db.commit()
     out = publish_message(message, [match.user_a_id, match.user_b_id])

@@ -33,3 +33,11 @@ def process_photo(raw: bytes) -> bytes:
     out = BytesIO()
     img.save(out, "JPEG", quality=85, optimize=True)
     return out.getvalue()
+
+
+def process_chat_photo(raw: bytes) -> tuple[bytes, int, int]:
+    """Like process_photo (EXIF and GPS removed), also returning the width and height, so the
+    chat can leave the right space for it before it loads."""
+    jpeg = process_photo(raw)
+    with Image.open(BytesIO(jpeg)) as img:
+        return jpeg, img.width, img.height

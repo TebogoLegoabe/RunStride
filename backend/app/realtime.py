@@ -62,7 +62,12 @@ def publish_message(message: Message, recipients: Iterable[uuid.UUID]) -> Messag
     # Push to the other person (never the sender). Message text stays off the lock screen.
     from app import push  # imported here: app.push uses the database, this module mustn't need it
 
-    body = {"text": "Sent you a message", "run_date": "Suggested a run together"}.get(message.kind, message.body)
+    body = {
+        "text": "Sent you a message",
+        "run_date": "Suggested a run together",
+        "image": "Sent you a photo",
+        "voice": "Sent you a voice message",
+    }.get(message.kind, message.body)
     push.notify(
         [r for r in recipients if r != message.sender_id],
         "messages",

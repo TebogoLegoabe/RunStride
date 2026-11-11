@@ -10,7 +10,7 @@ from app.deps import CurrentUser, DbSession
 from app.models import OtpCode
 from app.moderation import end_all_matches
 from app.routers.id_check import purge_user_files
-from app.storage import PhotoStorage, get_id_storage, get_photo_storage
+from app.storage import PhotoStorage, get_id_storage, get_photo_storage, user_file_urls
 
 router = APIRouter(tags=["account"])
 logger = logging.getLogger("runstride.account")
@@ -29,7 +29,7 @@ def delete_account(
     this person, including their evidence copy, so deleting can't erase proof of abuse.
     (Suspended and banned accounts can't reach this: they can't authenticate.)
     """
-    photo_urls = [p.url for p in user.profile.photos] if user.profile else []
+    photo_urls = user_file_urls(db, user)
     purge_user_files(db, user, get_id_storage())
     # Tell matches their chat is closing before the rows disappear
     end_all_matches(db, user, user.id)

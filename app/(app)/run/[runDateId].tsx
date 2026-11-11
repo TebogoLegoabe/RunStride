@@ -233,7 +233,7 @@ export default function RunSafetyScreen() {
             </Pressable>
             {share!.status !== "alert" && (
               <Pressable style={styles.panicButton} onPress={() => setConfirmAlert(true)} disabled={busy}>
-                <Ionicons name="alert-circle" size={22} color={colors.heading} />
+                <Ionicons name="alert-circle" size={22} color={colors.onAccent} />
                 <Text style={styles.panicText}>I need help</Text>
               </Pressable>
             )}
@@ -378,7 +378,7 @@ export default function RunSafetyScreen() {
                 : "You have no trusted contacts, so nobody will be texted. The tracking page will show you need help. If you're in danger, call 10111 or 112 now."}
             </Text>
             <Pressable style={styles.panicButton} onPress={panic} disabled={busy}>
-              {busy ? <ActivityIndicator color={colors.heading} /> : <Text style={styles.panicText}>Send alert</Text>}
+              {busy ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.panicText}>Send alert</Text>}
             </Pressable>
             <Pressable style={styles.cancelButton} onPress={() => setConfirmAlert(false)}>
               <Text style={styles.cancelText}>Cancel</Text>
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 12,
   },
-  panicText: { color: colors.heading, fontSize: 17, fontWeight: "800" },
+  panicText: { color: colors.onAccent, fontSize: 17, fontWeight: "800" },
   callRow: { flexDirection: "row", gap: 10, marginTop: 12 },
   callButton: {
     flex: 1,

@@ -1,4 +1,4 @@
-import { View, Pressable, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import { Text } from "./ui/Text";
 import { colors } from "../lib/theme";
 
@@ -8,9 +8,10 @@ type Props<T extends string> = {
   onChange: (selected: T[]) => void;
   // Single choice: tapping a chip replaces the selection instead of toggling it
   single?: boolean;
+  style?: StyleProp<ViewStyle>;
 };
 
-export function ChoiceChips<T extends string>({ options, selected, onChange, single }: Props<T>) {
+export function ChoiceChips<T extends string>({ options, selected, onChange, single, style }: Props<T>) {
   const toggle = (value: T) => {
     if (single) {
       onChange([value]);
@@ -22,7 +23,7 @@ export function ChoiceChips<T extends string>({ options, selected, onChange, sin
   };
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, style]}>
       {options.map(({ value, label }) => {
         const on = selected.includes(value);
         return (

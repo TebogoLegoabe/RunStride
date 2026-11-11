@@ -24,7 +24,8 @@ import { openPlus } from "../../../lib/upsell";
 import { clearDeviceToken, clearToken } from "../../../lib/session";
 import type { Me, MyProfile } from "../../../lib/types";
 import { useChat } from "../../../components/ChatProvider";
-import { colors } from "../../../lib/theme";
+import { colors, setThemePreference, themePreference, type ThemePreference } from "../../../lib/theme";
+import { ChoiceChips } from "../../../components/ChoiceChips";
 import { UserPhoto } from "../../../components/ui/UserPhoto";
 import { avatarRef } from "../../../lib/avatars";
 import { useTopPadding } from "../../../lib/responsive";
@@ -41,6 +42,12 @@ const daysLeft = (iso: string) => {
 };
 
 type Confirm = "sign-out" | "delete" | null;
+
+const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
+  { value: "dark", label: "Dark" },
+  { value: "light", label: "Light" },
+  { value: "system", label: "Match my phone" },
+];
 
 export default function ProfileTab() {
   const topPadding = useTopPadding();
@@ -265,7 +272,7 @@ export default function ProfileTab() {
                 onValueChange={setTaken}
                 disabled={switching}
                 trackColor={{ false: colors.border, true: colors.pink }}
-                thumbColor={colors.heading}
+                thumbColor={colors.onAccent}
                 accessibilityLabel="Seeing someone: turn dating off"
               />
             </View>
@@ -278,6 +285,28 @@ export default function ProfileTab() {
         {row("images-outline", "Photos, name and bio", editHref("/profile-setup"))}
         {row("walk-outline", "Running preferences", editHref("/running-preferences"))}
         {row("heart-outline", "Who you'd like to meet", editHref("/dating-preferences"))}
+      </View>
+
+      <Text style={styles.section}>Appearance</Text>
+      <View style={styles.group}>
+        <View style={[styles.row, styles.stackedRow]}>
+          <View style={styles.stackedHead}>
+            <Ionicons name="contrast-outline" size={20} color={colors.primary} />
+            <View style={styles.rowStack}>
+              <Text style={styles.rowTitle}>Theme</Text>
+              <Text style={styles.rowSub}>RunStride reloads to switch.</Text>
+            </View>
+          </View>
+          <ChoiceChips
+            single
+            options={THEME_OPTIONS}
+            selected={[themePreference]}
+            onChange={([pref]) => {
+              if (pref && pref !== themePreference) setThemePreference(pref).catch(() => {});
+            }}
+            style={styles.themeChips}
+          />
+        </View>
       </View>
 
       <Text style={styles.section}>Account</Text>
@@ -348,7 +377,7 @@ export default function ProfileTab() {
                 </Text>
                 <Pressable style={styles.dangerButton} onPress={removeAccount} disabled={busy}>
                   {busy ? (
-                    <ActivityIndicator color={colors.heading} />
+                    <ActivityIndicator color={colors.onAccent} />
                   ) : (
                     <Text style={styles.dangerButtonText}>Delete my account</Text>
                   )}
@@ -400,6 +429,9 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, color: colors.textBright, fontSize: 16 },
   rowStack: { flex: 1, gap: 2 },
   googleRow: { flexDirection: "column", alignItems: "stretch", gap: 10 },
+  stackedRow: { flexDirection: "column", alignItems: "stretch", gap: 12 },
+  stackedHead: { flexDirection: "row", alignItems: "center", gap: 12 },
+  themeChips: { marginBottom: 0 },
   rowTitle: { color: colors.textBright, fontSize: 16 },
   rowSub: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
   statusOn: { color: colors.success, fontSize: 13, fontWeight: "700" },
@@ -414,7 +446,7 @@ const styles = StyleSheet.create({
   primaryButton: { backgroundColor: colors.primary, paddingVertical: 13, borderRadius: 999, alignItems: "center" },
   primaryText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
   dangerButton: { backgroundColor: colors.danger, paddingVertical: 13, borderRadius: 999, alignItems: "center" },
-  dangerButtonText: { color: colors.heading, fontSize: 16, fontWeight: "700" },
+  dangerButtonText: { color: colors.onAccent, fontSize: 16, fontWeight: "700" },
   cancelButton: { paddingVertical: 12, alignItems: "center", marginTop: 6 },
   cancelText: { color: colors.textMuted, fontSize: 15 },
 });

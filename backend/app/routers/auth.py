@@ -23,7 +23,7 @@ from app.schemas import (
 )
 from app.security import create_access_token, generate_otp, hash_device_token, hash_otp, otp_matches, utcnow
 from app.sms import SmsError, SmsSender, get_sms_sender
-from app.storage import PhotoStorage, get_photo_storage
+from app.storage import PhotoStorage, get_photo_storage, user_file_urls
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger("runstride.auth")
@@ -338,7 +338,7 @@ def add_phone(
         raise HTTPException(status.HTTP_409_CONFLICT, "That number is already linked to a different Google account.")
 
     google_sub, email = user.google_sub, user.email
-    photo_urls = [p.url for p in user.profile.photos] if user.profile else []
+    photo_urls = user_file_urls(db, user)
     end_all_matches(db, user, user.id)
     db.delete(user)  # frees the Google account for the phone account (the ID is unique)
     db.flush()

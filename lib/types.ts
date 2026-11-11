@@ -79,12 +79,32 @@ export interface Message {
   id: string;
   matchId: string;
   senderId: string;
-  // text: typed. run_date: a run suggestion card. system: e.g. "Accepted the run"
-  kind: "text" | "run_date" | "system";
+  // text: typed. run_date: a run suggestion card. system: e.g. "Accepted the run".
+  // image: a photo (body is the caption, or "📷 Photo"). voice: a voice note.
+  kind: "text" | "run_date" | "system" | "image" | "voice";
   body: string;
   createdAt: string;
   readAt: string | null;
   runDate: RunDate | null;
+  replyTo: ReplyPreview | null; // the message this one answers
+  mediaUrl: string | null;
+  mediaWidth: number | null;
+  mediaHeight: number | null;
+  mediaDurationMs: number | null;
+  reactions: Reaction[];
+}
+
+export interface ReplyPreview {
+  id: string;
+  senderId: string;
+  kind: Message["kind"];
+  body: string;
+  mediaUrl: string | null;
+}
+
+export interface Reaction {
+  userId: string;
+  emoji: string;
 }
 
 // Pushed by the server over the WebSocket
@@ -93,6 +113,7 @@ export type RealtimeEvent =
   | { type: "pong" }
   | { type: "message"; message: Message }
   | { type: "read"; matchId: string; readAt: string }
+  | { type: "reaction"; matchId: string; messageId: string; reactions: Reaction[] }
   | { type: "match_ended"; matchId: string }
   | { type: "run_date"; runDate: RunDate }
   | { type: "race_message"; message: RaceMessage }

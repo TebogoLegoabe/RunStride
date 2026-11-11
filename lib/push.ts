@@ -34,9 +34,10 @@ export function pushSupport(): PushSupport {
   return "ok";
 }
 
-// Asks permission the first time, then tells the server where to send this account's pushes.
-// Returns why not, when it can't.
-export async function registerForPush(apiToken: string): Promise<PushSupport | "denied"> {
+// Tells the server where to send this account's pushes. With `ask`, shows the system question
+// first if needed; without it (opening the app) it only signs up a phone that already said yes,
+// and the "Turn on notifications" prompt does the asking. Returns why not, when it can't.
+export async function registerForPush(apiToken: string, ask = true): Promise<PushSupport | "denied"> {
   const support = pushSupport();
   if (support !== "ok") return support;
 
@@ -48,7 +49,7 @@ export async function registerForPush(apiToken: string): Promise<PushSupport | "
     });
   }
   let { status } = await Notifications.getPermissionsAsync();
-  if (status !== "granted") status = (await Notifications.requestPermissionsAsync()).status;
+  if (status !== "granted" && ask) status = (await Notifications.requestPermissionsAsync()).status;
   if (status !== "granted") return "denied";
 
   const { data: pushToken } = await Notifications.getExpoPushTokenAsync({ projectId });
@@ -75,4 +76,22 @@ export function onNotificationTap(open: (url: string) => void): () => void {
   Notifications.getLastNotificationResponseAsync().then(openFrom).catch(() => {});
   const subscription = Notifications.addNotificationResponseReceivedListener(openFrom);
   return () => subscription.remove();
+}
+
+// For the "Turn on notifications" prompt. ask: we can show the system question. blocked: the
+// phone won't ask again, so only the phone's settings can turn them on.
+export type PushPermission = "granted" | "ask" | "blocked" | "unsupported" | "ios-install";
+
+export async function pushPermission(): Promise<PushPermission> {
+  if (pushSupport() !== "ok") return "unsupported";
+  const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+  if (status === "granted") return "granted";
+  return canAskAgain ? "ask" : "blocked";
+}
+
+// From a tap on the prompt: shows the system question and signs this phone up
+export async function askForPush(apiToken: string): Promise<PushPermission> {
+  const result = await registerForPush(apiToken);
+  if (result === "ok") return "granted";
+  return result === "denied" ? pushPermission() : "unsupported";
 }

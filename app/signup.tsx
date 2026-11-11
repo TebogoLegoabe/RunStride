@@ -111,6 +111,8 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: colors.textMuted, marginBottom: 32 },
   input: {
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     color: colors.heading,
     borderRadius: 12,
     padding: 16,

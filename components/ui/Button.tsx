@@ -39,7 +39,7 @@ export function Button({
   const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const inactive = disabled || loading;
   const textColor =
-    variant === "primary" ? colors.heading : variant === "danger" ? colors.heading : variant === "ghost" ? colors.textMuted : colors.primary;
+    variant === "primary" ? colors.onAccent : variant === "danger" ? colors.onAccent : variant === "ghost" ? colors.textMuted : colors.primary;
 
   const content = (
     <View style={[styles.inner, small && styles.innerSmall]}>

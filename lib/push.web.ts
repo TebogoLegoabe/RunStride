@@ -64,7 +64,7 @@ export function pushSupport(): PushSupport {
 }
 
 // Called when the app opens: keeps an existing subscription linked to this account. Never asks.
-export async function registerForPush(apiToken: string): Promise<PushSupport | "denied"> {
+export async function registerForPush(apiToken: string, _ask = true): Promise<PushSupport | "denied"> {
   try {
     if (supported() && Notification.permission === "granted") await subscribe(apiToken);
   } catch {
@@ -96,4 +96,28 @@ export function onNotificationTap(open: (url: string) => void): () => void {
   };
   navigator.serviceWorker.addEventListener("message", onMessage);
   return () => navigator.serviceWorker.removeEventListener("message", onMessage);
+}
+
+// For the "Turn on notifications" prompt (same shape as the phone version in lib/push.ts)
+export type PushPermission = "granted" | "ask" | "blocked" | "unsupported" | "ios-install";
+
+export async function pushPermission(): Promise<PushPermission> {
+  const state = await webPushState();
+  if (state === "on") return "granted";
+  if (state === "off") {
+    // Nothing to offer if the server has no Web Push key
+    try {
+      await getWebPushKey();
+    } catch {
+      return "unsupported";
+    }
+    return "ask";
+  }
+  if (state === "denied") return "blocked";
+  return state === "ios-install" ? "ios-install" : "unsupported";
+}
+
+export async function askForPush(apiToken: string): Promise<PushPermission> {
+  const state = await enableWebPush(apiToken);
+  return state === "on" ? "granted" : state === "denied" ? "blocked" : state === "off" ? "ask" : "unsupported";
 }

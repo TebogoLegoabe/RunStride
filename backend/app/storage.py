@@ -14,16 +14,16 @@ IMMUTABLE_CACHE = "public, max-age=31536000, immutable"
 
 
 class PhotoStorage(Protocol):
-    def save(self, data: bytes) -> str:
-        """Store a JPEG and return the URL it can be fetched from."""
+    def save(self, data: bytes, *, folder: str = "photos", ext: str = "jpg", content_type: str = "image/jpeg") -> str:
+        """Store a file (a JPEG unless told otherwise) and return the URL it can be fetched from."""
         ...
 
     def delete(self, url: str) -> None: ...
 
 
-def _new_key() -> str:
-    # Random, unguessable names: a photo's URL is the only way to find it
-    return f"photos/{uuid.uuid4()}.jpg"
+def _new_key(folder: str = "photos", ext: str = "jpg") -> str:
+    # Random, unguessable names: a file's URL is the only way to find it
+    return f"{folder}/{uuid.uuid4()}.{ext}"
 
 
 class LocalPhotoStorage:
@@ -36,8 +36,8 @@ class LocalPhotoStorage:
     def __init__(self, media_dir: str | Path) -> None:
         self.root = Path(media_dir)
 
-    def save(self, data: bytes) -> str:
-        name = _new_key()
+    def save(self, data: bytes, *, folder: str = "photos", ext: str = "jpg", content_type: str = "image/jpeg") -> str:
+        name = _new_key(folder, ext)
         path = self.root / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
@@ -81,13 +81,13 @@ class S3PhotoStorage:
         self.bucket = bucket
         self.public_base_url = public_base_url.rstrip("/")
 
-    def save(self, data: bytes) -> str:
-        key = _new_key()
+    def save(self, data: bytes, *, folder: str = "photos", ext: str = "jpg", content_type: str = "image/jpeg") -> str:
+        key = _new_key(folder, ext)
         self.client.put_object(
             Bucket=self.bucket,
             Key=key,
             Body=data,
-            ContentType="image/jpeg",
+            ContentType=content_type,
             CacheControl=IMMUTABLE_CACHE,
         )
         return f"{self.public_base_url}/{key}"
@@ -156,3 +156,15 @@ def get_id_storage() -> IdStorage | None:
         settings.s3_endpoint_url, settings.s3_region, settings.id_access_key_id, settings.id_secret_access_key
     )
     return S3IdStorage(client, settings.id_bucket)
+
+
+def user_file_urls(db, user) -> list[str]:
+    """Every public file a person put up: profile photos, and photos and voice notes they sent in
+    chats. Collected before the account is deleted, then removed from storage afterwards."""
+    from sqlalchemy import select
+
+    from app.models import Message
+
+    urls = [p.url for p in user.profile.photos] if user.profile else []
+    urls += db.scalars(select(Message.media_url).where(Message.sender_id == user.id, Message.media_url.is_not(None))).all()
+    return urls

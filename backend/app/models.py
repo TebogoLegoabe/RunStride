@@ -285,7 +285,7 @@ class Message(Base):
     __tablename__ = "messages"
     __table_args__ = (
         Index("ix_messages_match_id_created_at", "match_id", "created_at"),
-        CheckConstraint("kind IN ('text', 'run_date', 'system')", name="message_kind_values"),
+        CheckConstraint("kind IN ('text', 'run_date', 'system', 'image', 'voice')", name="message_kind_values"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -300,8 +300,30 @@ class Message(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     # When the other person saw it
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The message this one answers (swipe to reply)
+    reply_to_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("messages.id", ondelete="SET NULL"))
+    # image: a photo (body is its caption, or "📷 Photo"). voice: a voice note (body "🎤 Voice message").
+    media_url: Mapped[str | None] = mapped_column(Text)
+    media_width: Mapped[int | None] = mapped_column(Integer)
+    media_height: Mapped[int | None] = mapped_column(Integer)
+    media_duration_ms: Mapped[int | None] = mapped_column(Integer)
 
     run_date: Mapped[RunDate | None] = relationship()
+    reply_to: Mapped["Message | None"] = relationship(remote_side=[id], lazy="joined")
+    reactions: Mapped[list["MessageReaction"]] = relationship(
+        order_by="MessageReaction.created_at", cascade="all, delete-orphan", lazy="selectin"
+    )
+
+
+class MessageReaction(Base):
+    """One person's reaction to a message. One each, like WhatsApp: reacting again replaces it."""
+
+    __tablename__ = "message_reactions"
+
+    message_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("messages.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    emoji: Mapped[str] = mapped_column(String(16))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class IdSubmission(Base):

@@ -436,19 +436,19 @@ export default function Races() {
                     end={{ x: 1, y: 0 }}
                     style={styles.dateBadge}
                   >
-                    <Ionicons name="calendar-outline" size={12} color={colors.heading} />
+                    <Ionicons name="calendar-outline" size={12} color={colors.onAccent} />
                     <Text style={styles.dateText}>{formatRaceDates(race.startsOn, race.endsOn)}</Text>
                   </LinearGradient>
                   {race.unreadSwapMatches > 0 ? (
                     <View style={styles.mentionBadge}>
-                      <Ionicons name="swap-horizontal" size={12} color={colors.heading} />
+                      <Ionicons name="swap-horizontal" size={12} color={colors.onAccent} />
                       <Text style={styles.mentionText}>
                         {race.unreadSwapMatches} swap {race.unreadSwapMatches === 1 ? "match" : "matches"}
                       </Text>
                     </View>
                   ) : race.unreadMentions > 0 ? (
                     <View style={styles.mentionBadge}>
-                      <Ionicons name="at" size={12} color={colors.heading} />
+                      <Ionicons name="at" size={12} color={colors.onAccent} />
                       <Text style={styles.mentionText}>
                         {race.unreadMentions} {race.unreadMentions === 1 ? "mention" : "mentions"}
                       </Text>
@@ -737,8 +737,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  mentionText: { color: colors.heading, fontSize: 11, fontWeight: "700" },
-  dateText: { color: colors.heading, fontSize: 12, fontWeight: "700" },
+  mentionText: { color: colors.onAccent, fontSize: 11, fontWeight: "700" },
+  dateText: { color: colors.onAccent, fontSize: 12, fontWeight: "700" },
   raceName: { color: colors.heading, fontSize: 18, fontWeight: "700" },
   meta: { color: colors.textMuted, fontSize: 14, marginTop: 2 },
   cardFooter: { flexDirection: "row", justifyContent: "space-between", marginTop: 10, gap: 8, flexWrap: "wrap" },

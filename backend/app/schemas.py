@@ -244,6 +244,8 @@ class SwipeResponse(CamelModel):
 
 class MessageBody(CamelModel):
     body: str = Field(max_length=1000)
+    # Answering another message in the same chat (swipe to reply)
+    reply_to_id: uuid.UUID | None = None
 
     @field_validator("body")
     @classmethod
@@ -266,6 +268,41 @@ class RunDateOut(CamelModel):
     responded_at: datetime | None
 
 
+class ReplyPreview(CamelModel):
+    """The message being answered, shown above a reply."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True)
+
+    id: uuid.UUID
+    sender_id: uuid.UUID
+    kind: str
+    body: str
+    media_url: str | None = None
+
+
+class ReactionOut(CamelModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True)
+
+    user_id: uuid.UUID
+    emoji: str
+
+
+class ReactionBody(CamelModel):
+    # null removes your reaction
+    emoji: str | None = Field(default=None, max_length=16)
+
+    @field_validator("emoji")
+    @classmethod
+    def looks_like_an_emoji(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        # Emoji only: no letters, digits or spaces (one emoji can be several characters long)
+        if not v or any(ch.isascii() and (ch.isalnum() or ch.isspace()) for ch in v) or any(ch.isspace() for ch in v):
+            raise ValueError("React with an emoji.")
+        return v
+
+
 class MessageOut(CamelModel):
     id: uuid.UUID
     match_id: uuid.UUID
@@ -276,6 +313,13 @@ class MessageOut(CamelModel):
     read_at: datetime | None
     # Current state of the run, for run_date cards
     run_date: RunDateOut | None = None
+    reply_to: ReplyPreview | None = None
+    # image and voice messages
+    media_url: str | None = None
+    media_width: int | None = None
+    media_height: int | None = None
+    media_duration_ms: int | None = None
+    reactions: list[ReactionOut] = Field(default_factory=list)
 
 
 class LastMessage(CamelModel):

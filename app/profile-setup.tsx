@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  removeText: { color: colors.heading, fontSize: 13 },
+  removeText: { color: colors.onPhoto, fontSize: 13 },
   addSlot: {
     alignItems: "center",
     justifyContent: "center",
@@ -368,6 +368,8 @@ const styles = StyleSheet.create({
   avatarEmoji: { fontSize: 28, lineHeight: 36 },
   input: {
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     color: colors.heading,
     borderRadius: 12,
     padding: 16,

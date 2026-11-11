@@ -96,7 +96,7 @@ export default function NotificationsScreen() {
                 value={settings.enabled}
                 onValueChange={(enabled) => save({ ...settings, enabled })}
                 trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.heading}
+                thumbColor={colors.onAccent}
                 accessibilityLabel="Push notifications"
               />
             </View>
@@ -129,7 +129,7 @@ export default function NotificationsScreen() {
                   disabled={!settings.enabled}
                   onValueChange={(on) => save({ ...settings, [kind.key]: on })}
                   trackColor={{ false: colors.border, true: colors.primary }}
-                  thumbColor={colors.heading}
+                  thumbColor={colors.onAccent}
                   accessibilityLabel={kind.title}
                 />
               </View>

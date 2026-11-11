@@ -222,6 +222,6 @@ const styles = StyleSheet.create({
   banOutline: { borderColor: colors.danger },
   banOutlineText: { color: colors.dangerText, fontSize: 15, fontWeight: "600" },
   banAction: { backgroundColor: colors.danger, borderColor: colors.danger },
-  banText: { color: colors.heading, fontSize: 15, fontWeight: "700" },
+  banText: { color: colors.onAccent, fontSize: 15, fontWeight: "700" },
   spinner: { marginTop: 12 },
 });

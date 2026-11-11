@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   bodyMine: { color: colors.onPrimary },
   mention: { color: colors.pink, fontWeight: "700" },
   mentionMine: { color: colors.onPrimary, fontWeight: "800", textDecorationLine: "underline" },
-  mentionOfMe: { color: colors.heading, backgroundColor: colors.pink },
+  mentionOfMe: { color: colors.onAccent, backgroundColor: colors.pink },
   time: { color: colors.textFaint, fontSize: 10, marginTop: 2, alignSelf: "flex-end" },
   timeMine: { color: colors.onPrimaryMuted },
   error: { color: colors.dangerText, fontSize: 13, textAlign: "center", marginVertical: 8 },
