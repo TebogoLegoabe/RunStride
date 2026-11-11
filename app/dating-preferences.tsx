@@ -8,10 +8,15 @@ import { DISTANCES_KM, GENDERS, SHOW_ME, distanceLabel, type Gender } from "../l
 import { afterSave } from "../lib/routing";
 import { getToken } from "../lib/session";
 import { ChoiceChips } from "../components/ChoiceChips";
-import { colors } from "../lib/theme";
+import { colors, setThemePreference, themePreference, type ThemePreference } from "../lib/theme";
 import { useBottomPadding, useTopPadding } from "../lib/responsive";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
+const THEMES: readonly { value: ThemePreference; label: string }[] = [
+  { value: "dark", label: "Dark" },
+  { value: "light", label: "Light" },
+  { value: "system", label: "Match my phone" },
+];
 const DISTANCE_OPTIONS = DISTANCES_KM.map((km) => ({ value: String(km), label: distanceLabel(km) }));
 const digits = (t: string) => t.replace(/\D/g, "");
 
@@ -30,6 +35,8 @@ export default function DatingPreferencesScreen() {
   const [saving, setSaving] = useState(false);
   // First time through only: be findable on Discover and in race runner lists (Profile changes it later)
   const [findable, setFindable] = useState(true);
+  // First time through: pick a look. Switching reloads the app, so it's applied on Finish.
+  const [theme, setTheme] = useState<ThemePreference[]>([themePreference]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -93,6 +100,8 @@ export default function DatingPreferencesScreen() {
       });
       if (edit !== "1" && !findable) await setDatingMode(token, "taken");
       afterSave(router, await getMe(token), edit === "1");
+      // A new look reloads the app, which then opens where afterSave just went
+      if (edit !== "1" && theme[0] !== themePreference) setThemePreference(theme[0]).catch(() => {});
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
     } finally {
@@ -167,6 +176,14 @@ export default function DatingPreferencesScreen() {
             accessibilityLabel="Let runners find me on Discover and in race runner lists"
           />
         </View>
+      )}
+
+      {edit !== "1" && (
+        <>
+          <Text style={styles.label}>Look</Text>
+          <Text style={styles.hint}>Applied when you finish. Change it any time in Profile → Appearance.</Text>
+          <ChoiceChips options={THEMES} selected={theme} onChange={(v) => v.length && setTheme(v)} single />
+        </>
       )}
 
       {error && <Text style={styles.error}>{error}</Text>}

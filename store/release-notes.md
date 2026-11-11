@@ -3,7 +3,15 @@
 Newest first. The "Play Store" block is the text for **Release notes** (What's new) in Play Console,
 which allows 500 characters per language. The rest is for testers.
 
-## 1.0.0 (11) — 11 November 2026
+## 1.0.0 (12) — 11 November 2026
+
+Everything in builds 10 and 11, plus:
+- New members choose a look (Dark, Light or Match my phone) on the last sign-up step. It's applied
+  when they finish, and stays changeable in Profile > Appearance.
+
+The Play Store text below covers this build too.
+
+## 1.0.0 (11) — 11 November 2026 (not released)
 
 Everything in build 10, plus:
 - The message box lines up with the buttons beside it and grows as you type.
