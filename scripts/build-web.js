@@ -13,7 +13,9 @@ const path = require("path");
 const DIST = path.join(__dirname, "..", "dist");
 
 fs.rmSync(DIST, { recursive: true, force: true });
-execSync("npx expo export --platform web --output-dir dist", {
+// --clear: Expo writes EXPO_PUBLIC_API_URL into the code and caches the result, so without it a
+// bundle built earlier for another API (e.g. localhost) can be reused and shipped by mistake.
+execSync("npx expo export --platform web --output-dir dist --clear", {
   stdio: "inherit",
   env: { ...process.env, EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL || "https://api.runstride.co.za" },
 });
