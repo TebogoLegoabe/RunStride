@@ -7,7 +7,7 @@ import { EmojiPanel } from "../ui/EmojiPanel";
 import { PHOTO_BODY, quoteLabel } from "./MessageBubble";
 import type { Message } from "../../lib/types";
 import { colors, fonts, radius, shadow } from "../../lib/theme";
-import { useSkinTone, withTone } from "../../lib/skinTone";
+import { SKIN_TONES, hasTones, setSkinTone, useSkinTone, withTone } from "../../lib/skinTone";
 
 export const QUICK_REACTIONS = ["❤️", "👍", "😂", "😮", "😢", "🙏", "🏃"];
 
@@ -24,6 +24,7 @@ type Props = {
 export function MessageMenu({ message, myId, otherName, onClose, onReact, onReply }: Props) {
   const [more, setMore] = useState(false);
   const tone = useSkinTone();
+  const [toneFor, setToneFor] = useState<string | null>(null);
   if (!message) return null;
   const mine = message.reactions?.find((r) => r.userId === myId)?.emoji ?? null;
   const text = message.kind === "text" || (message.kind === "image" && message.body !== PHOTO_BODY) ? message.body : null;
@@ -31,6 +32,7 @@ export function MessageMenu({ message, myId, otherName, onClose, onReact, onRepl
 
   const close = () => {
     setMore(false);
+    setToneFor(null);
     onClose();
   };
   const react = (emoji: string) => {
@@ -48,12 +50,32 @@ export function MessageMenu({ message, myId, otherName, onClose, onReact, onRepl
           </Text>
           {more ? (
             <EmojiPanel onPick={react} onClose={() => setMore(false)} />
+          ) : toneFor ? (
+            <View style={styles.emojis}>
+              {SKIN_TONES.map((t) => (
+                <Pressable
+                  key={t || "default"}
+                  onPress={() => {
+                    setSkinTone(t);
+                    react(withTone(toneFor, t));
+                  }}
+                  style={styles.emoji}
+                  accessibilityLabel={`React ${withTone(toneFor, t)}`}
+                >
+                  <Text style={styles.emojiText} allowFontScaling={false}>
+                    {withTone(toneFor, t)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           ) : (
             <View style={styles.emojis}>
-              {QUICK_REACTIONS.map((plain) => withTone(plain, tone)).map((emoji) => (
+              {QUICK_REACTIONS.map((plain) => ({ plain, emoji: withTone(plain, tone) })).map(({ plain, emoji }) => (
                 <Pressable
                   key={emoji}
                   onPress={() => react(emoji)}
+                  onLongPress={hasTones(plain) ? () => setToneFor(plain) : undefined}
+                  delayLongPress={300}
                   style={[styles.emoji, emoji === mine && styles.emojiMine]}
                   accessibilityLabel={emoji === mine ? `Remove ${emoji}` : `React ${emoji}`}
                 >
@@ -88,7 +110,11 @@ export function MessageMenu({ message, myId, otherName, onClose, onReact, onRepl
             )}
             {mine && <Action icon="close-circle-outline" label={`Remove ${mine}`} onPress={() => react(mine)} />}
           </View>
-          {Platform.OS !== "web" && <Text style={styles.tip}>Tip: swipe a message right to reply.</Text>}
+          <Text style={styles.tip}>
+            {Platform.OS === "web"
+              ? "Tip: press and hold 👍 or 🏃 to change the skin tone."
+              : "Tip: swipe a message right to reply. Hold 👍 or 🏃 to change the skin tone."}
+          </Text>
         </Pressable>
       </Pressable>
     </Modal>

@@ -3,7 +3,16 @@
 Newest first. The "Play Store" block is the text for **Release notes** (What's new) in Play Console,
 which allows 500 characters per language. The rest is for testers.
 
-## 1.0.0 (10) — 11 November 2026
+## 1.0.0 (11) — 11 November 2026
+
+Everything in build 10, plus:
+- The message box lines up with the buttons beside it and grows as you type.
+- Press and hold a hand or runner emoji to choose its skin tone (in the emoji panel and when
+  reacting). A hint in the emoji panel says so.
+
+The Play Store text below covers this build too.
+
+## 1.0.0 (10) — 11 November 2026 (not released)
 
 ### Play Store (en-ZA)
 
@@ -27,7 +36,7 @@ Notifications: turn them on so you never miss a match or a message.
 - One reaction each per message. The sender is notified when you react.
 - Send a photo (with an optional caption) from the image button, or a voice note from the mic
   (tap to start, tap send to finish). Voice notes play at 1×, 1.5× or 2×.
-- Emoji skin tones: tap ✋ in the emoji panel.
+- Emoji skin tones: press and hold a hand or runner emoji, or tap ✋ in the emoji panel.
 - Messages are grouped with day headings, and ticks show when your message was read.
 - New "suggest a run" icon.
 

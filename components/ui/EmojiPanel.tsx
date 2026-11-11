@@ -3,7 +3,7 @@ import { View, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Text } from "./Text";
 import { Ionicons } from "@expo/vector-icons";
 import { haptics } from "../../lib/haptics";
-import { SKIN_TONES, setSkinTone, useSkinTone, withTone } from "../../lib/skinTone";
+import { SKIN_TONES, hasTones, setSkinTone, useSkinTone, withTone } from "../../lib/skinTone";
 import { colors, radius } from "../../lib/theme";
 
 // Runner-themed first, then the usual suspects. Phones also have their own emoji keyboard; this is for
@@ -47,7 +47,11 @@ type Props = { onPick: (emoji: string) => void; onClose: () => void };
 export function EmojiPanel({ onPick, onClose }: Props) {
   const [group, setGroup] = useState(0);
   const tone = useSkinTone();
-  const [tones, setTones] = useState(false);
+  // Which emoji's tones are showing: ✋ from the button, or the emoji someone long-pressed
+  const [toneFor, setToneFor] = useState<string | null>(null);
+  const tones = toneFor !== null;
+  const setTones = (open: boolean | ((o: boolean) => boolean)) =>
+    setToneFor((current) => ((typeof open === "function" ? open(current !== null) : open) ? "✋" : null));
   return (
     <View style={styles.panel}>
       <View style={styles.tabs}>
@@ -80,16 +84,21 @@ export function EmojiPanel({ onPick, onClose }: Props) {
               key={t || "default"}
               onPress={() => {
                 setSkinTone(t);
-                setTones(false);
+                // Long-pressed an emoji: send it in the chosen tone too
+                if (toneFor && toneFor !== "✋") onPick(withTone(toneFor, t));
+                setToneFor(null);
               }}
               accessibilityLabel={t ? `Skin tone ${SKIN_TONES.indexOf(t)}` : "Default skin tone"}
               accessibilityState={{ selected: t === tone }}
               style={[styles.toneCell, t === tone && styles.toneOn]}
             >
-              <Text style={styles.emoji}>{withTone("✋", t)}</Text>
+              <Text style={styles.emoji}>{withTone(toneFor ?? "✋", t)}</Text>
             </Pressable>
           ))}
         </View>
+      )}
+      {!tones && GROUPS[group].emojis.some(hasTones) && (
+        <Text style={styles.hint}>Long-press {withTone("👍", tone)} or {withTone("🏃", tone)} to change the skin tone</Text>
       )}
       <ScrollView style={styles.scroll} contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
         {GROUPS[group].emojis.map((plain) => {
@@ -101,6 +110,15 @@ export function EmojiPanel({ onPick, onClose }: Props) {
                 haptics.tap();
                 onPick(e);
               }}
+              onLongPress={
+                hasTones(plain)
+                  ? () => {
+                      haptics.tap();
+                      setToneFor(plain);
+                    }
+                  : undefined
+              }
+              delayLongPress={300}
               accessibilityLabel={e}
               style={styles.cell}
             >
@@ -143,6 +161,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.bg,
   },
+  hint: { color: colors.textFaint, fontSize: 12, textAlign: "center", marginTop: 4 },
   toneCell: { padding: 4, borderRadius: radius.pill },
   toneOn: { backgroundColor: colors.primaryTint },
   toggle: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },

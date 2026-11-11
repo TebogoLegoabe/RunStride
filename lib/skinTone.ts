@@ -6,7 +6,7 @@ import * as SecureStore from "expo-secure-store";
 
 import { SKIN_TONES, type SkinTone } from "./emojiTone";
 
-export { SKIN_TONES, withTone, type SkinTone } from "./emojiTone";
+export { SKIN_TONES, hasTones, withTone, type SkinTone } from "./emojiTone";
 
 const KEY = "runstride.skinTone";
 

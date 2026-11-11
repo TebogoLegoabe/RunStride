@@ -11,11 +11,17 @@ const TONEABLE = new Set(
   )
 );
 
+// Whether an emoji comes in skin tones (long-press it to choose one)
+export function hasTones(emoji: string): boolean {
+  const first = emoji.codePointAt(0);
+  return first !== undefined && TONEABLE.has(first);
+}
+
 // 🏃 + 🏽 → 🏃🏽, and 🏃‍♀️ → 🏃🏽‍♀️ (the tone goes straight after the person, before the rest)
 export function withTone(emoji: string, tone: SkinTone): string {
   const first = emoji.codePointAt(0);
   if (!tone || first === undefined || !TONEABLE.has(first)) return emoji;
   const base = String.fromCodePoint(first);
-  const rest = emoji.slice(base.length).replace(/^️/, ""); // the tone replaces the "show as emoji" mark
+  const rest = emoji.slice(base.length).replace(/^\uFE0F/, ""); // the tone replaces the "show as emoji" mark
   return base + tone + rest;
 }

@@ -35,6 +35,10 @@ const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 const PAGE_SIZE = 30; // matches the API's default page
 const OFFLINE_POLL_MS = 5_000;
 const MAX_LENGTH = 1000;
+const COMPOSER_HEIGHT = 44; // the round buttons beside the message box
+const LINE_HEIGHT = 20;
+const INPUT_MIN = COMPOSER_HEIGHT - 2; // one line, inside the box's 1pt border
+const INPUT_MAX = INPUT_MIN + LINE_HEIGHT * 4; // five lines, then it scrolls
 
 // Messages and the day headings between them, newest first for the inverted list. Each message
 // knows whether it starts or ends a run from the same person, so a run reads as one block.
@@ -135,6 +139,8 @@ export function ChatView({ matchId, userId, name, photo, verified = false, onClo
   const [viewing, setViewing] = useState<string | null>(null);
   const recorder = useVoiceRecorder();
   const [recordMs, setRecordMs] = useState(0);
+  // The message box starts one line high (level with the buttons) and grows as you type
+  const [inputHeight, setInputHeight] = useState(INPUT_MIN);
   const input = useRef<React.ElementRef<typeof TextInput>>(null);
   const otherName = name ?? "They";
 
@@ -267,6 +273,7 @@ export function ChatView({ matchId, userId, name, photo, verified = false, onClo
     try {
       added(await sendMessage(token, matchId, body, replyTo?.id));
       setDraft("");
+      setInputHeight(INPUT_MIN);
     } catch (e) {
       handleError(e);
     } finally {
@@ -537,14 +544,25 @@ export function ChatView({ matchId, userId, name, photo, verified = false, onClo
                 <Image source={RUN_ICON} style={styles.runIcon} accessibilityIgnoresInvertColors />
               </Pressable>
               <View style={styles.inputWrap}>
-                <EmojiToggle open={emojiOpen} onPress={() => setEmojiOpen((o) => !o)} />
+                <View style={styles.emojiSlot}>
+                  <EmojiToggle open={emojiOpen} onPress={() => setEmojiOpen((o) => !o)} />
+                </View>
                 <TextInput
                   ref={input}
-                  style={styles.input}
-                  placeholder="Message"
-                  placeholderTextColor={colors.textFaint}
+                  style={[styles.input, Platform.OS === "web" && { height: inputHeight }]}
+                  accessibilityLabel="Message"
                   value={draft}
-                  onChangeText={setDraft}
+                  onChangeText={(text) => {
+                    setDraft(text);
+                    if (!text) setInputHeight(INPUT_MIN);
+                  }}
+                  // Browsers: a text area doesn't grow by itself, so follow the text's height
+                  onContentSizeChange={
+                    Platform.OS === "web"
+                      ? (e) => setInputHeight(Math.min(INPUT_MAX, Math.max(INPUT_MIN, Math.round(e.nativeEvent.contentSize.height))))
+                      : undefined
+                  }
+                  numberOfLines={1}
                   multiline
                   maxLength={MAX_LENGTH}
                   onSubmitEditing={Platform.OS === "web" ? send : undefined}
@@ -671,22 +689,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     backgroundColor: colors.surface,
-    borderRadius: 22,
+    borderRadius: COMPOSER_HEIGHT / 2,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingLeft: 4,
-    paddingRight: 8,
-    minHeight: 44,
+    paddingLeft: 2,
+    paddingRight: 10,
+    minHeight: COMPOSER_HEIGHT,
   },
+  // One line fills the 44pt box exactly (level with the buttons); longer messages grow it
   input: {
     flex: 1,
-    maxHeight: 120,
     color: colors.heading,
     paddingHorizontal: 6,
-    paddingVertical: 11,
+    paddingVertical: (INPUT_MIN - LINE_HEIGHT) / 2,
+    minHeight: INPUT_MIN,
+    maxHeight: INPUT_MAX,
     fontSize: 15,
+    lineHeight: LINE_HEIGHT,
+    textAlignVertical: "center",
   },
-  attach: { paddingVertical: 10, paddingHorizontal: 2 },
+  attach: { height: COMPOSER_HEIGHT - 2, justifyContent: "center", paddingHorizontal: 2 },
+  emojiSlot: { height: COMPOSER_HEIGHT - 2, justifyContent: "center" },
   iconButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   recordingBar: {
     flex: 1,
