@@ -1,4 +1,4 @@
-import { View, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Pressable, StyleSheet, ActivityIndicator, Image } from "react-native";
 import { Text } from "./ui/Text";
 import { useState } from "react";
 import { useRouter } from "expo-router";
@@ -7,6 +7,7 @@ import { ApiError, answerRun } from "../lib/api";
 import { formatRunTime } from "../lib/format";
 import type { RunDate } from "../lib/types";
 import { colors } from "../lib/theme";
+import { RUN_ICON } from "../lib/icons";
 
 const NETWORK_ERROR = "Couldn't reach RunStride. Check your connection.";
 
@@ -49,7 +50,7 @@ export function RunDateCard({ run, myId, token, otherName, onUpdated }: Props) {
   return (
     <View style={[styles.card, !live && styles.cardDone]}>
       <View style={styles.header}>
-        <Ionicons name="walk" size={18} color={colors.primary} />
+        <Image source={RUN_ICON} style={{ width: 22, height: 22, tintColor: colors.primary }} />
         <Text style={styles.heading}>{mine ? "You suggested a run" : `${otherName} suggested a run`}</Text>
       </View>
 

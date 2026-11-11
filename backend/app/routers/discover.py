@@ -61,7 +61,7 @@ def _traits(running: RunningProfile) -> RunnerTraits:
     )
 
 
-TAKEN_MODE = "You're in Taken mode, so dating is switched off. Switch it back on in your profile."
+TAKEN_MODE = "You're hidden from other runners. Turn on \"Let runners find me\" in your profile to use Discover."
 
 
 def _require_ready(user: User) -> None:

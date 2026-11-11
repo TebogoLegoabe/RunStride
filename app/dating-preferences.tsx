@@ -1,8 +1,9 @@
-import { View, Pressable, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
+import { View, Pressable, StyleSheet, ActivityIndicator, ScrollView, Switch } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { Text, TextInput } from "../components/ui/Text";
 import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ApiError, getDatingPreferences, getMe, getMyProfile, saveDatingPreferences } from "../lib/api";
+import { ApiError, getDatingPreferences, getMe, getMyProfile, saveDatingPreferences, setDatingMode } from "../lib/api";
 import { DISTANCES_KM, GENDERS, SHOW_ME, distanceLabel, type Gender } from "../lib/options";
 import { afterSave } from "../lib/routing";
 import { getToken } from "../lib/session";
@@ -27,6 +28,8 @@ export default function DatingPreferencesScreen() {
   const [ageMax, setAgeMax] = useState("");
   const [distance, setDistance] = useState<string[]>(["100"]);
   const [saving, setSaving] = useState(false);
+  // First time through only: be findable on Discover and in race runner lists (Profile changes it later)
+  const [findable, setFindable] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -88,6 +91,7 @@ export default function DatingPreferencesScreen() {
         ageMax: Number(ageMax),
         maxDistanceKm: Number(distance[0]),
       });
+      if (edit !== "1" && !findable) await setDatingMode(token, "taken");
       afterSave(router, await getMe(token), edit === "1");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : NETWORK_ERROR);
@@ -144,6 +148,27 @@ export default function DatingPreferencesScreen() {
       <Text style={styles.hint}>How far you'd travel to meet for a run.</Text>
       <ChoiceChips options={DISTANCE_OPTIONS} selected={distance} onChange={setDistance} single />
 
+      {edit !== "1" && (
+        <View style={styles.findable}>
+          <Ionicons name={findable ? "eye-outline" : "eye-off-outline"} size={22} color={colors.primary} />
+          <View style={styles.findableText}>
+            <Text style={styles.findableTitle}>Let runners find me</Text>
+            <Text style={styles.findableBody}>
+              {findable
+                ? "You'll show up on Discover and in race runner lists. Here just for races and race chats, or seeing someone? Turn this off. You can change it any time in Profile."
+                : "You'll stay hidden from Discover and race runner lists. You can still join races, chat in race groups and swap entries. Turn it on any time in Profile."}
+            </Text>
+          </View>
+          <Switch
+            value={findable}
+            onValueChange={setFindable}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.onAccent}
+            accessibilityLabel="Let runners find me on Discover and in race runner lists"
+          />
+        </View>
+      )}
+
       {error && <Text style={styles.error}>{error}</Text>}
 
       <Pressable
@@ -154,7 +179,7 @@ export default function DatingPreferencesScreen() {
         {saving ? (
           <ActivityIndicator color={colors.onPrimary} />
         ) : (
-          <Text style={styles.primaryButtonText}>Start discovering</Text>
+          <Text style={styles.primaryButtonText}>{edit === "1" ? "Save" : findable ? "Start discovering" : "Finish"}</Text>
         )}
       </Pressable>
     </ScrollView>
@@ -169,6 +194,21 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: colors.textMuted, marginBottom: 32 },
   label: { fontSize: 15, fontWeight: "600", color: colors.heading, marginBottom: 10 },
   hint: { fontSize: 13, color: colors.textMuted, marginTop: -4, marginBottom: 12 },
+  findable: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    marginTop: 8,
+    marginBottom: 20,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  findableText: { flex: 1 },
+  findableTitle: { color: colors.heading, fontSize: 15, fontWeight: "700", marginBottom: 2 },
+  findableBody: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
   inlineRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 24 },
   inlineText: { color: colors.text, fontSize: 16 },
   input: {

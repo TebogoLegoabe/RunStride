@@ -7,6 +7,7 @@ import { EmojiPanel } from "../ui/EmojiPanel";
 import { PHOTO_BODY, quoteLabel } from "./MessageBubble";
 import type { Message } from "../../lib/types";
 import { colors, fonts, radius, shadow } from "../../lib/theme";
+import { useSkinTone, withTone } from "../../lib/skinTone";
 
 export const QUICK_REACTIONS = ["❤️", "👍", "😂", "😮", "😢", "🙏", "🏃"];
 
@@ -22,6 +23,7 @@ type Props = {
 // Long-press (or the smiley on computers): react with an emoji, reply, or copy the text
 export function MessageMenu({ message, myId, otherName, onClose, onReact, onReply }: Props) {
   const [more, setMore] = useState(false);
+  const tone = useSkinTone();
   if (!message) return null;
   const mine = message.reactions?.find((r) => r.userId === myId)?.emoji ?? null;
   const text = message.kind === "text" || (message.kind === "image" && message.body !== PHOTO_BODY) ? message.body : null;
@@ -48,7 +50,7 @@ export function MessageMenu({ message, myId, otherName, onClose, onReact, onRepl
             <EmojiPanel onPick={react} onClose={() => setMore(false)} />
           ) : (
             <View style={styles.emojis}>
-              {QUICK_REACTIONS.map((emoji) => (
+              {QUICK_REACTIONS.map((plain) => withTone(plain, tone)).map((emoji) => (
                 <Pressable
                   key={emoji}
                   onPress={() => react(emoji)}

@@ -259,21 +259,26 @@ export default function ProfileTab() {
               </View>
             )}
             <View style={styles.row}>
-              <Ionicons name="heart-circle-outline" size={20} color={colors.pink} />
+              <Ionicons
+                name={membership.datingMode === "taken" ? "eye-off-outline" : "eye-outline"}
+                size={20}
+                color={colors.primary}
+              />
               <View style={styles.rowStack}>
-                <Text style={styles.rowTitle}>Seeing someone</Text>
+                <Text style={styles.rowTitle}>Let runners find me</Text>
                 <Text style={styles.rowSub}>
-                  Turns dating off: you're hidden from Discover and race runner lists. Races, chats and swaps carry
-                  on.
+                  {membership.datingMode === "taken"
+                    ? "Off: you're hidden from Discover and race runner lists. Your matches, race chats and swaps carry on."
+                    : "You're shown on Discover and in race runner lists. Here just for races, or seeing someone? Turn this off."}
                 </Text>
               </View>
               <Switch
-                value={membership.datingMode === "taken"}
-                onValueChange={setTaken}
+                value={membership.datingMode !== "taken"}
+                onValueChange={(findable) => setTaken(!findable)}
                 disabled={switching}
-                trackColor={{ false: colors.border, true: colors.pink }}
+                trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor={colors.onAccent}
-                accessibilityLabel="Seeing someone: turn dating off"
+                accessibilityLabel="Let runners find me on Discover and in race runner lists"
               />
             </View>
           </View>

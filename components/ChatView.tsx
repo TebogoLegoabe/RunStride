@@ -1,4 +1,4 @@
-import { View, Pressable, StyleSheet, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, AppState } from "react-native";
+import { View, Pressable, StyleSheet, ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Platform, AppState } from "react-native";
 import { Text, TextInput } from "./ui/Text";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +20,7 @@ import { MessageBubble, quoteLabel } from "./chat/MessageBubble";
 import { MessageMenu } from "./chat/MessageMenu";
 import { PhotoComposer, PhotoViewer } from "./chat/PhotoSheets";
 import { useVoiceRecorder } from "../lib/recorder";
+import { RUN_ICON } from "../lib/icons";
 import { useChat } from "./ChatProvider";
 import { SafetySheet } from "./SafetySheet";
 import { RunDateCard } from "./RunDateCard";
@@ -533,7 +534,7 @@ export function ChatView({ matchId, userId, name, photo, verified = false, onClo
           ) : (
             <>
               <Pressable style={styles.runButton} onPress={() => setSuggestOpen(true)} accessibilityLabel="Suggest a run">
-                <Ionicons name="walk" size={22} color={colors.primary} />
+                <Image source={RUN_ICON} style={styles.runIcon} accessibilityIgnoresInvertColors />
               </Pressable>
               <View style={styles.inputWrap}>
                 <EmojiToggle open={emojiOpen} onPress={() => setEmojiOpen((o) => !o)} />
@@ -739,6 +740,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  runIcon: { width: 28, height: 28, tintColor: colors.primary },
   systemNote: { color: colors.textFaint, fontSize: 12, textAlign: "center", marginVertical: 6 },
   sendButton: {
     width: 44,

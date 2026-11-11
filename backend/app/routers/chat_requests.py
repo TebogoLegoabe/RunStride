@@ -98,12 +98,13 @@ def send_request(body: ChatRequestBody, user: CurrentUser, db: DbSession) -> Cha
     if my_attendance(db, race_id, user.id) is None or my_attendance(db, race_id, other.id) is None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="You both need to be going to this race.")
 
-    # Taken mode is for races and swaps only: no new chats except about a swap post
+    # Hidden ("Let runners find me" off, stored as Taken mode): races and swaps only, so no new
+    # chats except about a swap post
     if body.listing_id is None and "taken" in (user.dating_mode, other.dating_mode):
         if user.dating_mode == "taken":
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
-                detail="You're in Taken mode. Switch dating back on in your profile to chat with runners.",
+                detail="You're hidden from other runners. Turn on \"Let runners find me\" in your profile to say hi to runners.",
             )
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This runner isn't available.")
 

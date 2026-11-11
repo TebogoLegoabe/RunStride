@@ -308,9 +308,9 @@ export default function Discover() {
       <View style={[styles.container, { paddingTop: topPadding }]}>
         <EmptyState
           icon="heart-circle"
-          title="Dating is switched off"
-          body="You're in Taken mode: nobody sees you in Discover, and you don't see anyone. Your races, chats and swaps carry on as normal."
-          action={{ title: switching ? "Switching on…" : "Switch dating back on", icon: "heart-outline", onPress: datingOn }}
+          title="You're hidden from other runners"
+          body="Nobody finds you on Discover or in race runner lists, and Discover stays empty for you. Your matches, race chats and swaps carry on as normal."
+          action={{ title: switching ? "Switching on…" : "Let runners find me", icon: "eye-outline", onPress: datingOn }}
         />
         {error && <Text style={styles.error}>{error}</Text>}
       </View>
